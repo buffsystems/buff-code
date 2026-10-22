@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/buffsystems/buff-code/releases"><img alt="Выпуск" src="https://img.shields.io/github/v/release/buffsystems/buff-code?label=выпуск&color=2563eb"></a>
+  <a href="https://github.com/buffsystems/buff-code/releases"><img alt="Выпуск" src="https://img.shields.io/github/v/release/buffsystems/buff-code?label=%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA&color=2563eb"></a>
   <a href="LICENSE"><img alt="Лицензия" src="https://img.shields.io/badge/лицензия-MIT-64748b"></a>
   <a href="https://buff.systems/docs/buff-code"><img alt="Документация" src="https://img.shields.io/badge/документация-buff.systems-0b0d12"></a>
 </p>
@@ -41,10 +41,12 @@
 Консоль — одной командой:
 
 ```sh
-curl -fsSL https://buff.systems/install | bash
+curl -fsSL https://github.com/buffsystems/buff-code/releases/latest/download/install | bash
 ```
 
-Приложение для Linux, macOS и Windows, контрольные суммы и подписи cosign каждого выпуска — в [выпусках](https://github.com/buffsystems/buff-code/releases) и на [buff.systems/downloads](https://buff.systems/downloads). При первом запуске Buff Code спросит адрес коннектора вашей компании и код из кабинета — или предложит подключить свою модель. Подробно — [Установка](https://buff.systems/docs/buff-code/install) и [Вход](https://buff.systems/docs/buff-code/sign-in).
+Скрипт берёт консоль из [выпусков](https://github.com/buffsystems/buff-code/releases) этого репозитория и сверяет контрольную сумму; если GitHub недоступен — переходит на зеркало [buff.systems/downloads](https://buff.systems/downloads) (`BUFF_SOURCE=mirror` — сразу на зеркало).
+
+Приложение для Linux, macOS и Windows — там же, в выпусках. Список сумм `SHA256SUMS` подписан cosign, открытый ключ [`cosign.pub`](cosign.pub) лежит в репозитории: `cosign verify-blob --key cosign.pub --signature SHA256SUMS.sig SHA256SUMS`. При первом запуске Buff Code спросит адрес коннектора вашей компании и код из кабинета — или предложит подключить свою модель. Подробно — [Установка](https://buff.systems/docs/buff-code/install) и [Вход](https://buff.systems/docs/buff-code/sign-in).
 
 ## Что умеет
 

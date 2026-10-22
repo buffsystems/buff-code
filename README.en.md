@@ -41,10 +41,12 @@ Buff Code reaches models through the company connector, through LiteLLM or direc
 The console, in one command:
 
 ```sh
-curl -fsSL https://buff.systems/install | bash
+curl -fsSL https://github.com/buffsystems/buff-code/releases/latest/download/install | bash
 ```
 
-The app for Linux, macOS and Windows, and every release's checksums and cosign signatures, are in the [releases](https://github.com/buffsystems/buff-code/releases) and at [buff.systems/downloads](https://buff.systems/downloads). On first start Buff Code asks for your company connector's address and a code from the dashboard — or offers to connect your own model. Details: [Install](https://buff.systems/docs/buff-code/install) and [Sign-in](https://buff.systems/docs/buff-code/sign-in).
+The script takes the console from this repository's [releases](https://github.com/buffsystems/buff-code/releases) and checks its checksum; if GitHub is unreachable it falls back to the mirror [buff.systems/downloads](https://buff.systems/downloads) (`BUFF_SOURCE=mirror` goes to the mirror directly).
+
+The app for Linux, macOS and Windows is in the releases too. The `SHA256SUMS` list is signed with cosign, and the public key [`cosign.pub`](cosign.pub) is in the repository: `cosign verify-blob --key cosign.pub --signature SHA256SUMS.sig SHA256SUMS`. On first start Buff Code asks for your company connector's address and a code from the dashboard — or offers to connect your own model. Details: [Install](https://buff.systems/docs/buff-code/install) and [Sign-in](https://buff.systems/docs/buff-code/sign-in).
 
 ## What it does
 
