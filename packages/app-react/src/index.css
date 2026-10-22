@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@import "@buff/ui/tailwind.css";
+
+/* Hosts build from their own roots; name this package's sources so Tailwind always scans them. */
+@source "./";
+
+/* The diff and file viewers draw their own scrollbars inside their shadow roots (a zero-width
+   vertical bar, a thin horizontal one). @buff/ui's page-wide scrollbar-color is inherited into
+   them and switches Chromium to standard scrollbars, which reserve a 15px gutter beside the code. */
+@layer base {
+  diffs-container {
+    scrollbar-color: auto;
+  }
+}

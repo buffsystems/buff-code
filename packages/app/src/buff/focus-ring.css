@@ -1,0 +1,8 @@
+/* Buff (#470): рамка фокуса — цвет бренда темы, как на сайте. Без этого то, у чего нет своего
+   стиля фокуса (например, кнопка закрытия диалога), рисуется системным цветом Chromium. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--v2-border-border-focus);
+    outline-offset: 1px;
+  }
+}

@@ -1,0 +1,72 @@
+/* Поиск по тексту переписки (#453). */
+.buff-search {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* #470: поле не прижато к линии шапки — его рамка и кольцо фокуса видны целиком. */
+  padding: 12px 16px 12px;
+}
+
+.buff-search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text-strong);
+}
+
+.buff-search-list {
+  display: flex;
+  max-height: 56vh;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.buff-search-result {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.buff-search-result:hover {
+  background: var(--v2-background-bg-layer-02);
+}
+
+.buff-search-title {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buff-search-fragment {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-search-fragment mark {
+  border-radius: 3px;
+  background: var(--surface-warning-weak);
+  color: var(--text-strong);
+}
+
+.buff-search-role,
+.buff-search-more,
+.buff-search-note {
+  font-size: 11px;
+  color: var(--v2-text-text-faint, var(--text-weak));
+}
+
+.buff-search-note {
+  padding: 4px 8px;
+  font-size: 12px;
+}

@@ -1,0 +1,68 @@
+/* Просмотр файлов (#451). */
+.buff-preview-switch {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  padding: 0 24px 8px;
+  background: var(--background-stronger, transparent);
+}
+
+.buff-preview-switch button {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-preview-switch button[data-active="true"] {
+  background: var(--v2-background-bg-layer-02);
+  color: var(--text-strong);
+}
+
+.buff-preview-markdown {
+  padding: 4px 24px 160px;
+  max-width: 920px;
+}
+
+.buff-preview-pdf {
+  width: 100%;
+  height: calc(100vh - 160px);
+  border: 0;
+}
+
+.buff-preview-video {
+  max-width: 100%;
+  max-height: calc(100vh - 200px);
+  border-radius: 8px;
+}
+
+/* «Добавить выделение в чат» (#451) — над содержимым файла, пока строки выделены. */
+.buff-selection-to-chat {
+  position: absolute;
+  top: 4px;
+  right: 24px;
+  z-index: 2;
+}
+
+/* Вложения (#459): картинка и текст в окне просмотра. */
+.buff-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.buff-preview-text {
+  max-height: 70vh;
+  margin: 0;
+  padding: 12px 16px;
+  overflow: auto;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,503 @@
+/* Buff (#471): элементы окна — как в приложении личного кабинета (frontend/src/components/ui/*):
+   плоские кнопки 32 / 36 / 40 px радиусом 9 px, поля с обводкой и кольцом фокуса, карточки и диалоги 14 px,
+   меню с обводкой, синие подсказки, переключатель цвета бренда, выделенное — светло-синее.
+   Стили компонентов апстрима подключаются вне слоёв, поэтому здесь — тоже вне слоёв и с
+   приставкой `:root[data-theme]`: она перевешивает их селекторы того же вида. Размеры текста —
+   в шкале апстрима (13 px = основной текст): сборка умножает их на размер из настроек (#461). */
+
+/* ── Кнопки ─────────────────────────────────────────────── */
+:root[data-theme] [data-component="button-v2"] {
+  border-radius: 9px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-shadow: none;
+}
+:root[data-theme] [data-component="button-v2"][data-size="small"] {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+}
+:root[data-theme] [data-component="button-v2"][data-size="normal"] {
+  height: 36px;
+  padding: 0 14px;
+}
+:root[data-theme] [data-component="button-v2"][data-size="large"] {
+  height: 40px;
+  padding: 0 14px;
+}
+:root[data-theme] [data-component="button-v2"][data-icon][data-size="small"] {
+  padding-left: 10px;
+}
+:root[data-theme] [data-component="button-v2"][data-icon][data-size="normal"] {
+  padding-left: 12px;
+}
+:root[data-theme] [data-component="button-v2"][data-icon][data-size="large"] {
+  padding-left: 12px;
+}
+
+/* Основная — заливка бренда, без бликов и вдавленной тени; наведение — чуть прозрачнее. */
+:root[data-theme] [data-component="button-v2"][data-variant="contrast"],
+:root[data-theme] [data-component="button-v2"][data-variant="contrast"]:is(:hover, [data-state="hover"], :active, [data-state="pressed"]):not(:disabled) {
+  background: var(--v2-background-bg-contrast);
+  color: var(--v2-text-text-contrast);
+  text-shadow: none;
+  box-shadow: none;
+}
+:root[data-theme] [data-component="button-v2"][data-variant="contrast"]:is(:hover, [data-state="hover"]):not(:disabled) {
+  opacity: 0.9;
+}
+
+/* Обычная — обводка на карточке, наведение — цвет колонки (outline кабинета). */
+:root[data-theme] [data-component="button-v2"]:is([data-variant="neutral"], [data-variant="outline"], [data-variant="danger"], [data-variant="warning"]) {
+  background: var(--v2-background-bg-layer-01);
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-strong);
+}
+:root[data-theme] [data-component="button-v2"]:is([data-variant="neutral"], [data-variant="outline"], [data-variant="danger"], [data-variant="warning"]):is(:hover, [data-state="hover"], :active, [data-state="pressed"]):not(:disabled) {
+  background: var(--v2-buff-hover);
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-strong);
+}
+:root[data-theme] [data-component="button-v2"][data-variant="danger"] {
+  color: var(--v2-state-fg-danger);
+}
+:root[data-theme] [data-component="button-v2"][data-variant="warning"] {
+  color: var(--v2-state-fg-warning);
+}
+
+/* Невидимые — текст второго уровня, наведение — цвет колонки. */
+:root[data-theme] [data-component="button-v2"]:is([data-variant="ghost"], [data-variant="ghost-muted"], [data-variant="ghost-faint"]) {
+  background: transparent;
+  box-shadow: none;
+}
+:root[data-theme] [data-component="button-v2"][data-variant="ghost"] {
+  color: var(--v2-buff-fg-2);
+}
+:root[data-theme] [data-component="button-v2"]:is([data-variant="ghost"], [data-variant="ghost-muted"], [data-variant="ghost-faint"]):is(:hover, [data-state="hover"], :active, [data-state="pressed"], [data-expanded]):not(:disabled) {
+  background: var(--v2-buff-hover);
+  color: var(--v2-text-text-base);
+}
+
+/* Кнопки-значки: радиус 8 px; отправка в поле ввода — плоская, цвета бренда. */
+:root[data-theme] [data-component="icon-button-v2"] {
+  border-radius: 8px;
+}
+:root[data-theme] [data-component="icon-button-v2"][data-size="small"] {
+  border-radius: 6px;
+}
+:root[data-theme] [data-component="icon-button-v2"]:is([data-variant="ghost"], [data-variant="ghost-muted"]):is(:hover, [data-state="hover"], [data-expanded]):not(:disabled) {
+  background: var(--v2-buff-hover);
+}
+:root[data-theme] :is([data-component="button-v2"][data-variant="submit"], [data-component="icon-button-v2"]:is([data-variant="submit"], [data-variant="contrast"])) {
+  background: var(--v2-background-bg-icon-button-contrast);
+  color: var(--v2-text-text-contrast);
+  text-shadow: none;
+  box-shadow: none;
+}
+:root[data-theme] [data-component="split-button-v2"] {
+  border-radius: 9px;
+}
+
+/* ── Поля ───────────────────────────────────────────────── */
+:root[data-theme] :is([data-component="text-input-v2"], [data-component="textarea-v2"]) {
+  border-radius: 8px;
+  background: var(--v2-background-bg-base);
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-base);
+}
+:root[data-theme] [data-component="text-input-v2"] {
+  height: 36px;
+}
+:root[data-theme] :is([data-component="text-input-v2"], [data-component="textarea-v2"]):focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--v2-border-border-focus),
+    0 0 0 3px color-mix(in srgb, var(--v2-border-border-focus) 30%, transparent);
+  outline: none;
+}
+:root[data-theme] [data-component="input"] [data-slot="input-wrapper"] {
+  border-radius: 8px;
+  border-color: var(--v2-border-border-base);
+  background: var(--v2-background-bg-base);
+}
+:root[data-theme] [data-component="select-v2"]:not([data-appearance="inline"]) {
+  border-radius: 8px;
+}
+:root[data-theme] [data-component="select-v2"]:is(:hover, [data-expanded]):not(:disabled) {
+  background: var(--v2-buff-hover);
+}
+
+/* ── Меню, подсказки, всплывающие карточки ─────────────── */
+:root[data-theme] [data-component="menu-v2-content"],
+:root[data-theme] [data-component="menu-v2-content"]:is([data-appearance="standard"], [data-slot="select-v2-content"]) {
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--v2-background-bg-layer-01);
+  box-shadow: var(--v2-elevation-floating);
+}
+/* #470: сочетание в пункте меню — не вплотную к подписи (русские подписи длиннее). */
+:root[data-theme] [data-slot="menu-v2-item-shortcut"] {
+  margin-inline-start: auto;
+  padding-inline-start: 16px;
+}
+
+:root[data-theme] [data-component="menu-v2-item"] {
+  min-height: 32px;
+  border-radius: 6px;
+}
+:root[data-theme] [data-component="menu-v2-item"]:is([data-highlighted], :hover) {
+  background: var(--v2-buff-hover);
+}
+:root[data-theme] [data-component="menu-v2-item"][data-selected] {
+  background: var(--v2-buff-selected);
+  color: var(--v2-buff-selected-fg);
+}
+:root[data-theme] :is([data-component="popover-content"], [data-component="hover-card-content"]) {
+  border-radius: 10px;
+  background: var(--v2-background-bg-layer-01);
+  box-shadow: var(--v2-elevation-floating);
+}
+:root[data-theme] :is([data-component="tooltip-v2"], [data-component="tooltip-v2"][data-appearance="standard"]) {
+  border-radius: 8px;
+  background: var(--v2-background-bg-accent);
+  color: var(--v2-text-text-contrast);
+  font-size: 11px;
+}
+
+/* ── Диалоги, карточки, уведомления ─────────────────────── */
+:root[data-theme] [data-component="dialog-overlay"] {
+  backdrop-filter: blur(2px);
+}
+:root[data-theme] [data-component="dialog-v2"] [data-slot="dialog-container"] {
+  border-radius: 14px;
+  background: var(--v2-background-bg-layer-01);
+  box-shadow:
+    0 0 0 1px var(--v2-border-border-base),
+    var(--v2-elevation-overlay);
+}
+:root[data-theme] [data-component="dialog-v2"] [data-slot="dialog-container"] [data-slot="dialog-content"] [data-slot="dialog-header"] :is([data-slot="dialog-header-title"], [data-slot="dialog-title"]) {
+  font-size: 15px;
+  font-weight: 600;
+}
+/* Диалог «по содержимому» (fit) — и у больших размеров: у апстрима размер перебивает fit. */
+:root[data-theme] [data-component="dialog-v2"][data-fit][data-size] [data-slot="dialog-container"] {
+  height: auto;
+}
+:root[data-theme] [data-component="card"] {
+  border-radius: 14px;
+}
+:root[data-theme] .toast-v2 {
+  border-radius: 12px;
+}
+
+/* ── Переключатели, сегменты, метки ─────────────────────── */
+:root[data-theme] [data-component="switch"] [data-slot="switch-control"] {
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--v2-border-border-base);
+  box-shadow: none;
+}
+:root[data-theme] [data-component="switch"] [data-slot="switch-thumb"] {
+  border-radius: 999px;
+}
+:root[data-theme] [data-component="switch"][data-checked] [data-slot="switch-control"],
+:root[data-theme] [data-component="switch"][data-checked]:hover:not([data-disabled], [data-readonly]) [data-slot="switch-control"] {
+  background: var(--v2-background-bg-accent);
+  box-shadow: none;
+}
+:root[data-theme] [data-slot="segmented-control-v2"] {
+  height: 36px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--v2-buff-hover);
+  box-shadow: none;
+}
+:root[data-theme] [data-slot="segmented-control-v2-item"] {
+  height: 32px;
+  border-radius: 8px;
+}
+:root[data-theme] [data-slot="segmented-control-v2-item"][data-pressed] {
+  background: var(--v2-background-bg-layer-01);
+  box-shadow: var(--v2-elevation-raised);
+}
+:root[data-theme] [data-component="tag"] {
+  border-radius: 999px;
+  font-weight: 600;
+}
+:root[data-theme] input[type="range"] {
+  accent-color: var(--v2-background-bg-accent);
+}
+
+/* ── Вкладки в вертикальной колонке — как пункты навигации кабинета ── */
+:root[data-theme] [data-titlebar-tab][data-orientation="vertical"] {
+  border-radius: 9px;
+}
+:root[data-theme] [data-titlebar-tab][data-orientation="vertical"][data-active="true"] {
+  --tab-base: var(--v2-background-bg-layer-01);
+  --tab-overlay: transparent;
+  box-shadow: var(--v2-elevation-raised);
+}
+:root[data-theme] [data-titlebar-tab][data-orientation="vertical"]:not([data-active="true"]) .text-v2-text-text-faint {
+  color: var(--v2-buff-fg-2);
+}
+
+/* ── Наши экраны ─────────────────────────────────────────── */
+/* Пункты колонки (Главная, Автоматизации, Сценарии, Новая сессия) — как навигация кабинета:
+   текст второго уровня, 36 px, текущий — карточка с тенью. */
+:root[data-theme] [data-slot="vertical-tabs-sidebar"] button[data-titlebar-tab-action] {
+  height: 36px;
+  gap: 10px;
+  padding-inline: 10px;
+  border-radius: 9px;
+  font-weight: 500;
+  color: var(--v2-buff-fg-2);
+}
+:root[data-theme] [data-slot="vertical-tabs-sidebar"] button[data-titlebar-tab-action]:hover:not([data-state="pressed"]) {
+  --tab-overlay: transparent;
+  --tab-base: var(--v2-background-bg-layer-02);
+}
+:root[data-theme] [data-slot="vertical-tabs-sidebar"] button[data-titlebar-tab-action][data-state="pressed"] {
+  --tab-overlay: transparent;
+  --tab-base: var(--v2-background-bg-layer-01);
+  box-shadow: var(--v2-elevation-raised);
+  color: var(--v2-text-text-base);
+}
+
+/* Значок проекта без своего цвета — светло-голубая плитка с синей буквой, как в кабинете. */
+:root[data-theme] [data-slot="project-avatar-surface"] {
+  border-radius: 5px;
+  text-shadow: none;
+  font-weight: 600;
+}
+:root[data-theme] [data-slot="project-avatar-surface"][data-variant="gray"]:not([data-has-image]) {
+  background: var(--v2-state-bg-info);
+  box-shadow: inset 0 0 0 1px var(--v2-buff-selected);
+  color: var(--v2-state-fg-info);
+}
+
+/* Действия в карточках и строках — кнопки без рамки; синим — только переходы (открыть, история),
+   удаление — красным. */
+:root[data-theme] [data-component="button-v2"][data-variant="ghost"][data-action^="buff-"]:is([data-action$="-open"], [data-action$="-history"]) {
+  color: var(--v2-text-text-accent);
+}
+:root[data-theme] [data-component="button-v2"][data-variant="ghost"][data-action^="buff-"][data-action$="-remove"] {
+  color: var(--v2-state-fg-danger);
+}
+
+/* ── Настройки: меню слева, подразделы, списки в строках ─── */
+:root[data-theme] .settings-nav-groups [data-slot="tabs-v2-trigger-wrapper"] {
+  height: 36px;
+  border-radius: 9px;
+  color: var(--v2-buff-fg-2);
+  font-weight: 500;
+}
+:root[data-theme] .settings-nav-groups [data-slot="tabs-v2-trigger"] {
+  gap: 10px;
+  padding: 0 10px;
+}
+:root[data-theme] .settings-nav-groups [data-slot="tabs-v2-trigger-wrapper"]:hover:not(:has([data-selected])) {
+  background: var(--v2-background-bg-layer-02);
+}
+:root[data-theme] .settings-nav-groups [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]) {
+  background: var(--v2-background-bg-layer-01);
+  box-shadow:
+    0 0 0 1px var(--v2-border-border-base),
+    var(--v2-elevation-raised);
+  color: var(--v2-text-text-base);
+}
+/* Значки пунктов — приглушённые, у выбранного — цвета бренда (колонка и меню настроек). */
+:root[data-theme] :is(.settings-nav-groups [data-slot="tabs-v2-trigger-wrapper"], [data-slot="vertical-tabs-sidebar"] button[data-titlebar-tab-action]) [data-slot="icon-svg"] {
+  color: var(--v2-text-text-muted);
+}
+:root[data-theme] :is(.settings-nav-groups [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]), [data-slot="vertical-tabs-sidebar"] button[data-titlebar-tab-action][data-state="pressed"]) [data-slot="icon-svg"] {
+  color: var(--v2-icon-icon-accent);
+}
+/* Подразделы (MCP, плагины, навыки…) — вкладки с подчёркиванием брендом. */
+:root[data-theme] [data-component="tabs-v2"][data-variant="pill"][data-orientation="horizontal"] [data-slot="tabs-v2-list"] {
+  height: 40px;
+  gap: 4px;
+  padding-bottom: 0;
+  align-items: stretch;
+}
+:root[data-theme] [data-component="tabs-v2"][data-variant="pill"][data-orientation="horizontal"] [data-slot="tabs-v2-trigger-wrapper"],
+:root[data-theme] [data-component="tabs-v2"][data-variant="pill"][data-orientation="horizontal"] [data-slot="tabs-v2-trigger-wrapper"]:hover:not(:disabled):not(:has([data-selected])) {
+  height: 40px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: inset 0 -2px 0 transparent;
+  font-weight: 500;
+}
+:root[data-theme] [data-component="tabs-v2"][data-variant="pill"][data-orientation="horizontal"] [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]) {
+  border: 0;
+  background-color: transparent;
+  box-shadow: inset 0 -2px 0 var(--v2-background-bg-accent);
+  color: var(--v2-text-text-base);
+  font-weight: 600;
+}
+:root[data-theme] [data-component="tabs-v2"][data-variant="pill"][data-orientation="horizontal"] [data-slot="tabs-v2-trigger"] {
+  padding: 0 12px;
+  border: 0;
+}
+/* Список в строке настроек — как поле кабинета: белый, обводка, 36 px. */
+:root[data-theme] [data-component="settings-row"] [data-slot="settings-row-control"] [data-component="select-v2"] {
+  min-width: 160px;
+  height: 36px;
+  padding: 0 10px 0 12px;
+  border-radius: 8px;
+  background: var(--v2-background-bg-base);
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-base);
+}
+/* Поиск на главной — поле, как в кабинете. */
+:root[data-theme] label:has(> input[aria-controls="home-session-search-results"]) {
+  border-radius: 8px;
+  background: var(--v2-background-bg-base);
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-base);
+}
+:root[data-theme] label:has(> input[aria-controls="home-session-search-results"]):focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--v2-border-border-focus),
+    0 0 0 3px color-mix(in srgb, var(--v2-border-border-focus) 30%, transparent);
+}
+
+/* ── Лента: сообщение человека — тёмный текст на голубом, как плашки кабинета ── */
+:root[data-theme] body [data-local-session] [data-component="user-message"] [data-slot="user-message-text"],
+:root[data-theme] body [data-workspace-session] [data-component="user-message"] [data-slot="user-message-text"] {
+  border-radius: 12px;
+  background: var(--v2-state-bg-info);
+  box-shadow: inset 0 0 0 1px var(--v2-buff-selected);
+  color: var(--v2-text-text-base);
+}
+
+/* ── Полосы прокрутки — тонкие, без стрелок ─────────────── */
+:root[data-theme] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+:root[data-theme] ::-webkit-scrollbar-button {
+  display: none;
+}
+:root[data-theme] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+:root[data-theme] ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--v2-border-border-strong) padding-box;
+}
+
+/* ── Заголовки разделов в настройках — 15 px полужирные ─── */
+:root[data-theme] :is(.settings-section-title, .settings-extension-heading) {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--v2-text-text-base);
+}
+/* Шапка диалога — линия снизу, как у окон кабинета. */
+:root[data-theme] [data-component="dialog-v2"] [data-slot="dialog-container"] [data-slot="dialog-content"] [data-slot="dialog-header"] {
+  border-bottom: 1px solid var(--v2-border-border-base);
+}
+
+/* ── Раунд 2 ревью ───────────────────────────────────────── */
+/* Списки настроек — карточки кабинета: радиус 12, обводка 1 px. */
+:root[data-theme] [data-component="settings-list"] {
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-base);
+}
+/* Названия в колонке — многоточием, а не растворением. */
+:root[data-theme] [data-titlebar-tab][data-orientation="vertical"] [data-slot="tab-link"] {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root[data-theme] [data-titlebar-tab][data-orientation="vertical"] [data-slot="tab-title"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Неактивная отправка — серая, как отключённые кнопки кабинета. */
+:root[data-theme] :is([data-component="button-v2"][data-variant="submit"], [data-component="icon-button-v2"]:is([data-variant="submit"], [data-variant="contrast"])):disabled {
+  background: var(--v2-buff-hover);
+  color: var(--v2-text-text-faint);
+  opacity: 1;
+}
+/* Кнопки на страницах и в панели настроек — как в кабинете: в карточках и строках 36 px,
+   главная кнопка страницы — 40 px. Мелкие 32 px остаются для тесных полос (поле ввода, шапки). */
+:root[data-theme] :is(.buff-page, .settings-panel) [data-component="button-v2"][data-size="small"] {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+}
+:root[data-theme] :is(.buff-page, .settings-panel) [data-component="button-v2"][data-icon][data-size="small"] {
+  padding-left: 12px;
+}
+:root[data-theme] :is(.buff-auto-header, .buff-wf-header) [data-component="button-v2"] {
+  height: 40px;
+  padding: 0 16px;
+}
+/* Вкладки правой панели (обзор, файлы) — подчёркивание брендом, без плашки. */
+:root[data-theme] .session-review-v2-tabs-bar :is([data-slot="tabs-trigger-wrapper"], [data-slot="tabs-trigger"]),
+:root[data-theme] .session-review-v2-tabs-bar :is([data-slot="tabs-trigger-wrapper"], [data-slot="tabs-trigger"]):hover {
+  border-radius: 0;
+  background: transparent;
+}
+:root[data-theme] .session-review-v2-tabs-bar [data-slot="tabs-trigger-wrapper"]:has([data-selected]) {
+  box-shadow: inset 0 -2px 0 var(--v2-background-bg-accent);
+  color: var(--v2-text-text-base);
+}
+/* Выбранный файл в дереве — голубая заливка, как выбранное в списках кабинета. */
+:root[data-theme] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-selected],
+:root[data-theme] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-selected]:hover {
+  background: var(--v2-buff-selected);
+  color: var(--v2-text-text-base);
+}
+
+/* ── Раунд 3 ревью ───────────────────────────────────────── */
+/* Режим в поле ввода — того же веса, что «План» и модель. */
+:root[data-theme] .buff-mode [data-component="select-v2"] {
+  color: var(--v2-text-text-muted);
+}
+:root[data-theme] .buff-mode[data-mode="full"] [data-component="select-v2"] {
+  color: var(--icon-warning-base);
+}
+:root[data-theme] .buff-mode [data-component="select-v2"] [data-slot="select-v2-value-text"] {
+  font-weight: 400;
+  color: inherit;
+}
+/* Переходы в карточках сценариев — синим, как на «Автоматизациях». */
+:root[data-theme] [data-component="button-v2"][data-variant="ghost"]:is([data-action="buff-wf-detail"], [data-action="buff-wf-last"]) {
+  color: var(--v2-text-text-accent);
+}
+/* Проекты на главной — основной цвет текста, а не приглушённый. */
+:root[data-theme] [data-component="home-project-row"] {
+  color: var(--v2-buff-fg-2);
+}
+:root[data-theme] [data-component="home-project-row"][data-selected] {
+  color: var(--v2-text-text-base);
+}
+/* «Новая сессия» на главной — кнопка с обводкой, как действия кабинета. */
+:root[data-theme] [data-component="button-v2"][data-action="home-new-session"][data-variant="ghost-muted"] {
+  height: 36px;
+  padding: 0 14px 0 12px;
+  background: var(--v2-background-bg-layer-01);
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-strong);
+  color: var(--v2-text-text-base);
+  font-weight: 500;
+}
+/* Кнопки в диалогах — как в карточках, 36 px. */
+:root[data-theme] [data-component="dialog-v2"] [data-component="button-v2"][data-size="small"] {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+}
+/* Кнопки-значки в шапке правой панели — без фона, подсветка при наведении. */
+:root[data-theme] .session-review-v2-tabs-bar [data-component="icon-button-v2"]:not(:hover, [data-expanded]) {
+  background: transparent;
+  box-shadow: none;
+}
+/* Просмотр файла в правой панели — на фоне панели: иначе в тёмной теме за строками видна полоса. */
+:root[data-theme] #review-panel {
+  --opencode-diffs-bg: var(--v2-background-bg-base);
+}
+
+/* Большое окно Buff по содержимому, но не выше экрана (#470). У апстрима большое окно — 480 px
+   с полосами прокрутки, скрытыми у окна: короткое стоит с пустотой, длинное прячет низ. */
+[data-component="dialog-v2"][data-size="large"] [data-slot="dialog-container"].buff-dialog-fit {
+  height: auto;
+  max-height: calc(100vh - 92px);
+}

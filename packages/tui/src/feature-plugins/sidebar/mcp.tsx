@@ -1,0 +1,96 @@
+import { Plugin } from "@opencode/plugin/tui"
+import { createMemo, For, Match, Show, Switch, createSignal } from "solid-js"
+import { DialogMcp } from "../../component/dialog-mcp"
+import { n, t } from "../buff/locale"
+
+function View(props: { context: Plugin.Context; sessionID: string }) {
+  const [open, setOpen] = createSignal(true)
+  const theme = props.context.theme
+  const session = createMemo(() => props.context.data.session.get(props.sessionID))
+  const list = createMemo(() => props.context.data.location.mcp.server.list(session()?.location) ?? [])
+  const on = createMemo(() => list().filter((item) => item.status.status === "connected").length)
+  const bad = createMemo(
+    () => list().filter((item) => item.status.status === "failed" || item.status.status === "needs_auth").length,
+  )
+
+  const dot = (status: string) => {
+    if (status === "connected") return theme.text.feedback.success.base
+    if (status === "failed") return theme.text.feedback.error.base
+    if (status === "disabled") return theme.text.muted
+    if (status === "needs_auth") return theme.text.feedback.warning.base
+    return theme.text.muted
+  }
+
+  return (
+    <Show when={list().length > 0}>
+      <box>
+        <box flexDirection="row" gap={1} onMouseDown={() => list().length > 2 && setOpen((x) => !x)}>
+          <Show when={list().length > 2}>
+            <text fg={theme.text.base}>{open() ? "▼" : "▶"}</text>
+          </Show>
+          <text fg={theme.text.base}>
+            <b>MCP</b>
+            <Show when={!open()}>
+              <span style={{ fg: theme.text.muted }}>
+                {" "}
+                ({t("{count} active", { count: on() })}
+                {bad() > 0 ? ", " + n(bad(), "{n} error|{n} errors") : ""})
+              </span>
+            </Show>
+          </text>
+        </box>
+        <Show when={list().length <= 2 || open()}>
+          <For each={list()}>
+            {(item) => (
+              <box
+                flexDirection="row"
+                gap={1}
+                minWidth={0}
+                onMouseUp={() =>
+                  props.context.ui.dialog.show(() => (
+                    <DialogMcp initialServer={item.name} details={item.status.status === "failed"} />
+                  ))
+                }
+              >
+                <text
+                  flexShrink={0}
+                  style={{
+                    fg: dot(item.status.status),
+                  }}
+                >
+                  •
+                </text>
+                <text fg={theme.text.base} wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
+                  <b>{item.name}</b>
+                </text>
+                <text
+                  fg={item.status.status === "failed" ? theme.text.feedback.error.base : theme.text.muted}
+                  wrapMode="none"
+                  flexShrink={0}
+                >
+                  <Switch fallback={item.status.status}>
+                    <Match when={item.status.status === "connected"}>{t("Connected")}</Match>
+                    <Match when={item.status.status === "pending"}>{t("Connecting")}</Match>
+                    <Match when={item.status.status === "failed"}>{t("Error")}</Match>
+                    <Match when={item.status.status === "disabled"}>{t("Disabled")}</Match>
+                    <Match when={item.status.status === "needs_auth"}>{t("Sign in")}</Match>
+                  </Switch>
+                </text>
+              </box>
+            )}
+          </For>
+        </Show>
+      </box>
+    </Show>
+  )
+}
+
+export default Plugin.define({
+  id: "opencode.sidebar.mcp",
+  setup(context) {
+    context.ui.slot({
+      append: "sidebar.content",
+      render: (props) => <View context={context} sessionID={props.sessionID} />,
+    })
+  },
+})

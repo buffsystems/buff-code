@@ -1,0 +1,12 @@
+# Проверено при выпуске на публичный GitHub (#624): фикции и публичные ключи, не секреты.
+# Отпечаток держит номер строки — правка строки снова требует проверки.
+# Ключи переводов и счётчиков, не значения:
+/scan/packages/app/src/runtime/i18n/language.tsx:generic-api-key:46
+/scan/packages/session-ui/src/components/tool-count-summary.tsx:generic-api-key:6
+# Апстрим: публикуемый тестовый ключ Stripe (pk_test) для локальной разработки консоли.
+/scan/packages/console/app/package.json:generic-api-key:9
+# Тесты маскировки записей HTTP: заглушки sk-1234…, AIzaSy… — их и маскируют.
+/scan/packages/http-recorder/test/http.test.ts:generic-api-key:100
+/scan/packages/http-recorder/test/redaction.test.ts:generic-api-key:77
+/scan/packages/http-recorder/test/redaction.test.ts:generic-api-key:102
+/scan/packages/http-recorder/test/redaction.test.ts:gcp-api-key:80

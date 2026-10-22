@@ -1,0 +1,40 @@
+/* Вход в Buff (#457): подсказка к адресу коннектора и ожидание подтверждения. */
+.buff-sign-in-hint {
+  margin-top: -8px;
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-sign-in-link {
+  color: var(--text-interactive-base, var(--v2-text-text-base));
+  text-decoration: underline;
+}
+
+.buff-sign-in-code {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.buff-sign-in-wait {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-base);
+}
+
+.buff-sign-in-wait b {
+  font-variant-numeric: tabular-nums;
+}
+
+.buff-sign-in-expired {
+  font-size: 14px;
+  color: var(--v2-state-fg-danger, var(--icon-critical-base));
+}
+
+.buff-sign-in-actions {
+  display: flex;
+  gap: 8px;
+}

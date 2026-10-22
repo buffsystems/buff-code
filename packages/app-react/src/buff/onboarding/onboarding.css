@@ -1,0 +1,17 @@
+/* Getting to know Buff Code (#457): the step dots — layout only, the look is @buff/ui's. */
+.buff-onboarding-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.buff-onboarding-dot {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.buff-onboarding-dot[data-active="true"] {
+  background: var(--primary);
+}

@@ -1,0 +1,90 @@
+/* Режим разрешений в поле ввода (#450). */
+.buff-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Полный доступ заметен: человек должен видеть, что вопросов не будет. */
+/* Вес — как у соседних «План» и модели (#471). */
+.buff-mode [data-component="select-v2"] {
+  font-weight: 500;
+}
+
+.buff-mode[data-mode="full"] [data-component="select-v2"] {
+  color: var(--icon-warning-base);
+}
+
+.buff-mode-option {
+  display: flex;
+  max-width: 320px;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+
+.buff-mode-plan {
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-mode-plan:hover {
+  color: var(--text-strong);
+}
+
+.buff-mode-plan[data-active="true"] {
+  border-color: var(--border-interactive-base, currentColor);
+  color: var(--text-strong);
+}
+
+/* Запрос разрешения (#450): пометка «от субагента» и поле «что сделать вместо этого». */
+.buff-permission-badge {
+  margin-left: 8px;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface-warning-weak);
+  font-size: 11px;
+  color: var(--text-strong);
+}
+
+.buff-permission-feedback {
+  margin-bottom: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-strong);
+}
+
+/* Пункт меню режима — в две строки: название и пояснение. Меню выбора рассчитано на одну. */
+[data-component="menu-v2-item"]:has(.buff-mode-option) {
+  height: auto;
+  align-items: flex-start;
+  padding-block: 6px;
+}
+
+/* Три пункта в две строки — без прокрутки; правило апстрима (12rem) того же уровня, поэтому селектор полный. */
+[data-component="menu-v2-content"][data-slot="select-v2-content"]
+  [data-slot="select-v2-listbox"]:has(.buff-mode-option) {
+  max-height: none;
+}
+
+[data-slot="select-v2-content"]:has(.buff-mode-option),
+[data-slot="select-v2-content"]:has(.buff-mode-option) > * {
+  max-height: none;
+}
+
+/* Дифф правки в запросе разрешения (#470): длинная правка прокручивается в рамке. */
+.buff-permission-diff {
+  width: 100%;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 8px;
+}

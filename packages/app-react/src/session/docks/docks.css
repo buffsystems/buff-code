@@ -1,0 +1,270 @@
+/*
+  The request docks above the composer (#584): permission requests, questions, web search and
+  MCP requests — the app-specific frame on the design system's tokens.
+*/
+@layer components {
+  .session-docks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+  }
+  .session-docks:empty {
+    display: none;
+  }
+  .dock-prompt {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background-color: var(--card);
+    color: var(--card-foreground);
+    font-size: 13px;
+  }
+  .dock-prompt__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    max-height: var(--question-prompt-max-height, 60vh);
+    overflow-y: auto;
+  }
+  .dock-prompt__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .dock-prompt__row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .dock-prompt__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+  .dock-prompt__icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+  .dock-prompt__icon--warning {
+    color: var(--warning);
+  }
+  .dock-prompt__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .dock-prompt__hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted-foreground);
+  }
+  .dock-prompt__patterns {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .dock-prompt__patterns code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    word-break: break-all;
+  }
+  .dock-prompt__diff {
+    margin: 0;
+  }
+  .dock-prompt__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-top: 1px solid var(--border);
+    background-color: var(--muted);
+    padding: 0.5rem 0.75rem;
+  }
+  .dock-prompt__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .question-progress {
+    display: flex;
+    gap: 0.25rem;
+  }
+  .question-progress__segment {
+    width: 1rem;
+    height: 0.25rem;
+    border: 0;
+    border-radius: 999px;
+    background-color: var(--border);
+    cursor: pointer;
+  }
+  .question-progress__segment[data-answered="true"] {
+    background-color: var(--muted-foreground);
+  }
+  .question-progress__segment[data-active="true"] {
+    background-color: var(--primary);
+  }
+  .question-minimize svg {
+    transition: transform 300ms ease;
+  }
+  .question-minimize--restore svg {
+    transform: rotate(180deg);
+  }
+  .question-text {
+    white-space: pre-wrap;
+  }
+  .question-text--clamped {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  .question-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .question-option {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    padding: 0.375rem 0.5rem;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  .question-option:hover,
+  .question-option:focus-visible {
+    background-color: var(--muted);
+    outline: none;
+  }
+  .question-option[data-picked="true"] {
+    border-color: var(--border-strong);
+  }
+  .question-option__main {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+  }
+  .question-option__label {
+    font-weight: 500;
+  }
+  .question-option__description {
+    color: var(--muted-foreground);
+  }
+  .question-option__input {
+    width: 100%;
+    resize: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    outline: none;
+    unicode-bidi: plaintext;
+  }
+  .question-mark {
+    display: flex;
+    padding-top: 0.125rem;
+  }
+  .question-mark__box {
+    display: flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+  }
+  .question-mark__box--multi {
+    border-radius: var(--radius-sm);
+  }
+  .question-mark__box svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  .question-mark__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+  }
+  .question-mark__box[data-picked="true"] {
+    border-color: var(--primary);
+  }
+  .question-mark__box[data-picked="true"] .question-mark__dot {
+    background-color: var(--primary);
+  }
+
+  .websearch {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .websearch__copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .mcp-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .mcp-form__message {
+    white-space: pre-wrap;
+  }
+  .mcp-form__switch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .mcp-form__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .permission-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  /* Full access stands out: the person should see no questions will come. */
+  .permission-mode[data-mode="full"] .permission-mode__select {
+    color: var(--warning);
+  }
+  .permission-mode__plan {
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    padding: 0.125rem 0.5rem;
+    color: var(--muted-foreground);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .permission-mode__plan[data-active="true"] {
+    border-color: var(--border-strong);
+    background-color: var(--muted);
+    color: var(--foreground);
+  }
+}

@@ -1,0 +1,65 @@
+/* The command palette (#584): the results list's layout; rows and fields are @buff/ui's look. */
+.command-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.command-palette__results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(60vh, 28rem);
+  overflow-y: auto;
+}
+
+.command-palette__group-title {
+  padding: 4px 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.command-palette__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  text-align: start;
+}
+
+.command-palette__row[data-active] {
+  background: var(--accent);
+}
+
+.command-palette__text,
+.command-palette__file {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.command-palette__title,
+.command-palette__file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette__description,
+.command-palette__file-dir {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.command-palette__state {
+  padding: 8px;
+}

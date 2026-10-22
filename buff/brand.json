@@ -1,0 +1,24 @@
+{
+  "product": "Buff Code",
+  "binary": "buff",
+  "appDir": "buff",
+  "bundleId": "systems.buff.code",
+  "scheme": "buff",
+  "vendor": "Buff",
+  "site": "https://buff.systems",
+  "docs": "https://buff.systems/docs",
+  "support": "support@buff.systems",
+  "updateApi": "https://buff.systems/update/api",
+  "wellKnown": "https://buff.systems",
+  "upstream": {
+    "repo": "https://github.com/anomalyco/opencode",
+    "branch": "v2",
+    "tag": "v2.0.11",
+    "commit": "9eb6902aaf3c35ce985b67c605a775992249066b"
+  },
+  "npmScope": "@buff",
+  "repository": "https://github.com/buffsystems/buff-code",
+  "installScript": "https://buff.systems/install",
+  "offlineModelCatalog": true,
+  "release": 30
+}

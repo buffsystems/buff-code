@@ -1,0 +1,138 @@
+/* Automations (#447): the page, the cards, the schedule editor and the run history — layout only,
+   the look is @buff/ui's. */
+.buff-auto-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.buff-auto-header > [data-action="buff-automation-new"] {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.buff-auto-intro {
+  max-width: 620px;
+  margin-top: 8px;
+}
+
+.buff-auto-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.buff-auto-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.buff-auto-card-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.buff-auto-card-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buff-auto-card-line {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.buff-auto-card-line[data-status="failed"] {
+  color: var(--destructive);
+}
+
+.buff-auto-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.buff-auto-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.buff-auto-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.buff-auto-number {
+  width: 84px;
+}
+
+.buff-auto-time {
+  width: 72px;
+}
+
+.buff-auto-run {
+  display: grid;
+  grid-template-areas:
+    "when meta actions"
+    "status status status";
+  grid-template-columns: 104px minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.buff-auto-run-when {
+  grid-area: when;
+}
+
+.buff-auto-run-meta {
+  grid-area: meta;
+  color: var(--muted-foreground);
+}
+
+.buff-auto-run-status {
+  grid-area: status;
+}
+
+.buff-auto-run[data-status="failed"] .buff-auto-run-status {
+  color: var(--destructive);
+}
+
+.buff-auto-run[data-status="skipped"] .buff-auto-run-status {
+  color: var(--muted-foreground);
+}
+
+.buff-auto-run-actions {
+  grid-area: actions;
+  display: inline-flex;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .buff-auto-header {
+    flex-direction: column;
+  }
+
+  .buff-auto-run {
+    grid-template-areas:
+      "when meta"
+      "status status"
+      "actions actions";
+    grid-template-columns: 104px minmax(0, 1fr);
+  }
+}

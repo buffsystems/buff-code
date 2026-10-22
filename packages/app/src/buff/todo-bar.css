@@ -1,0 +1,30 @@
+/* Строка прогресса списка дел над полем ввода (#463). */
+.buff-todo-bar {
+  margin-bottom: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--v2-border-border-base, var(--border-base));
+  border-radius: 8px;
+  background: var(--v2-background-bg-layer-01, var(--background-base));
+}
+
+.buff-todo-bar-line {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.buff-todo-bar-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buff-todo-bar[data-open="true"] .buff-todo-bar-chevron {
+  transform: rotate(180deg);
+}

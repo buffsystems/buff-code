@@ -1,0 +1,62 @@
+/* Search in the conversations' text (#453): the dialog and the results in the sessions column. */
+.buff-search {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* #470: the field keeps clear of the header line, its border and focus ring whole. */
+  padding: 12px 0;
+}
+
+.buff-search-list {
+  display: flex;
+  max-height: 56vh;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.buff-search-result {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: start;
+}
+
+.buff-search-result:hover {
+  background: var(--muted);
+}
+
+.buff-search-title {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buff-search-fragment {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+}
+
+.buff-search-fragment mark {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--warning) 25%, transparent);
+  color: var(--foreground);
+}
+
+.buff-search-role,
+.buff-search-more,
+.buff-search-note {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.buff-search-note {
+  padding: 4px 8px;
+  font-size: 12px;
+}

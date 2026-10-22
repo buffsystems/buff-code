@@ -1,0 +1,75 @@
+/* Карта запросов слева от ленты (#465). */
+.buff-query-map {
+  position: absolute;
+  top: 56px;
+  bottom: 140px;
+  left: 4px;
+  z-index: 20;
+  display: flex;
+  width: 12px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+/* #470: риска заметна (была 6×3 px почти в цвет фона); полоса вокруг — чтобы попасть курсором. */
+.buff-query-map-tick {
+  box-sizing: content-box;
+  width: 10px;
+  min-width: 10px;
+  height: 4px;
+  min-height: 4px;
+  flex: 0 0 auto;
+  padding: 3px 0;
+  border-radius: 2px;
+  background-color: var(--v2-text-text-faint, var(--text-weak));
+  background-clip: content-box;
+}
+
+/* #470: только цвет — сокращённое background сбрасывало background-clip, и риска с отступами
+   заливалась в квадрат, похожий на сбой отрисовки. */
+.buff-query-map-tick:hover {
+  background-color: var(--text-weak, var(--v2-text-text-muted));
+}
+
+.buff-query-map-tick[data-active] {
+  width: 12px;
+  min-width: 12px;
+  background-color: var(--text-strong);
+}
+
+.buff-query-map-tick[data-running] {
+  background-color: var(--v2-state-fg-info, var(--text-base));
+}
+
+.buff-query-map-preview {
+  display: flex;
+  max-width: 320px;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.buff-query-map-title {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.buff-query-map-query {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  font-weight: 600;
+}
+
+.buff-query-map-answer {
+  white-space: pre-line;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  opacity: 0.85;
+}

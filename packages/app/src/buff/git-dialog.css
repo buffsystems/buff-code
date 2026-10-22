@@ -1,0 +1,123 @@
+/* Git в окне (#454). */
+.buff-git-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-git-chip:hover {
+  background: var(--v2-background-bg-layer-02);
+  color: var(--text-strong);
+}
+
+.buff-git-count {
+  font-size: 11px;
+  color: var(--v2-text-text-faint, var(--text-weak));
+}
+
+.buff-git-count[data-slot="changes"] {
+  color: var(--icon-warning-base);
+}
+
+.buff-git {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 12px;
+}
+
+.buff-git-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.buff-git-files,
+.buff-git-history {
+  display: flex;
+  max-height: 44vh;
+  flex-direction: column;
+  overflow-y: auto;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 8px;
+}
+
+.buff-git-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-base);
+}
+
+.buff-git-file + .buff-git-file {
+  border-top: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+}
+
+.buff-git-file[data-current="true"] {
+  color: var(--text-strong);
+}
+
+.buff-git-status,
+.buff-git-note {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-git-file[data-status="conflict"] .buff-git-status,
+.buff-git-file[data-status="deleted"] .buff-git-status {
+  color: var(--icon-critical-base);
+}
+
+.buff-git-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+}
+
+.buff-git-warning {
+  padding: 8px 12px;
+  border: 1px solid var(--border-warning-base);
+  border-radius: 8px;
+  background: var(--surface-warning-weak);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-strong);
+}
+
+.buff-git-commit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.buff-git-commit-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-base);
+}
+
+.buff-git-ref {
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--v2-background-bg-layer-02);
+  font-size: 11px;
+  color: var(--text-strong);
+}

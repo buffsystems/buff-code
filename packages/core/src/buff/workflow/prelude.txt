@@ -1,0 +1,45 @@
+// Фасад сценария внутри песочницы (#448). Наружу — один мост __bridge без прототипа; туда и
+// обратно идут только строки JSON, так что объекты хоста в песочницу не попадают.
+const __call = (op, input) =>
+  new Promise((ok, fail) =>
+    __bridge(op, JSON.stringify(input === undefined ? null : input), (text) => ok(text === undefined ? undefined : JSON.parse(text)), (message) => fail(new Error(message))),
+  );
+const __sync = (op, input) => {
+  let out;
+  __bridge(op, JSON.stringify(input === undefined ? null : input), (text) => { out = text === undefined ? undefined : JSON.parse(text) }, (message) => { throw new Error(message) });
+  return out;
+};
+let __anonymous = 0;
+function agent(name, persona) {
+  const named = typeof name === "string" && name.length > 0;
+  const key = named ? name : "#" + ++__anonymous;
+  const role = typeof persona === "string" ? persona : persona && typeof persona.system === "string" ? persona.system : undefined;
+  __sync("agent", { key, name: named ? name : undefined, role });
+  return Object.freeze({ ask: (instructions, schema) => __call("ask", { key, instructions: String(instructions), schema: typeof schema === "number" ? schema : null }) });
+}
+const args = Object.freeze(__sync("args"));
+function log(message) { __sync("log", String(message)) }
+function report(item, tag) { __sync("report", { item, tag }) }
+function phase() {}
+const __phaseEnter = (name) => __sync("phase.enter", name);
+const __phaseExit = (previous) => __sync("phase.exit", previous);
+const files = Object.freeze({
+  glob: (pattern) => __call("observe", { op: "files.glob", args: [pattern] }),
+  read: (path) => __call("observe", { op: "files.read", args: [path] }),
+  grep: (pattern, glob) => __call("observe", { op: "files.grep", args: [pattern, glob] }),
+});
+const git = Object.freeze({
+  changedFiles: (base) => __call("observe", { op: "git.changedFiles", args: [base] }),
+  diff: (base, paths) => __call("observe", { op: "git.diff", args: [base, paths] }),
+  log: (count) => __call("observe", { op: "git.log", args: [count] }),
+  status: () => __call("observe", { op: "git.status", args: [] }),
+});
+const world = Object.freeze({ run: (cmd, list, options) => __call("observe", { op: "world.run", args: [cmd, list || [], options || {}] }) });
+const artifact = Object.freeze({
+  file: (id, path, options) => __call("publish", { kind: "file", id, path, options }),
+  markdown: (id, content, options) => __call("publish", { kind: "markdown", id, content: String(content), options }),
+  chart: (id, spec) => __sync("declare", { kind: "chart", id, spec }),
+  table: (id, spec) => __sync("declare", { kind: "table", id, spec }),
+  metrics: (id, spec) => __sync("declare", { kind: "metrics", id, spec }),
+  board: (id, spec) => __sync("declare", { kind: "board", id, spec }),
+});

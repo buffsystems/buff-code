@@ -1,0 +1,23 @@
+/* Размер шрифта в настройках (#461). */
+.buff-size-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.buff-size-control input[type="range"] {
+  width: 160px;
+  accent-color: var(--v2-icon-icon-base, var(--icon-base));
+}
+
+.buff-size-value {
+  min-width: 44px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-size-sample--code {
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+}

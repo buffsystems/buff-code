@@ -1,0 +1,154 @@
+/* Общие части экранов настроек Buff Code (#444, #445). */
+.buff-kit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 4px;
+}
+
+.buff-kit-hint {
+  margin-top: -6px;
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+/* Выбор из набора — сегменты, как переключатель периода в кабинете (#471): белая рамка, выбранное —
+   заливка цвета колонки, без тени. */
+.buff-kit-choice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--v2-background-bg-base);
+  box-shadow: inset 0 0 0 1px var(--v2-border-border-base);
+}
+
+.buff-kit-choice-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-kit-choice-item:hover {
+  color: var(--v2-text-text-base);
+}
+
+.buff-kit-choice-item[data-active="true"] {
+  background: var(--v2-background-bg-layer-02);
+  color: var(--v2-text-text-base);
+}
+
+/* Вкладки разделов окна (Git) — с подчёркиванием и отступом от шапки. */
+.buff-kit-choice[data-appearance="tabs"] {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset 0 -1px 0 var(--v2-border-border-base);
+}
+
+/* Вкладки страницы (фильтры автоматизаций, вид сценариев) — подчёркивание брендом, как в кабинете. */
+:is(.buff-auto-filters, .buff-wf-filters) {
+  gap: 4px;
+  border-bottom: 1px solid var(--v2-border-border-base);
+}
+
+:is(.buff-auto-filters, .buff-wf-filters, .buff-kit-choice[data-appearance="tabs"]) .buff-kit-choice-item {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+
+:is(.buff-auto-filters, .buff-wf-filters, .buff-kit-choice[data-appearance="tabs"]) .buff-kit-choice-item[data-active="true"] {
+  background: transparent;
+  box-shadow: inset 0 -2px 0 var(--v2-background-bg-accent);
+  font-weight: 600;
+}
+
+/* Счётчик у вкладки — маленькая серая метка. */
+.buff-kit-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  background: var(--v2-buff-hover);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-kit-area {
+  min-height: 64px;
+}
+
+.buff-kit-area--tall {
+  min-height: 180px;
+}
+
+.buff-kit-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.buff-kit-note {
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-kit-area--page {
+  min-height: 320px;
+}
+
+/* Вкладок расширений стало больше, чем помещалось в полосу фиксированной ширины (#446):
+   полоса растёт по содержимому и переносится, а не режется. */
+.settings-subtabs[data-component="tabs-v2"][data-variant="pill"] > [data-slot="tabs-v2-list"] {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  overflow: visible;
+}
+
+.buff-kit-review-text {
+  max-height: 320px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--v2-background-bg-layer-02);
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.buff-kit-note--warn {
+  color: var(--icon-warning-base);
+}
+
+/* Полоса «ждут проверки» над полем ввода (#446). */
+.buff-trust-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-warning-base);
+  border-radius: 10px;
+  background: var(--surface-warning-weak);
+}

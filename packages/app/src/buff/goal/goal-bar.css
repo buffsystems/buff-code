@@ -1,0 +1,42 @@
+/* Цель сессии над полем ввода (#463). */
+.buff-goal-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--v2-border-border-base, var(--border-base));
+  border-radius: 8px;
+  background: var(--v2-background-bg-layer-01, var(--background-base));
+}
+
+.buff-goal-bar-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.buff-goal-bar-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buff-goal-bar-reason {
+  padding-left: 20px;
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-goal-bar[data-status="complete"] .buff-goal-bar-text {
+  color: var(--v2-state-fg-success, var(--text-strong));
+}
+
+.buff-goal-bar[data-status="paused"] .buff-goal-bar-text {
+  color: var(--v2-state-fg-warning, var(--text-base));
+}

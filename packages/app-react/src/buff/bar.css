@@ -1,0 +1,128 @@
+/*
+  Buff's strips above the composer and chips under it (#584), in the session and on the draft:
+  goal, to-dos, trust, no model, funds, snapshot git, rewound turn; the context, git and balance
+  chips — the app-specific pieces on the design system's tokens.
+*/
+@layer components {
+  .buff-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 0.375rem;
+  }
+  .buff-bars:empty {
+    display: none;
+  }
+  .buff-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--card);
+    padding: 0.25rem 0.375rem 0.25rem 0.625rem;
+    font-size: 13px;
+    color: var(--foreground);
+  }
+  .buff-bar--stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.125rem;
+  }
+  .buff-bar[data-tone="warning"] .buff-bar__icon:first-child {
+    color: var(--warning);
+  }
+  .buff-bar[data-tone="danger"] .buff-bar__icon:first-child {
+    color: var(--destructive);
+  }
+  .buff-bar__line {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .buff-bar__toggle {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .buff-bar__icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+  }
+  .buff-bar__text {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-align: start;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .buff-bar__title {
+    font-weight: 500;
+  }
+  .buff-bar__reason {
+    padding-inline-start: 1.25rem;
+    font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .buff-bar[data-open="true"] .buff-bar__chevron {
+    transform: rotate(180deg);
+  }
+  .buff-goal__text {
+    font-weight: 500;
+  }
+  [data-status="complete"] .buff-goal__text {
+    color: var(--success);
+  }
+  [data-status="paused"] .buff-goal__text {
+    color: var(--warning);
+  }
+
+  .composer-chips {
+    display: flex;
+    min-height: 1.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .composer-chip {
+    display: inline-flex;
+    height: 1.75rem;
+    max-width: 320px;
+    align-items: center;
+    gap: 0.25rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    padding: 0 0.5rem;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 440;
+    white-space: nowrap;
+    color: var(--muted-foreground);
+    cursor: pointer;
+  }
+  .composer-chip:hover {
+    background-color: var(--muted);
+    color: var(--foreground);
+  }
+  /* The balance keeps the Solid chip's 6px off what is before it. */
+  .buff-balance {
+    margin-inline-start: 0.375rem;
+  }
+  .composer-chip--warning,
+  .buff-balance[data-state="low"] {
+    color: var(--warning);
+  }
+  .buff-balance[data-state="exhausted"] {
+    color: var(--destructive);
+  }
+  .buff-git-chip__count {
+    font-variant-numeric: tabular-nums;
+  }
+}

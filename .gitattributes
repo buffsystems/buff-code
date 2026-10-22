@@ -1,0 +1,37 @@
+packages/core/migration/**/snapshot.json linguist-generated
+packages/core/src/database/migration.gen.ts linguist-generated
+packages/core/src/models-dev/snapshot.txt linguist-generated
+packages/core/src/**/*.txt text eol=lf
+packages/httpapi-codegen/test/generated/*.ts text eol=lf
+
+# Публичный снимок на GitHub (#624): `git archive` пропускает наше — выпуск в реестр и канал
+# обновлений, записки сопровождающих и CI апстрима, который запускался бы на публичном GitHub.
+.github/ export-ignore
+buff/ops.mk export-ignore
+buff/publish.sh export-ignore
+buff/promote.sh export-ignore
+buff/RELEASE.md export-ignore
+buff/README.md export-ignore
+# README апстрима на других языках описывают opencode, а не Buff Code; его корневой install ставит opencode
+# (наш — buff/install).
+README.ar.md export-ignore
+README.bn.md export-ignore
+README.br.md export-ignore
+README.bs.md export-ignore
+README.da.md export-ignore
+README.de.md export-ignore
+README.es.md export-ignore
+README.fr.md export-ignore
+README.gr.md export-ignore
+README.it.md export-ignore
+README.ja.md export-ignore
+README.ko.md export-ignore
+README.no.md export-ignore
+README.pl.md export-ignore
+README.th.md export-ignore
+README.tr.md export-ignore
+README.uk.md export-ignore
+README.vi.md export-ignore
+README.zh.md export-ignore
+README.zht.md export-ignore
+install export-ignore

@@ -1,0 +1,33 @@
+/* Список дел Buff (#463). */
+[data-component="buff-todo-list"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 6px 2px;
+  list-style: none;
+  font-size: 13px;
+  line-height: var(--line-height-compact);
+  color: var(--text-base);
+}
+
+[data-component="buff-todo-list"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+[data-component="buff-todo-list"] li [data-component="icon"] {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+[data-component="buff-todo-list"] li[data-status="completed"] {
+  color: var(--v2-text-text-muted);
+  text-decoration: line-through;
+}
+
+[data-component="buff-todo-list"] li[data-status="in_progress"] {
+  font-weight: 500;
+  color: var(--text-strong);
+}

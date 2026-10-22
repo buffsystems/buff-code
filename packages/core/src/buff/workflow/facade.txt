@@ -1,0 +1,169 @@
+/**
+ * A node: one task assigned to an actor, producing a typed result.
+ * Thenable — await it, or combine with Promise.all for joins.
+ */
+declare interface Node<T> extends PromiseLike<T> {}
+
+/** Persona of an actor, fixed at creation. Every actor has the regular working tools. */
+declare interface AgentPersona {
+  /** System prompt describing the actor's role. */
+  system?: string;
+}
+
+/**
+ * An actor: a persistent conversation (its own session) that executes tasks serially.
+ * Context accumulates across asks; concurrent asks on one actor queue in order.
+ */
+declare interface Agent {
+  /**
+   * Assign one task. T is the task's result: an interface or type alias defined in this
+   * script (JSDoc on its properties is what the actor reads about each field), or the
+   * final response text when the type argument is omitted.
+   */
+  ask<T = string>(instructions: string): Node<T>;
+}
+
+/**
+ * Create a fresh actor. A non-empty name is an identity shown to the user: unique within
+ * the run, and the key an amended run reuses finished work by. In a loop, compute a name
+ * per iteration (agent("reviewer-" + file)) or leave actors anonymous.
+ */
+declare function agent(name?: string, persona?: string | AgentPersona): Agent;
+
+/** The run's arguments, validated against the workflow's declarations, defaults filled in. */
+declare const args: Readonly<Record<string, unknown>>;
+
+/** Emit a progress message to the user. */
+declare function log(message: string): void;
+
+/**
+ * Publish one intermediate result while the run is still going. Journaled: survives a
+ * failure and is delivered with the completion notification. JSON values only. The
+ * optional tag routes the item to a dashboard declared with artifact.chart/table/metrics/board.
+ */
+declare function report(item: unknown, artifactId?: string): void;
+
+/**
+ * Mark the start of a phase: a short name, in the user's language, for the stage the
+ * following steps form. It claims the rest of its enclosing block. A compile-time string
+ * literal, as its own statement. Repeating a name continues that phase. Every phase must
+ * contain at least one ask or world.run.
+ */
+declare function phase(name: string): void;
+
+/** One matching line found by files.grep. */
+declare interface GrepMatch {
+  /** Workspace-relative path. */
+  path: string;
+  /** One-based line number. */
+  line: number;
+  /** The full text of the matching line. */
+  text: string;
+}
+
+/** Journaled read-only observations of the workspace. There is no write: writing is an agent task. */
+declare const files: {
+  /** Workspace files matching a glob pattern, workspace-relative, sorted. */
+  glob(pattern: string): Promise<string[]>;
+  /** Read one workspace file as UTF-8 text. */
+  read(path: string): Promise<string>;
+  /** Search file contents with a regular expression, optionally narrowed to a path glob. */
+  grep(pattern: string, glob?: string): Promise<GrepMatch[]>;
+};
+
+/** The working tree's status. */
+declare interface GitStatus {
+  /** Current branch; absent when HEAD is detached. */
+  branch?: string;
+  /** True when nothing is staged, modified or untracked. */
+  clean: boolean;
+  staged: string[];
+  unstaged: string[];
+  untracked: string[];
+}
+
+/** One commit. */
+declare interface GitCommit {
+  hash: string;
+  subject: string;
+  author: string;
+  /** Author date, ISO 8601. */
+  date: string;
+}
+
+/** Journaled read-only git observations; outside a repository every call rejects (catchably). */
+declare const git: {
+  /** Changed workspace-relative paths: against HEAD plus untracked, or against a base ref. */
+  changedFiles(base?: string): Promise<string[]>;
+  /** Unified diff against base (default HEAD), optionally limited to paths. */
+  diff(base?: string, paths?: string[]): Promise<string>;
+  /** Recent commits, newest first. */
+  log(count?: number): Promise<GitCommit[]>;
+  status(): Promise<GitStatus>;
+};
+
+/** A finished process. */
+declare interface WorldRunResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
+/**
+ * Run a real command in the workspace, journaled per call. cmd is a compile-time string
+ * literal (the command set is shown to the user before the run starts); fixed argv, no
+ * shell. A nonzero exit code resolves; spawn failure or timeout (default 300000 ms) rejects.
+ */
+declare const world: {
+  run(cmd: string, args?: string[], opts?: { timeoutMs?: number }): Promise<WorldRunResult>;
+};
+
+/** A published artifact version. */
+declare interface ArtifactRef { id: string; version: number }
+declare interface ArtifactOptions {
+  /** Card title, in the user's language; defaults to the id. */
+  title?: string;
+  description?: string;
+  /** The run's deliverable: at most one per run. */
+  primary?: boolean;
+}
+/** One value taken from a reported item: a dot path into it ("timing.after"). */
+declare interface ArtifactField { field: string; label?: string; unit?: string }
+declare interface ChartSpec extends ArtifactOptions {
+  type?: "line" | "bar";
+  x: ArtifactField;
+  y: ArtifactField | ArtifactField[];
+}
+declare interface TableSpec extends ArtifactOptions {
+  columns: ArtifactField[];
+  /** Field identifying a row; a later item with the same key replaces it. */
+  key?: string;
+}
+declare interface MetricsSpec extends ArtifactOptions {
+  /** Each tile shows the newest value of its field. */
+  metrics: ArtifactField[];
+}
+declare interface BoardSpec extends ArtifactOptions {
+  /** Field identifying a card. */
+  key: string;
+  /** Field holding the card's column. */
+  status: string;
+  columns: string[];
+  cardTitle?: string;
+  detail?: ArtifactField[];
+}
+/** What the user sees as the run's deliverable and live dashboards. Ids are compile-time literals. */
+declare const artifact: {
+  /** Publish a workspace file (copied at publish time). */
+  file(id: string, path: string, opts?: ArtifactOptions): Promise<ArtifactRef>;
+  /** Publish markdown the script composed. */
+  markdown(id: string, content: string, opts?: ArtifactOptions): Promise<ArtifactRef>;
+  /** Declare a chart fed by report(item, id). */
+  chart(id: string, spec: ChartSpec): void;
+  /** Declare a table fed by report(item, id). */
+  table(id: string, spec: TableSpec): void;
+  /** Declare metric tiles fed by report(item, id). */
+  metrics(id: string, spec: MetricsSpec): void;
+  /** Declare a board fed by report(item, id). */
+  board(id: string, spec: BoardSpec): void;
+};

@@ -1,0 +1,64 @@
+/* Сводка изменений хода и откат (#449). */
+.buff-turn-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.buff-turn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--v2-text-text-muted);
+  white-space: pre;
+}
+
+.buff-turn-toggle:hover {
+  color: var(--text-strong);
+}
+
+.buff-turn-files {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.buff-turn-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.buff-turn-file + .buff-turn-file {
+  border-top: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+}
+
+.buff-turn-file:not(:disabled):hover {
+  background: var(--v2-background-bg-layer-02);
+}
+
+.buff-turn-external {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface-warning-weak);
+  font-size: 11px;
+  color: var(--text-strong);
+}
+
+.buff-turn-reverted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 10px;
+  background: var(--v2-background-bg-layer-02);
+}

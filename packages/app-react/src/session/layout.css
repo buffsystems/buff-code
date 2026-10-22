@@ -1,0 +1,335 @@
+/* The session screen's frame (#584): the chat panel's width slide, the side column's review and
+   terminal regions and the bottom terminal — the Solid window's presence and size motion
+   (packages/app/src/index.css), on @buff/ui's surfaces. Reduced motion turns every one of them off. */
+
+[data-slot="session-chat-panel"] {
+  container-type: inline-size;
+  container-name: session-chat;
+}
+
+[data-slot="session-chat-panel"][data-motion="width"] {
+  transition: width 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: width;
+}
+
+[data-slot="session-chat-panel"][data-scrollbar-hidden="true"]
+  [data-slot="session-timeline-scroll"]
+  > .scroll-view__thumb {
+  visibility: hidden;
+}
+
+[data-slot="session-side-region"],
+[data-slot="session-side-terminal-region"] {
+  transition: height 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-slot="session-side-region"][data-motion="none"],
+[data-slot="session-side-terminal-region"][data-motion="none"] {
+  transition: none;
+}
+
+[data-slot="session-side-region"][data-motion="height"],
+[data-slot="session-side-terminal-region"][data-motion="height"] {
+  will-change: height;
+}
+
+[data-slot="session-side-panel-gap"] {
+  transition: height 40ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-slot="session-side-panel-gap"][data-closing="true"] {
+  transition-delay: 200ms;
+}
+
+[data-slot="session-side-panel-gap"][data-motion="none"] {
+  transition: none;
+}
+
+[data-slot="session-side-panel-presence"][data-opened="true"],
+[data-slot="session-side-region-presence"][data-opened="true"] {
+  animation: side-region-presence-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-slot="session-side-panel-presence"][data-opened="false"] {
+  animation: side-region-presence-out 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+[data-slot="session-side-region-presence"][data-opened="false"] {
+  animation: side-region-presence-out 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-slot="terminal-panel-presence"][data-opened="true"] {
+  animation: terminal-panel-presence-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-slot="terminal-panel-presence"][data-opened="false"] {
+  animation: terminal-panel-presence-out 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+[data-slot="side-terminal-panel-presence"][data-opened="true"] {
+  animation: side-terminal-panel-presence-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-slot="side-terminal-panel-presence"][data-opened="false"] {
+  animation: side-terminal-panel-presence-out 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* The review aside: the panel frame, sliding with the chat panel's width. */
+.session-review-surface {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  container-type: inline-size;
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
+}
+
+/* The frame's edge is drawn over the contents, taking no room (so they line up with the toggle),
+   as a painted border rather than an outline: an outline's rounded corners rasterized a shade
+   differently from frame to frame mid-slide, under the transparent review toggle. */
+.session-review-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--border);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.session-review-surface[data-resizing] {
+  transition: none;
+}
+
+.session-review-surface[aria-hidden="true"] {
+  pointer-events: none;
+}
+
+/* The contents keep the column's settled width while it slides; only they fade. */
+.session-review-surface__content {
+  display: flex;
+  flex-shrink: 0;
+  height: 100%;
+  width: var(--session-side-content-width, 100%);
+}
+
+[data-slot="session-side-region-presence"][data-opened] [data-slot="session-review-content"] {
+  transition: opacity 200ms ease-out 40ms;
+}
+
+#review-panel[aria-hidden="true"] > [data-slot="session-review-content"] {
+  opacity: 0;
+}
+
+[data-slot="session-side-region-presence"][data-opened="false"] [data-slot="session-review-content"] {
+  transition: opacity 160ms ease-out;
+}
+
+@starting-style {
+  [data-slot="session-side-region-presence"][data-opened="true"] [data-slot="session-review-content"] {
+    opacity: 0;
+  }
+}
+
+/* The terminal's aside. */
+.terminal-surface {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--card);
+}
+
+.terminal-surface[data-stacked] {
+  width: 100%;
+}
+
+.terminal-surface:not([data-stacked])[data-present] {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.terminal-surface:not([data-stacked]):not([data-present]) {
+  width: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.terminal-surface[data-framed] {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+  border-radius: var(--radius-xl);
+}
+
+.terminal-surface[data-size-animated="true"] {
+  will-change: height;
+}
+
+.terminal-surface__content {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-surface__content[data-closed] {
+  pointer-events: none;
+}
+
+[data-component="terminal-panel"][data-size-animated="true"][data-opened="true"] {
+  animation: terminal-panel-size-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-component="terminal-panel"][data-size-animated="true"][data-opened="false"] {
+  animation: terminal-panel-size-out 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="session-chat-panel"],
+  [data-slot="session-side-region"],
+  [data-slot="session-side-terminal-region"],
+  [data-slot="session-side-panel-gap"],
+  [data-slot="session-review-content"],
+  .session-review-surface {
+    transition: none !important;
+  }
+
+  [data-slot="terminal-panel-presence"],
+  [data-slot="side-terminal-panel-presence"],
+  [data-slot="session-side-panel-presence"],
+  [data-slot="session-review-content"],
+  [data-slot="session-side-region-presence"],
+  [data-component="terminal-panel"] {
+    animation: none !important;
+  }
+}
+
+@keyframes terminal-panel-presence-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes terminal-panel-presence-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes side-terminal-panel-presence-in {
+  from {
+    opacity: 0.999999;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes side-terminal-panel-presence-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.999999;
+    visibility: hidden;
+  }
+}
+
+/* Presence needs an animation lifetime, but the panel frame must never fade. */
+@keyframes side-region-presence-in {
+  from,
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes side-region-presence-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    visibility: hidden;
+  }
+}
+
+@keyframes terminal-panel-size-in {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--terminal-panel-height);
+  }
+}
+
+@keyframes terminal-panel-size-out {
+  from {
+    height: var(--terminal-panel-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* The phone's «Session view» switcher. */
+.session-mobile-tabs {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.session-mobile-tabs__list {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+}
+
+.session-mobile-tabs__tab {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.session-mobile-tabs__tab[data-selected] {
+  border-bottom-color: var(--foreground);
+  color: var(--foreground);
+}
+
+/* The terminal beside the review: framed by its slot, clipped to the frame's corners. */
+.session-side-terminal {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+
+.session-side-terminal > [data-slot="side-terminal-panel-clip"] {
+  border-radius: inherit;
+}
+
+/* The review toggle floats over the sliding panels: its own layer, so its icon paints the same
+   whatever slides under it (the masked tab bar re-rasterized it a shade off). */
+[data-slot="session-panel-actions"] {
+  will-change: transform;
+}

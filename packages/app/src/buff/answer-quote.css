@@ -1,0 +1,9 @@
+/* «Добавить в сообщение» у выделения в ответе (#459). */
+.buff-answer-quote {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  gap: 4px;
+  box-shadow: var(--v2-elevation-floating);
+  border-radius: 8px;
+}

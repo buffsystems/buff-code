@@ -1,0 +1,34 @@
+--- a/dist/renderers/DiffHunksRenderer.js
++++ b/dist/renderers/DiffHunksRenderer.js
+@@ -677,7 +677,8 @@
+ 	}
+ };
+ function getModifiedLinesString(lines) {
+-	return `${lines} unmodified line${lines > 1 ? "s" : ""}`;
++	const text = globalThis.__buffDiffsText?.("{n} unmodified line|{n} unmodified lines", lines);
++	return text ?? `${lines} unmodified line${lines > 1 ? "s" : ""}`;
+ }
+ function pushUnifiedInjectedRows(rows, context) {
+ 	for (const row of rows) {
+--- a/dist/utils/createNoNewlineElement.js
++++ b/dist/utils/createNoNewlineElement.js
+@@ -6,7 +6,7 @@
+ 		tagName: "div",
+ 		children: [createHastElement({
+ 			tagName: "span",
+-			children: [createTextNodeElement("No newline at end of file")]
++			children: [createTextNodeElement(globalThis.__buffDiffsText?.("No newline at end of file") ?? "No newline at end of file")]
+ 		})],
+ 		properties: {
+ 			"data-no-newline": "",
+--- a/dist/utils/createSeparator.js
++++ b/dist/utils/createSeparator.js
+@@ -51,7 +51,7 @@
+ 		}));
+ 		if (chunked && expandIndex != null) contentChildren.push(createHastElement({
+ 			tagName: "div",
+-			children: [createTextNodeElement("Expand all")],
++			children: [createTextNodeElement(globalThis.__buffDiffsText?.("Expand all") ?? "Expand all")],
+ 			properties: {
+ 				role: "button",
+ 				"data-expand-button": "",

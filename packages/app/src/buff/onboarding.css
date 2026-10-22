@@ -1,0 +1,117 @@
+/* Знакомство с Buff Code (#457). */
+.buff-onboarding {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 16px 14px;
+}
+
+.buff-onboarding-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.buff-onboarding-dot {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--v2-border-border-muted, var(--border-weak-base));
+}
+
+.buff-onboarding-dot[data-active="true"] {
+  background: var(--v2-background-bg-accent);
+}
+
+.buff-onboarding-count {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-onboarding-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.buff-onboarding-note {
+  margin: -8px 0 0;
+  font-size: 13px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-onboarding-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.buff-onboarding-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--v2-border-border-base);
+  border-radius: 10px;
+  background: var(--v2-background-bg-layer-01);
+  text-align: start;
+}
+
+.buff-onboarding-choice:hover {
+  background: var(--v2-buff-hover);
+}
+
+/* Выбранное — как в кабинете: светло-синяя заливка, обводка и заголовок цвета бренда (#471). */
+.buff-onboarding-choice[data-active="true"] {
+  border-color: var(--v2-background-bg-accent);
+  background: var(--v2-buff-selected);
+}
+
+.buff-onboarding-choice[data-active="true"] .buff-onboarding-choice-title {
+  color: var(--v2-buff-selected-fg);
+}
+
+.buff-onboarding-choice-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.buff-onboarding-choice-note {
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-onboarding-switches {
+  display: flex;
+  flex-direction: column;
+}
+
+.buff-onboarding-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* Размер текста на шаге 2 (#461). */
+.buff-onboarding-size {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.buff-onboarding-size input[type="range"] {
+  width: 200px;
+  accent-color: var(--v2-background-bg-accent);
+}
+
+.buff-onboarding-size-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--v2-text-text-muted);
+}

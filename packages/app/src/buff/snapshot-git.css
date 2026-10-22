@@ -1,0 +1,18 @@
+/* Полоса «снимкам не хватает git» над полем ввода (#495). */
+.buff-snapshot-git {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-base);
+  background: var(--v2-background-bg-layer-01, var(--surface-base));
+}
+
+.buff-snapshot-git > [data-slot="icon-svg"],
+.buff-snapshot-git > svg {
+  color: var(--icon-warning-base);
+}

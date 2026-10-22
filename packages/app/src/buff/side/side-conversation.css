@@ -1,0 +1,98 @@
+/* Побочный диалог во вкладке правой панели (#464). */
+.buff-side {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.buff-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.buff-side-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-strong);
+}
+
+/* Панель вкладок запрещает выделение; ответы побочного диалога выделяются — чтобы перенести их. */
+.buff-side-messages {
+  user-select: text;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.buff-side-empty {
+  margin: auto 0;
+  font-size: 13px;
+  line-height: var(--line-height-compact);
+  text-align: center;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-side-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.buff-side-row[data-role="user"] {
+  align-self: flex-end;
+  max-width: 90%;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--v2-background-bg-layer-02);
+}
+
+.buff-side-tools {
+  font-size: 12px;
+  color: var(--v2-text-text-muted);
+}
+
+/* #470: поле ввода — карточкой, как основное: общая рамка, без ручки растяжения. */
+.buff-side-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-border-border-base, var(--border-base));
+  border-radius: 12px;
+  background: var(--v2-background-bg-base, transparent);
+}
+
+.buff-side-input:focus-within {
+  border-color: var(--v2-border-border-strong, var(--border-strong));
+}
+
+.buff-side-input textarea {
+  min-height: 44px;
+  max-height: 200px;
+  resize: none;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-strong);
+}
+
+.buff-side-input > :not(textarea) {
+  align-self: flex-end;
+}

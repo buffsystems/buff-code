@@ -1,0 +1,153 @@
+/* Остаток и расход в окне (#455). */
+.buff-balance-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin-left: 6px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-balance-chip:hover {
+  background: var(--v2-background-bg-layer-02);
+  color: var(--text-strong);
+}
+
+.buff-balance-chip[data-state="low"] {
+  color: var(--icon-warning-base);
+}
+
+.buff-balance-chip[data-state="exhausted"] {
+  color: var(--v2-state-fg-danger, var(--icon-critical-base));
+}
+
+.buff-funds-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--v2-border-border-muted, var(--border-weak-base));
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-base);
+  background: var(--v2-background-bg-layer-01, var(--surface-base));
+}
+
+.buff-funds-strip > [data-slot="icon-svg"],
+.buff-funds-strip > svg {
+  color: var(--icon-warning-base);
+}
+
+.buff-funds-strip[data-state="exhausted"] > [data-slot="icon-svg"],
+.buff-funds-strip[data-state="exhausted"] > svg {
+  color: var(--v2-state-fg-danger, var(--icon-critical-base));
+}
+
+.buff-billing {
+  display: flex;
+  max-height: min(70vh, 640px);
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 16px 12px;
+  overflow-y: auto;
+}
+
+.settings-section .buff-billing {
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+}
+
+.buff-billing-summary,
+.buff-billing-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.buff-billing-balance {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-strong);
+}
+
+.buff-billing-summary[data-state="low"] .buff-billing-note {
+  color: var(--icon-warning-base);
+}
+
+.buff-billing-summary[data-state="exhausted"] .buff-billing-balance,
+.buff-billing-summary[data-state="exhausted"] .buff-billing-note,
+.buff-billing-problem {
+  color: var(--v2-state-fg-danger, var(--icon-critical-base));
+}
+
+.buff-billing-problem {
+  font-size: 12px;
+}
+
+.buff-billing-label {
+  font-size: 12px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-billing-value {
+  font-size: 13px;
+  color: var(--text-strong);
+}
+
+.buff-billing-note {
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-billing-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-base);
+}
+
+.buff-billing-chart {
+  display: flex;
+  height: 56px;
+  align-items: flex-end;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.buff-billing-bar {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--v2-icon-icon-base, var(--icon-base));
+}
+
+.buff-billing-bar[data-empty="true"] {
+  background: var(--v2-border-border-muted, var(--border-weak-base));
+}
+
+.buff-billing-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--v2-text-text-faint, var(--text-weak));
+}
+
+.buff-billing-days {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.buff-billing-actions {
+  display: flex;
+  gap: 8px;
+}

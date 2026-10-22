@@ -1,0 +1,99 @@
+/*
+  The providers' and models' app-specific pieces (#584): the provider rows of settings, the
+  models' provider groups, and the connect dialog's provider list. Colours from @buff/ui tokens.
+*/
+
+.settings-models-group-trigger {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-models-group-trigger > svg:first-child {
+  width: 16px;
+  height: 16px;
+  color: var(--muted-foreground);
+}
+
+.settings-models-group-trigger:disabled {
+  cursor: default;
+}
+
+.settings-models-group-trigger:not(:disabled):hover {
+  background: var(--muted);
+}
+
+.settings-models-group-trigger:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.settings-models.settings-tab-body {
+  gap: 12px;
+}
+
+.settings-models [data-slot="settings-row-description"]:empty {
+  display: none;
+}
+
+.settings-models [data-component="settings-row"] {
+  flex-wrap: nowrap;
+}
+
+.settings-models [data-slot="settings-row-control"] {
+  width: auto;
+}
+
+/* A row of a provider list: icon, name and tags, a note, and its action. */
+.provider-list-row {
+  display: flex;
+  width: 100%;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.provider-list-row:hover,
+.provider-list-row:focus-visible,
+.provider-list-row[data-active="true"] {
+  outline: none;
+  background: var(--muted);
+}
+
+.provider-list-row:disabled {
+  cursor: default;
+}
+
+.provider-list-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-list-note {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,46 @@
+/* The desktop browser pane (#584): its toolbar and address field on @buff/ui's tokens. */
+
+.panes-browser-toolbar {
+  border-bottom: 1px solid var(--border);
+}
+
+.panes-browser-address {
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+
+.panes-browser-address:hover,
+.panes-browser-address:focus-within {
+  background: var(--muted);
+}
+
+.panes-browser-address__input {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: transparent;
+  caret-color: var(--foreground);
+  outline: none;
+}
+
+.panes-browser-address__input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.panes-browser-address__input:focus {
+  border-color: var(--ring);
+}
+
+.panes-browser-address__display {
+  color: var(--foreground);
+}
+
+.panes-browser-address__scheme {
+  color: var(--muted-foreground);
+}
+
+.panes-browser-error {
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--destructive);
+}

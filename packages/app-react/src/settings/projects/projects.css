@@ -1,0 +1,175 @@
+/* A project's settings (#584): the general page's icon, colours and startup script, and the
+   extensions' sections — ported from the Solid window's project.css onto @buff/ui tokens. */
+
+.project-settings-title {
+  line-height: 20px;
+}
+
+.project-settings-name {
+  width: min(280px, 100%);
+}
+
+.project-settings-server-link {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.project-settings-server-link:hover,
+.project-settings-server-link:focus-visible {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+.project-settings-icon {
+  position: relative;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  outline: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+.project-settings-icon--active,
+.project-settings-icon:focus-visible {
+  outline-color: var(--ring);
+}
+
+.project-settings-icon-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: var(--background);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.project-settings-icon-overlay > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.project-settings-icon-overlay[data-visible="true"] {
+  opacity: 1;
+}
+
+.project-settings-colors {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.project-settings-color {
+  position: relative;
+  display: flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: transparent;
+  color: var(--primary-foreground);
+  transition: box-shadow 120ms ease;
+}
+
+.project-settings-color:focus-visible,
+.project-settings-color[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 4px var(--ring);
+}
+
+.project-settings-color > svg {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+}
+
+.project-settings-startup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-block: 20px;
+}
+
+.project-settings-startup textarea {
+  font-family: var(--font-mono);
+}
+
+.project-settings-startup-hint code {
+  padding-inline: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  unicode-bidi: isolate;
+}
+
+.project-settings-extension-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-settings-extension-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.project-settings-extension-section-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.project-settings-extension-section-header > :last-child {
+  color: var(--muted-foreground);
+}
+
+.project-settings-extension-empty-description,
+.project-settings-extension-row-description {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.project-settings-extension-row-status {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-settings-icon-overlay,
+  .project-settings-color {
+    transition: none;
+  }
+}

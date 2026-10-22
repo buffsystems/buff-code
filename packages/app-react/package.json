@@ -1,0 +1,61 @@
+{
+  "name": "@opencode/app-react",
+  "version": "2.0.11",
+  "description": "Buff Code window on React and @buff/ui (#561)",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite": "./vite.plugin.ts",
+    "./index.css": "./src/index.css"
+  },
+  "scripts": {
+    "typecheck": "tsgo -b",
+    "test": "bun test",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@buff/ui": "git+https://github.com/buffsystems/buff-ui.git#v0.1.3",
+    "@dnd-kit/abstract": "0.5.0",
+    "@dnd-kit/dom": "0.5.0",
+    "@dnd-kit/helpers": "0.5.0",
+    "@dnd-kit/react": "0.5.0",
+    "@opencode/app": "workspace:*",
+    "@opencode/client": "workspace:*",
+    "@opencode/schema": "workspace:*",
+    "@opencode/session-ui": "workspace:*",
+    "@opencode/ui": "workspace:*",
+    "@opencode/util": "workspace:*",
+    "@pierre/diffs": "catalog:",
+    "@pierre/trees": "1.0.0-beta.4",
+    "@tanstack/react-query": "5.104.2",
+    "@tanstack/virtual-core": "3.17.8",
+    "diff": "catalog:",
+    "dompurify": "3.4.14",
+    "effect": "catalog:",
+    "fuzzysort": "catalog:",
+    "ghostty-web": "github:anomalyco/ghostty-web#83c0a07b8628b748aed073b232cb4b52a6ca11c1",
+    "lucide-react": "1.58.0",
+    "qr-scanner": "1.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "strip-ansi": "7.1.2"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "20.0.11",
+    "@playwright/test": "catalog:",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@typescript/native-preview": "catalog:",
+    "@vitejs/plugin-react": "6.1.2",
+    "happy-dom": "20.11.1",
+    "tailwindcss": "4.3.3",
+    "vite": "8.2.2"
+  }
+}

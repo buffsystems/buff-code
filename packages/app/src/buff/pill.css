@@ -1,0 +1,23 @@
+/* Метка состояния на наших экранах — как Pill кабинета (#471): пилюля с точкой и мягким цветом.
+   Тон задаёт страница переменными --pill-bg / --pill-fg по своему состоянию; без тона — нейтральная. */
+:is(.buff-auto-badge, .buff-wf-badge) {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  background: var(--pill-bg, var(--v2-background-bg-layer-02));
+  color: var(--pill-fg, var(--v2-buff-fg-2));
+}
+
+:is(.buff-auto-badge, .buff-wf-badge)::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}

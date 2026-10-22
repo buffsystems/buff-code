@@ -1,0 +1,28 @@
+/* Buff (#470): запрос MCP-сервера над полем ввода. */
+.buff-mcp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.buff-mcp-form-message {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.buff-mcp-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.buff-mcp-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}

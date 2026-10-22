@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content, viewport-fit=cover" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import { mount } from "./app-direction.fixture.tsx"
+      const query = new URLSearchParams(location.search)
+      mount({ server: query.get("server"), route: query.get("route"), direction: query.get("direction") })
+    </script>
+  </body>
+</html>

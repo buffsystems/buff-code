@@ -1,0 +1,18 @@
+/*
+  The draft's «Session details» (#584): @buff/ui's popover holding the summary's own cards, so the
+  popover itself draws no surface or type of its own — only the width and the page-relative scroll.
+*/
+@layer components {
+  .ui-popover.draft-summary-popover {
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    border: 0;
+    background: none;
+    padding: 0;
+    box-shadow: none;
+    font-size: inherit;
+    line-height: inherit;
+  }
+}

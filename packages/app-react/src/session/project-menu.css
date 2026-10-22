@@ -1,0 +1,87 @@
+/* The session's project menu (#584): one line per item, the project and its folder ellipsized
+   within the menu's width; the open-folder arrow shows on a usable path only. */
+.session-project-menu {
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+}
+
+.session-project-link {
+  --session-project-fade-direction: to right;
+  position: relative;
+}
+
+.session-project-link:dir(rtl) {
+  --session-project-fade-direction: to left;
+}
+
+.session-project-link-content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-project-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-project-path,
+.session-project-icon {
+  color: var(--muted-foreground);
+}
+
+.session-project-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.session-project-link-open {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block: 0;
+  display: flex;
+  align-items: center;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.session-project-link-open svg {
+  width: 16px;
+  height: 16px;
+}
+
+.session-project-link:is(:hover, [data-highlighted]):not([aria-disabled="true"]) .session-project-link-content {
+  mask-image: linear-gradient(
+    var(--session-project-fade-direction),
+    #000 calc(100% - 40px),
+    transparent calc(100% - 24px)
+  );
+}
+
+.session-project-link:is(:hover, [data-highlighted]):not([aria-disabled="true"]) .session-project-link-open {
+  opacity: 1;
+}
+
+/* A row's tooltip wrapper: the row keeps the menu's width, the label stays a plain pointer. */
+.session-project-row {
+  min-width: 0;
+  cursor: default;
+}
+
+.session-project-row .ui-menu__item {
+  cursor: default;
+}
+
+/* The full name or path of a cut-short row, wrapped, 2px above the row (the tooltip's own offset is 4px). */
+.session-project-info-tooltip {
+  max-width: min(480px, calc(100vw - 16px));
+  white-space: normal;
+  word-break: break-all;
+  translate: 0 2px;
+}

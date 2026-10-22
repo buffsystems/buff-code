@@ -1,0 +1,26 @@
+/* A Buff page on the window's frame (#447, #448): a scrolling panel, the content centred. */
+.buff-page-panel {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  align-self: stretch;
+  overflow-y: auto;
+  background: var(--background);
+}
+
+.buff-page {
+  display: flex;
+  width: 100%;
+  max-width: 920px;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 auto;
+  padding: 24px 24px 32px;
+}
+
+@media (max-width: 640px) {
+  .buff-page {
+    padding: 16px;
+  }
+}

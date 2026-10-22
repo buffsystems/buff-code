@@ -1,0 +1,584 @@
+/*
+  Tool calls in the timeline (#584): consoles, file sections, agent cards and the "Used" stack on
+  the design system's tokens. The collapsible look comes from @buff/ui; layout lives here.
+*/
+@layer components {
+  .tool-console {
+    position: relative;
+    margin-top: 0.25rem;
+    overflow: hidden;
+    /* The e2e outline check tints this border through the variable. */
+    border: 1px solid var(--v2-border-border-base, var(--terminal-border));
+    border-radius: var(--radius-md);
+    background-color: var(--terminal-bg);
+    color: var(--terminal-fg);
+  }
+  .tool-console__copy {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+  .tool-console:hover .tool-console__copy,
+  .tool-console__copy:focus-within {
+    opacity: 1;
+  }
+  .tool-console__scroll {
+    max-height: 20rem;
+    overflow: auto;
+    outline: none;
+  }
+  .tool-console__pre {
+    margin: 0;
+    padding: 0.625rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 18px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .tool-console [data-slot="bash-command"] {
+    display: block;
+    color: var(--ansi-green);
+  }
+  .tool-console [data-slot="bash-command"]::before {
+    content: "$ ";
+    color: var(--ansi-gray);
+  }
+  .tool-console [data-slot="bash-result"] {
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .tool-submessage {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .tool-submessage [data-slot="shell-submessage-value"] {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    transition:
+      opacity 320ms ease-out,
+      filter 320ms ease-out;
+  }
+  .tool-submessage--out {
+    opacity: 0;
+    filter: blur(2px);
+  }
+  .tool-submessage--in {
+    opacity: 1;
+    filter: none;
+  }
+
+  /* The Solid apply-patch accordion: each trigger is a bordered 32px row, the rows overlap by their
+     border, the open file's content continues the frame below its trigger. */
+  .tool-files {
+    display: flex;
+    flex-direction: column;
+  }
+  .tool-files__item {
+    display: flex;
+    flex-direction: column;
+  }
+  .tool-files__item + .tool-files__item {
+    margin-top: -1px;
+  }
+  .tool-files__header {
+    position: sticky;
+    top: var(--sticky-accordion-top, 0px);
+    z-index: 2;
+    margin: 0;
+    font: inherit;
+  }
+  .tool-files__trigger {
+    display: flex;
+    width: 100%;
+    height: 2rem;
+    align-items: center;
+    overflow: clip;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background-color: var(--card);
+    padding: 0 0.75rem;
+    color: var(--foreground);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  .tool-files__item:first-child .tool-files__trigger {
+    border-start-start-radius: var(--radius-md);
+    border-start-end-radius: var(--radius-md);
+  }
+  .tool-files__item:last-child:not([data-expanded]) .tool-files__trigger {
+    border-end-start-radius: var(--radius-md);
+    border-end-end-radius: var(--radius-md);
+  }
+  .tool-files__trigger:hover {
+    background-color: var(--muted);
+  }
+  .tool-files__trigger:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+  .tool-files__header-content {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .tool-files__info {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .tool-files__icon,
+  .tool-files__chevron {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+    color: var(--muted-foreground);
+  }
+  .tool-files__name {
+    display: flex;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+  .tool-files__directory {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--muted-foreground);
+    text-overflow: ellipsis;
+    direction: rtl;
+  }
+  .tool-files__filename {
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+  .tool-files__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .tool-files__change {
+    font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .tool-files__change[data-type="added"] {
+    color: var(--success);
+  }
+  .tool-files__change[data-type="removed"] {
+    color: var(--destructive);
+  }
+  .tool-files__content {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-top: 0;
+    background-color: var(--card);
+  }
+  .tool-files__item:last-child .tool-files__content {
+    border-end-start-radius: var(--radius-md);
+    border-end-end-radius: var(--radius-md);
+  }
+  .tool-diff-changes {
+    display: flex;
+    gap: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .tool-diff-changes [data-slot="diff-changes-additions"] {
+    color: var(--success);
+  }
+  .tool-diff-changes [data-slot="diff-changes-deletions"] {
+    color: var(--destructive);
+  }
+  .tool-code {
+    position: relative;
+    outline: none;
+    user-select: text;
+  }
+  .tool-diagnostics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.375rem 0;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .tool-diagnostics [data-slot="diagnostic-label"] {
+    color: var(--destructive);
+    font-weight: 500;
+    margin-inline-end: 0.25rem;
+  }
+  .tool-diagnostics [data-slot="diagnostic-location"] {
+    color: var(--muted-foreground);
+    margin-inline-end: 0.25rem;
+  }
+
+  .tool-output {
+    max-height: 20rem;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.75rem;
+    outline: none;
+  }
+  .tool-image img {
+    display: block;
+    max-width: 100%;
+    max-height: 20rem;
+    border-radius: var(--radius-md);
+  }
+  .tool-loaded {
+    display: flex;
+    min-height: 1.75rem;
+    min-width: 0;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--muted-foreground);
+    font-size: 13px;
+    line-height: 16px;
+  }
+  .tool-loaded__value {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--fg-2);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .webfetch-link {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--primary);
+  }
+  .webfetch-link [data-slot="webfetch-link-text"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .webfetch-link-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex-shrink: 0;
+  }
+  .tool-links [data-slot="exa-tool-links"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.25rem 0;
+    font-size: 13px;
+  }
+  .tool-links__more {
+    align-self: flex-start;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--muted-foreground);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .tool-task {
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tool-task__surface {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--card);
+    padding: 0.375rem 0.625rem;
+  }
+  .tool-task__surface [data-slot="basic-tool-tool-info-main"] {
+    align-items: center;
+  }
+  .tool-task__icon,
+  .tool-task__spinner {
+    display: flex;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    align-items: center;
+    color: var(--task-agent-color, var(--muted-foreground));
+  }
+  .tool-task__icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  .tool-task__title {
+    flex-shrink: 0;
+    color: var(--task-agent-color, var(--foreground));
+    font-weight: 500;
+  }
+  .tool-task__action {
+    display: flex;
+    color: var(--muted-foreground);
+  }
+  .tool-task--delegating {
+    width: fit-content;
+    height: 2.25rem;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-md);
+    background-color: var(--muted);
+    padding: 0.625rem;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+
+  .tool-error {
+    border: 1px solid color-mix(in srgb, var(--destructive) 35%, var(--border));
+    border-radius: var(--radius-md);
+    background-color: var(--destructive-soft);
+    padding: 0 0.5rem;
+  }
+  .tool-error__icon {
+    display: flex;
+    color: var(--destructive);
+  }
+  .tool-error__icon svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .tool-error [data-slot="tool-error-card-summary"] {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--destructive-soft-foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tool-error__content {
+    position: relative;
+    padding: 0.25rem 2rem 0.5rem 0;
+  }
+  .tool-error__copy {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  .tool-error__detail {
+    margin: 0;
+    color: var(--destructive-soft-foreground);
+    font-size: 13px;
+    line-height: 18px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  .tool-note {
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .tool-note__text {
+    color: var(--muted-foreground);
+    font-size: 13px;
+    line-height: 16px;
+    cursor: default;
+  }
+
+  .tool-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  [data-component="collapsed-tool-group"] > [data-component="collapsible"] > [data-slot="collapsible-content"] {
+    margin-left: 0;
+    padding-left: 0.75rem;
+  }
+  .tool-context-row {
+    display: flex;
+    min-height: 1.75rem;
+    align-items: center;
+    font-size: 13px;
+    line-height: 16px;
+  }
+  .tool-context-row [data-slot="basic-tool-tool-info-structured"],
+  .tool-context-row [data-slot="basic-tool-tool-info-main"] {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 0.375rem;
+  }
+  .tool-context-row [data-slot="basic-tool-tool-title"] {
+    font-weight: 500;
+    color: var(--fg-2);
+  }
+  .tool-context-row [data-slot="basic-tool-tool-subtitle"],
+  .tool-context-row [data-slot="basic-tool-tool-arg"],
+  .tool-context-row [data-slot="context-tool-group-matches"] {
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+  .tool-context-row__dot::before {
+    content: "·";
+    color: var(--muted-foreground);
+  }
+  [data-component="context-tool-group-trigger"] [data-slot="context-tool-group-prefix"],
+  [data-component="context-tool-group-trigger"] [data-slot="context-tool-group-count"] {
+    color: var(--muted-foreground);
+  }
+
+  .tool-answers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .tool-answers__question {
+    color: var(--muted-foreground);
+  }
+  .tool-todos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0.375rem 0.125rem;
+    list-style: none;
+    font-size: 13px;
+    line-height: 16px;
+    color: var(--foreground);
+  }
+  .tool-todos li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+  .tool-todos__icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .tool-todos li[data-status="completed"] {
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+  }
+  .tool-todos li[data-status="in_progress"] {
+    font-weight: 500;
+  }
+  .tool-plan__text {
+    position: relative;
+    max-height: 240px;
+    overflow: hidden;
+  }
+  .tool-plan[data-full="false"] .tool-plan__text::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 48px;
+    background: linear-gradient(to bottom, transparent, var(--background));
+    pointer-events: none;
+  }
+  .tool-plan[data-full="true"] .tool-plan__text {
+    max-height: none;
+  }
+  .tool-plan__actions {
+    display: flex;
+    gap: 0.25rem;
+    padding-top: 0.25rem;
+  }
+}
+
+/* The subagent card's running mark (#584). */
+.progress-indicator {
+  display: block;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.progress-indicator [data-frame-content] {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.progress-indicator [data-reduced-motion] {
+  display: none;
+  fill: currentColor;
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-indicator [data-frame-content] {
+    display: none;
+  }
+  .progress-indicator [data-reduced-motion] {
+    display: block;
+  }
+}
+
+/* Find inside a diff (#584). */
+.diff-find {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  height: 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--popover);
+  padding: 0 0.5rem 0 0.75rem;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+.diff-find__icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.diff-find__input {
+  width: 10rem;
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.diff-find__count {
+  width: 10ch;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.diff-find__button {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.diff-find__button:hover {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+.diff-find__button:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* An error card inside a Used stack carries no accent bar of its own (the Solid card's ::before). */
+[data-kind="tool-error-card"]::before {
+  display: none;
+}

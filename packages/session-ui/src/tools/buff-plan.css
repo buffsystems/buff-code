@@ -1,0 +1,25 @@
+/* Карточка плана Buff (#463): свёрнутый текст с затуханием, целиком — по кнопке. */
+[data-component="buff-plan"] [data-slot="buff-plan-text"] {
+  position: relative;
+  max-height: 240px;
+  overflow: hidden;
+}
+
+[data-component="buff-plan"][data-full="false"] [data-slot="buff-plan-text"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 48px;
+  background: linear-gradient(to bottom, transparent, var(--v2-background-bg-base, var(--background-base)));
+  pointer-events: none;
+}
+
+[data-component="buff-plan"][data-full="true"] [data-slot="buff-plan-text"] {
+  max-height: none;
+}
+
+[data-component="buff-plan"] [data-slot="buff-plan-actions"] {
+  display: flex;
+  gap: 4px;
+  padding-top: 4px;
+}

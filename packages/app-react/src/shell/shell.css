@@ -1,0 +1,93 @@
+/* The shell's app-specific layout (#584): the vertical tab list fades out above the column's end. */
+[data-slot="vertical-tabs-sidebar"] [data-slot="vertical-tabs-scroll"] {
+  min-height: 0;
+  /* 16px clears the fade; one more keeps it clear when the list's height is fractional. */
+  padding-block-end: 17px;
+  scroll-padding-block-end: 16px;
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+}
+
+[data-slot="mobile-tabs-drawer"] [data-slot="vertical-tabs-scroll"] {
+  overscroll-behavior: contain;
+}
+
+[data-slot="mobile-tabs-drawer"] [data-titlebar-tab] {
+  min-height: 44px;
+}
+
+/* A title that does not fit fades out before the close button instead of being cut. */
+[data-titlebar-tab][data-title-overflow="true"] [data-slot="tab-title"] {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
+}
+[dir="rtl"] [data-titlebar-tab][data-title-overflow="true"] [data-slot="tab-title"] {
+  -webkit-mask-image: linear-gradient(to left, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to left, black calc(100% - 16px), transparent);
+}
+
+/* The debug bar (#584): a row of small figures under the window, development builds included. */
+.debug-bar {
+  display: none;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 4px 12px;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+
+@media (min-width: 768px) {
+  .debug-bar {
+    display: flex;
+  }
+}
+
+.debug-bar__cell {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 20px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+}
+
+.debug-bar__toggle[aria-pressed="true"],
+.debug-bar__toggle:hover {
+  background: var(--muted);
+}
+
+.debug-bar__label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+.debug-bar__value {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.debug-bar__cell[data-dim] .debug-bar__value {
+  opacity: 0.7;
+}
+
+.debug-bar__cell[data-bad] .debug-bar__value {
+  color: var(--destructive);
+}
+
+/* The desktop window moves by the titlebar (#584): macOS and Windows hide the native one. A modal
+   marks #root aria-hidden, and its overlay must not drag the window. */
+#root:not([aria-hidden]) [data-drag-region] {
+  app-region: drag;
+}
+
+[data-drag-region] :is(button, a, input, textarea, select, [role="button"], [role="menuitem"], [role="tab"], [contenteditable]) {
+  app-region: no-drag;
+}

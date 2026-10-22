@@ -1,0 +1,36 @@
+/* MCP-серверы в настройках (#444). */
+.buff-mcp-summary,
+.buff-mcp-status {
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-mcp-status[data-tone="fail"] {
+  color: var(--text-critical-base, var(--icon-critical-base));
+}
+
+.buff-mcp-status[data-tone="warn"] {
+  color: var(--icon-warning-base);
+}
+
+.buff-mcp-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--v2-icon-icon-faint);
+}
+
+.buff-mcp-dot[data-tone="ok"] {
+  background: var(--icon-success-base);
+}
+
+.buff-mcp-dot[data-tone="fail"] {
+  background: var(--icon-critical-base);
+}
+
+.buff-mcp-dot[data-tone="warn"],
+.buff-mcp-dot[data-tone="busy"] {
+  background: var(--icon-warning-base);
+}

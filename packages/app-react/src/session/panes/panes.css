@@ -1,0 +1,788 @@
+/* The side panes (#584): the tab bar, the review / file browser frame, file trees, line comments
+   and Pierre's viewer colours — the Solid session-review-v2 / file-tree-v2 / line-comment-v2
+   looks on @buff/ui's tokens. App-specific pieces only; controls come from @buff/ui. */
+
+[data-component="session-side-panel"] {
+  background: var(--card);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+
+.session-review-v2-tabs-bar {
+  height: 48px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.panes-tablist {
+  height: 100%;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.session-review-v2-sidebar-toggle-slot,
+.panes-tablist > .sticky {
+  background: var(--card);
+  padding-inline: 6px;
+}
+
+/* Pane tabs size to their label and keep the Solid window's 32px row, 8px gap and insets; the rest
+   of the look is @buff/ui's tab strip. Terminal tabs share it. */
+[data-slot="tabs-trigger-wrapper"] {
+  flex: none;
+  max-width: none;
+  gap: 8px;
+  height: 32px;
+  padding-inline: 10px 4px;
+}
+
+[data-slot="tabs-trigger-wrapper"]:not(:has(.ui-tab-strip__close)) {
+  padding-inline-end: 10px;
+}
+
+[data-slot="tabs-trigger"] {
+  max-width: 16rem;
+}
+
+.panes-tab-name[data-temporary] {
+  font-style: italic;
+}
+
+.panes-tab-name[data-file-not-found] {
+  text-decoration-line: line-through;
+}
+
+/* ── Review / file browser frame ─────────────────────────────────────────── */
+
+[data-component="session-review-v2"] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+[data-slot="session-review-v2-body"] {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+[data-component="session-review-v2-sidebar-root"] {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+[data-slot="session-review-v2-sidebar"] {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-inline-end: 1px solid var(--border);
+}
+
+[data-slot="session-review-v2-sidebar-resize"] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 20;
+  width: 0;
+  overflow: visible;
+}
+
+[data-slot="session-review-v2-sidebar-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px 12px 8px;
+  flex-shrink: 0;
+}
+
+[data-slot="session-review-v2-sidebar-title"] {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-inline-start: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+[data-slot="session-review-v2-sidebar-filter"] {
+  padding: 0 8px 4px;
+  flex-shrink: 0;
+}
+
+.panes-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding-inline: 8px 2px;
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+}
+
+.panes-filter:hover,
+.panes-filter:focus-within {
+  background: var(--muted);
+}
+
+.panes-filter__input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+.panes-filter__input::-webkit-search-cancel-button {
+  display: none;
+}
+
+[data-slot="session-review-v2-preview"] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+[data-slot="session-review-v2-toolbar"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 40px;
+  padding-inline: 8px;
+  flex-shrink: 0;
+}
+
+[data-slot="session-review-v2-toolbar-group"],
+[data-slot="session-review-v2-toolbar-collapsed-meta"],
+.session-review-v2-segmented-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.session-review-v2-segmented-control [data-pressed] {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+[data-slot="session-review-v2-file-position"] {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-slot="session-review-v2-file-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 16px;
+  flex-shrink: 0;
+}
+
+[data-slot="session-review-v2-file-title"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+[data-slot="session-review-v2-file-name"] {
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+[data-slot="session-review-v2-file-path"] {
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-slot="session-review-v2-file-status"] {
+  width: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+[data-slot="session-review-v2-file-status"][data-type="added"],
+[data-slot="file-tree-v2-change"][data-change="added"] {
+  color: var(--success);
+}
+
+[data-slot="session-review-v2-file-status"][data-type="deleted"],
+[data-slot="file-tree-v2-change"][data-change="deleted"] {
+  color: var(--destructive);
+}
+
+[data-slot="session-review-v2-file-status"][data-type="modified"],
+[data-slot="file-tree-v2-change"][data-change="modified"] {
+  color: var(--warning);
+}
+
+[data-slot="session-review-v2-diff-scroll"] {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+[data-slot="session-review-v2-empty"],
+[data-slot="session-review-v2-empty-changes"] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+[data-slot="session-review-v2-empty-changes-title"] {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+[data-component="diff-changes"] {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-slot="diff-changes-additions"] {
+  color: var(--success);
+}
+
+[data-slot="diff-changes-deletions"] {
+  color: var(--destructive);
+}
+
+/* ── File trees ──────────────────────────────────────────────────────────── */
+
+[data-component="file-tree-v2"] {
+  min-width: 100%;
+  padding: 0 8px 8px;
+}
+
+[data-slot="file-tree-v2-row"] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  padding-inline-end: 8px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-2, var(--foreground));
+  white-space: nowrap;
+  text-align: start;
+}
+
+[data-slot="file-tree-v2-row"]:hover {
+  background: var(--muted);
+}
+
+[data-slot="file-tree-v2-row"][data-selected] {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+[data-slot="file-tree-v2-row"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+[data-slot="file-tree-v2-label"] {
+  display: flex;
+  flex: 1;
+  flex-shrink: 0;
+  align-items: center;
+  margin-inline-end: 12px;
+}
+
+[data-slot="file-tree-v2-directory"] {
+  color: var(--muted-foreground);
+}
+
+[data-slot="file-tree-v2-guide"] {
+  position: absolute;
+  inset-block: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+[data-slot="file-tree-v2-chevron"] {
+  color: var(--muted-foreground);
+  transform: rotate(-90deg);
+  transition: transform 120ms;
+}
+
+[dir="rtl"] [data-slot="file-tree-v2-chevron"] {
+  transform: rotate(90deg);
+}
+
+[data-slot="file-tree-v2-chevron"][data-expanded] {
+  transform: none;
+}
+
+[data-slot="file-tree-v2-change"] {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Line comments ───────────────────────────────────────────────────────── */
+
+[data-component="line-comment-v2"] {
+  margin: 6px 12px;
+  max-width: 560px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  white-space: normal;
+}
+
+[data-slot="line-comment-v2-shell"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+[data-variant="display"] [data-slot="line-comment-v2-shell"] {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+[data-slot="line-comment-v2-meta"],
+[data-slot="line-comment-v2-footer-meta"],
+[data-slot="line-comment-v2-label"] {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+[data-slot="line-comment-v2-textarea"] {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  padding: 6px 8px;
+  outline: none;
+}
+
+[data-slot="line-comment-v2-textarea"]:focus {
+  border-color: var(--ring);
+}
+
+[data-slot="line-comment-v2-footer"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+[data-slot="line-comment-v2-footer-actions"] {
+  display: flex;
+  gap: 6px;
+}
+
+[data-slot="line-comment-v2-field"] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+[data-slot="line-comment-v2-mention-list"] {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--popover);
+}
+
+[data-slot="line-comment-v2-mention-item"] {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px;
+  text-align: start;
+}
+
+[data-slot="line-comment-v2-mention-item"][data-active] {
+  background: var(--muted);
+}
+
+[data-slot="line-comment-v2-mention-dir"] {
+  color: var(--muted-foreground);
+}
+
+[data-slot="line-comment-v2-overflow"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+}
+
+[data-slot="line-comment-v2-overflow"]:hover {
+  background: var(--muted);
+}
+
+/* ── Viewer and file view ────────────────────────────────────────────────── */
+
+[data-component="file"] {
+  --opencode-diffs-bg: var(--code-block-bg);
+  --font-family-mono: var(--font-mono);
+  --font-family-sans: var(--font-sans);
+  --v2-background-bg-accent: var(--primary);
+  --v2-text-text-accent: var(--primary);
+}
+
+[data-slot="file-media-image"] {
+  max-height: 60vh;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+}
+
+.buff-selection-to-chat {
+  position: absolute;
+  inset-inline-end: 16px;
+  top: 8px;
+  z-index: 10;
+}
+
+.buff-preview-switch {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px;
+}
+
+.buff-preview-switch button {
+  padding: 2px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.buff-preview-switch button[data-active="true"] {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.buff-preview-markdown {
+  padding: 8px 24px 24px;
+}
+
+.panes-context-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+@container (min-width: 32rem) {
+  .panes-context-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Like the composer toolbar, fade only clipped tabs under the review toggle without reserving
+   layout space; the fade contracts as overflow clears and the second mask keeps the divider.
+   The clear zone runs 4px past the toggle (12px inset + 28px): a fractional panel edge mid-slide
+   must not bleed the fade's first pixels into the toggle. */
+#review-panel .session-review-v2-tabs-bar {
+  --session-review-header-fade: clamp(0px, calc(100% - 100cqi), 24px);
+  mask-image:
+    linear-gradient(
+      to right,
+      #000 calc(100cqi - 44px - var(--session-review-header-fade)),
+      transparent calc(100cqi - 44px)
+    ),
+    linear-gradient(to top, #000 1px, transparent 1px);
+}
+
+/* Nothing of the bar paints under the toggle at all (the mask alone still blends a shade). */
+#review-panel .session-review-v2-tabs-bar {
+  clip-path: polygon(
+    0 0,
+    calc(100cqi - 44px) 0,
+    calc(100cqi - 44px) calc(100% - 1px),
+    100% calc(100% - 1px),
+    100% 100%,
+    0 100%
+  );
+}
+
+#review-panel .session-review-v2-tabs-bar:dir(rtl) {
+  clip-path: polygon(
+    calc(100% - 100cqi + 44px) 0,
+    100% 0,
+    100% 100%,
+    0 100%,
+    0 calc(100% - 1px),
+    calc(100% - 100cqi + 44px) calc(100% - 1px)
+  );
+}
+
+#review-panel .session-review-v2-tabs-bar:dir(rtl) {
+  mask-image:
+    linear-gradient(
+      to left,
+      #000 calc(100cqi - 44px - var(--session-review-header-fade)),
+      transparent calc(100cqi - 44px)
+    ),
+    linear-gradient(to top, #000 1px, transparent 1px);
+}
+
+/* The review toggle floats over this corner; its row is as tall as the toggle's (51px over the
+   terminal beside the review, whose header has a divider). */
+.session-review-v2-open-in-app-slot {
+  height: 48px;
+}
+
+#review-panel[data-stacked] .session-review-v2-open-in-app-slot {
+  height: 51px;
+}
+
+/* ── A phone's Changes and Files views ─────────────────────────────────────── */
+
+.session-mobile-review {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* The changes' total and «Expand all» on a 40px bar with a hairline under it. */
+.session-mobile-review__header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding-inline: 8px;
+}
+
+.session-mobile-review__actions {
+  margin-inline-start: auto;
+}
+
+/* A flush accordion: each trigger is bordered above and below, the rows overlap by their border,
+   and the list's own edges (first top, last bottom) carry none, as the Solid phone review. */
+.session-mobile-review__item + .session-mobile-review__item {
+  margin-top: -1px;
+}
+
+.session-mobile-review__header-row {
+  margin: 0;
+  font: inherit;
+}
+
+.session-mobile-review__trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  padding-inline: 8px;
+  border: 0;
+  border-block: 1px solid var(--border);
+  background: none;
+  color: var(--foreground);
+  font-size: 13px;
+  text-align: start;
+}
+
+.session-mobile-review__item:first-child .session-mobile-review__trigger {
+  border-top-width: 0;
+}
+
+.session-mobile-review__item:last-child:not([data-expanded]) .session-mobile-review__trigger {
+  border-bottom-width: 0;
+}
+
+.session-mobile-review__file {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.session-mobile-review__file [data-slot="session-review-directory"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.session-mobile-review__chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  transition: rotate 150ms;
+}
+
+[data-expanded] .session-mobile-review__chevron {
+  rotate: 180deg;
+}
+
+.session-mobile-review__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.session-mobile-review__summary [data-slot="session-review-change"][data-type="added"] {
+  color: var(--success);
+}
+
+.session-mobile-review__summary [data-slot="session-review-change"][data-type="removed"] {
+  color: var(--destructive);
+}
+
+.session-mobile-review__open {
+  margin-inline-start: auto;
+}
+
+.session-mobile-review__content {
+  border-bottom: 1px solid var(--border);
+}
+
+.session-mobile-review__item:last-child .session-mobile-review__content {
+  border-bottom-width: 0;
+}
+
+.session-mobile-files {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* The header's divider is the open tabs' line, drawn across the whole header (the Solid tabs-v2
+   list with its ::before spanning the header), so a selected tab sits on it. */
+.session-mobile-files__header {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  height: 40px;
+  padding-inline: 8px;
+}
+
+/* The hairline under the files header belongs to the open-file tabs, across the whole header, so a
+   selected tab can draw over it (the Solid tabs' separator). */
+.session-mobile-files__tabs::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+  background-color: var(--border);
+  pointer-events: none;
+}
+
+.session-mobile-files__tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* A pane's two-axis scroller (the review's file tree): long names scroll sideways under a thumb
+   along the bottom edge. */
+.scroll-view[data-orientation="both"] > .scroll-view__viewport {
+  overflow: auto;
+}
+
+.scroll-view[data-orientation="both"] > .scroll-view__thumb[data-orientation="horizontal"] {
+  top: auto;
+  right: auto;
+  bottom: 2px;
+  left: 0;
+  height: 6px;
+}
+
+/* A phone's file comments span the file, 12px in from either side (the Solid mobile files). */
+.session-mobile-files [data-component="line-comment-v2"] {
+  max-width: none;
+}
+
+/* An open file's tab fills the header's height, so its bottom (and a selected tab's underline)
+   sits on the header's hairline, as the Solid tabs. */
+.session-mobile-files__tab {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  max-width: 12rem;
+  height: 100%;
+  padding-inline: 8px 2px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.session-mobile-files__tab > button[role="tab"] {
+  display: flex;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.session-mobile-files__tab[data-selected] {
+  color: var(--foreground);
+}
+
+.session-mobile-files__tab[data-selected]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 1;
+  height: 1px;
+  background-color: var(--foreground);
+}

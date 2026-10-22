@@ -1,0 +1,182 @@
+import { createEffect, createMemo, createSignal, Show } from "solid-js"
+import { useData } from "../context/data"
+import { useClient } from "../context/client"
+import { Keymap } from "../context/keymap"
+import { pipe, sortBy } from "remeda"
+import { DialogSelect } from "../ui/dialog-select"
+import { useDialog } from "../ui/dialog"
+import { useTheme } from "../context/theme"
+import { TextAttributes } from "@opentui/core"
+import type { McpServer } from "@opencode/client"
+import { useToast } from "../ui/toast"
+import { DialogErrorDetails } from "./dialog-error-details"
+import { DialogIntegration } from "./dialog-integration"
+import { useLocation } from "../context/location"
+import { BuffMcp } from "@opencode/schema/buff-mcp"
+import { MCP_COMMANDS_HINT } from "../feature-plugins/buff/mcp"
+import { t } from "../feature-plugins/buff/locale"
+
+function statusError(status: McpServer["status"]) {
+  if (status.status === "failed" || status.status === "needs_auth") return status.error
+  return undefined
+}
+
+// Buff (#444): статус — теми же словами, что в настройках окна.
+function Status(props: { status: McpServer["status"]; loading: boolean }) {
+  const text = () => BuffMcp.statusText(props.loading ? { status: "pending" } : props.status, t)
+  return (
+    <Show when={text().tone === "ok"} fallback={<>{text().label}</>}>
+      <span style={{ attributes: TextAttributes.BOLD }}>{text().label} ✓</span>
+    </Show>
+  )
+}
+
+export function DialogMcp(props: { initialServer?: string; details?: boolean } = {}) {
+  const data = useData()
+  const dialog = useDialog()
+  const client = useClient()
+  const location = useLocation()
+  const toast = useToast()
+  const theme = useTheme().surface("dialog")
+  const current = () => location.ref ?? data.location.default()
+  const servers = createMemo(() =>
+    pipe(
+      data.location.mcp.server.list(current()) ?? [],
+      sortBy((server) => server.name),
+    ),
+  )
+  const initial = props.initialServer ? servers().find((server) => server.name === props.initialServer) : undefined
+  const [focused, setFocused] = createSignal<string | undefined>(props.initialServer)
+  const [detail, setDetail] = createSignal<McpServer | undefined>(
+    props.details && initial?.status.status === "failed" ? initial : undefined,
+  )
+  const [loading, setLoading] = createSignal<ReadonlySet<string>>(new Set())
+
+  const statusColor = (status: McpServer["status"]) => {
+    if (status.status === "connected") return theme.text.feedback.success.base
+    if (status.status === "failed") return theme.text.feedback.error.base
+    if (status.status === "needs_auth") return theme.text.feedback.warning.base
+    return theme.text.muted
+  }
+
+  createEffect(() => {
+    if (focused()) return
+    const first = servers()[0]
+    if (first) setFocused(first.name)
+  })
+
+  const options = createMemo(() => {
+    const loadingMcp = loading()
+    return servers().map((server) => {
+      const pending = loadingMcp.has(server.name) || server.status.status === "pending"
+      return {
+        value: server.name,
+        title: server.name,
+        footer: <Status status={server.status} loading={pending} />,
+        footerColor: pending ? theme.text.muted : statusColor(server.status),
+      }
+    })
+  })
+
+  const focusedServer = createMemo(() => servers().find((server) => server.name === focused()))
+
+  const toggleTitle = createMemo(() => {
+    const status = focusedServer()?.status.status
+    if (status === "connected") return t("disconnect")
+    if (status === "failed") return t("retry")
+    if (status === "needs_auth") return t("sign in")
+    return t("connect")
+  })
+
+  const focusedError = createMemo(() => {
+    const server = focusedServer()
+    // Enter starts sign-in for auth-gated integrations instead of showing the auth reason
+    if (server?.status.status === "needs_auth" && server.integrationID) return undefined
+    return server ? statusError(server.status) : undefined
+  })
+
+  const select = (name: string | undefined) => {
+    const server = servers().find((entry) => entry.name === name)
+    if (!server) return
+    if (server.status.status === "needs_auth" && server.integrationID) {
+      dialog.replace(() => <DialogIntegration integrationID={server.integrationID} autoConnect />)
+      return
+    }
+    if (!statusError(server.status)) return
+    setDetail(server)
+  }
+
+  // Auth-gated servers enter the integration flow; other inactive states retry the connection.
+  // The mcp.status.changed event refreshes the list, so no manual sync is needed.
+  const toggle = (name: string) => {
+    if (loading().has(name)) return
+    const server = servers().find((entry) => entry.name === name)
+    if (!server || server.status.status === "pending") return
+    if (server.status.status === "needs_auth" && server.integrationID) {
+      select(name)
+      return
+    }
+    setLoading((prev) => new Set(prev).add(name))
+    const target = current()
+    const input = { server: name, location: { directory: target.directory } }
+    const call = server.status.status === "connected" ? client.api.mcp.disconnect(input) : client.api.mcp.connect(input)
+    void call.catch(toast.error).finally(() =>
+      setLoading((prev) => {
+        const next = new Set(prev)
+        next.delete(name)
+        return next
+      }),
+    )
+  }
+
+  return (
+    <box>
+      <Show
+        when={detail()}
+        fallback={
+          <DialogSelect
+            title={t("MCP servers")}
+            options={options()}
+            preserveSelection
+            onMove={(option) => setFocused(option.value as string)}
+            onSelect={(option) => select(option.value as string)}
+            actions={[
+              {
+                title: toggleTitle(),
+                command: "dialog.mcp.toggle",
+                onTrigger: (option) => {
+                  setFocused(option.value as string)
+                  toggle(option.value as string)
+                },
+              },
+            ]}
+            footer={
+              <box>
+                <Show when={focusedError()}>
+                  <text fg={theme.text.muted}>{t("enter — the error reason")}</text>
+                </Show>
+                <text fg={theme.text.muted}>{MCP_COMMANDS_HINT}</text>
+              </box>
+            }
+          />
+        }
+      >
+        {(server) => (
+          <DialogErrorDetails
+            title={t("MCP server: {name}", { name: server().name })}
+            error={[BuffMcp.statusText(server().status, t).reason, statusError(server().status)]
+              .filter((line, index, lines) => line && lines.indexOf(line) === index)
+              .join("\n\n")}
+            context={`Status: ${server().status.status}\nConfiguration: mcp.servers.${server().name}${
+              server().integrationID ? `\nIntegration: ${server().integrationID}` : ""
+            }`}
+            onBack={() => {
+              setDetail(undefined)
+              dialog.setSize("medium")
+            }}
+          />
+        )}
+      </Show>
+    </box>
+  )
+}

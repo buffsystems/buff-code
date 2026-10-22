@@ -1,0 +1,240 @@
+/* Автоматизации (#447): страница, карточки, редактор расписания, история запусков. */
+.buff-auto-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* #470: на узком окне кнопка «Новая автоматизация» переносилась в две строки. */
+.buff-auto-header > [data-action="buff-automation-new"] {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.buff-auto-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.buff-auto-intro {
+  max-width: 620px;
+  margin-top: 10px;
+  font-size: 13.5px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-auto-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.buff-auto-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.buff-auto-empty {
+  padding: 20px 16px;
+  border: 1px dashed var(--v2-border-border-base, var(--border-base));
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.buff-auto-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--v2-border-border-base, var(--border-base));
+  border-radius: 12px;
+  background: var(--v2-background-bg-layer-01, transparent);
+}
+
+.buff-auto-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.buff-auto-card-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-strong);
+}
+
+/* Вид метки — buff/pill.css; здесь только тон по состоянию (#471). */
+.buff-auto-badge[data-state="active"] {
+  --pill-bg: var(--v2-state-bg-success);
+  --pill-fg: var(--v2-state-fg-success);
+}
+
+.buff-auto-badge[data-state="failed"] {
+  --pill-bg: var(--v2-state-bg-danger);
+  --pill-fg: var(--v2-state-fg-danger);
+}
+
+.buff-auto-badge[data-state="waiting"] {
+  --pill-bg: var(--v2-state-bg-warning);
+  --pill-fg: var(--v2-state-fg-warning);
+}
+
+.buff-auto-badge[data-state="running"] {
+  --pill-bg: var(--v2-state-bg-info);
+  --pill-fg: var(--v2-state-fg-info);
+}
+
+.buff-auto-card-line {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-base);
+}
+
+.buff-auto-card-weak {
+  color: var(--v2-text-text-muted);
+}
+
+.buff-auto-card-line[data-status="failed"] {
+  color: var(--v2-state-fg-danger, var(--icon-critical-base));
+}
+
+.buff-auto-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* Окно ограничено по высоте: длинная форма прокручивается внутри него. */
+[data-component="buff-automation-editor"] {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.buff-auto-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.buff-auto-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.buff-auto-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.buff-auto-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.buff-auto-input {
+  width: 84px;
+  padding: 3px 6px;
+  border: 1px solid var(--v2-border-border-base, var(--border-base));
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+}
+
+.buff-auto-input[data-field="at"] {
+  width: 72px;
+}
+
+.buff-auto-days {
+  display: flex;
+  gap: 2px;
+}
+
+.buff-auto-summary {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.buff-auto-history {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 16px 12px;
+}
+
+.buff-auto-run {
+  display: grid;
+  grid-template-areas:
+    "when meta actions"
+    "status status status";
+  grid-template-columns: 104px minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--v2-border-border-base, var(--border-base));
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.buff-auto-run-when {
+  grid-area: when;
+  font-variant-numeric: tabular-nums;
+}
+
+.buff-auto-run-meta {
+  grid-area: meta;
+  font-variant-numeric: tabular-nums;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-auto-run-status {
+  grid-area: status;
+}
+
+.buff-auto-run[data-status="failed"] .buff-auto-run-status {
+  color: var(--v2-state-fg-danger, var(--icon-critical-base));
+}
+
+.buff-auto-run[data-status="skipped"] .buff-auto-run-status {
+  color: var(--v2-text-text-muted);
+}
+
+.buff-auto-run-actions {
+  grid-area: actions;
+  display: inline-flex;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .buff-auto-header {
+    flex-direction: column;
+  }
+
+  .buff-auto-run {
+    grid-template-areas:
+      "when meta"
+      "status status"
+      "actions actions";
+    grid-template-columns: 104px minmax(0, 1fr);
+  }
+}
