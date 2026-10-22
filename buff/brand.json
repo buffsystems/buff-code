@@ -20,5 +20,5 @@
   "repository": "https://github.com/buffsystems/buff-code",
   "installScript": "https://buff.systems/install",
   "offlineModelCatalog": true,
-  "release": 30
+  "release": 31
 }

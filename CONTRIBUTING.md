@@ -1,36 +1,37 @@
-# Contributing to Buff Code
+# Как участвовать
 
-Thank you for helping. Issues and pull requests are welcome.
+*[English version](CONTRIBUTING.en.md)*
 
-## How this repository works
+Спасибо, что хотите помочь Buff Code. Issues и pull request'ы приветствуются.
 
-This repository is a **snapshot**: each Buff release adds one commit with the source of that
-release. Development happens in our tree, and the next release brings it here.
+## Как устроен репозиторий
 
-So a pull request is not merged with the GitHub button. When we accept it, we apply your change
-to our tree — your authorship is kept in the commit — and it appears here with the next release.
-We then close the pull request with a link to that release.
+Это **снимок**: каждый выпуск Buff добавляет сюда один коммит с исходниками этого выпуска, а разработка идёт в нашем дереве. Поэтому pull request не сливается кнопкой GitHub: принятое изменение мы переносим к себе — авторство сохраняется в коммите — и оно появляется здесь со следующим выпуском. Pull request мы закрываем со ссылкой на этот выпуск.
 
-## Good changes to propose
+## Что можно присылать
 
-- Bug fixes, with a way to reproduce the bug.
-- Fixes for a platform, terminal or shell we handle wrongly.
-- Documentation and translation fixes.
+- **Ошибки** — через [issues](https://github.com/buffsystems/buff-code/issues). Укажите версию (`buff --version`), ОС и терминал или десктоп, что делали, что ожидали, что получили. Перед отправкой уберите из вывода токены и пароли.
+- **Исправления, переводы и документацию** — через pull request.
+- **Предложения** — issue с пометкой «предложение»: что хотите сделать, зачем и как это выглядит для пользователя. Большое изменение сначала обсудите в issue.
 
-For a larger feature, please open an issue first so we can agree on the approach.
+Вопросы о покупке Enterprise и коммерческие — не сюда, а через [buff.systems](https://buff.systems/#contact).
 
-## Before you open a pull request
+## Pull request
 
-- One focused change per pull request.
-- Run the tests of the package you changed, e.g. `cd packages/core && bun run test`.
-- `bun turbo typecheck` passes.
-- Explain **why** in the description, not only what.
+1. Одно изменение — один PR. Небольшой и описанный: что меняется и **почему**.
+2. Проверьте: тесты пакета, который правите (например, `cd packages/core && bun run test`), и `bun turbo typecheck`. Напишите в PR, где и как проверяли.
+3. Коммиты — в стиле [Conventional Commits](https://www.conventionalcommits.org/ru/): `fix(scope): …`, `docs: …`.
+4. Документация двуязычная: правите `README.md` — правьте и `README.en.md` (и наоборот).
+5. Не добавляйте секреты, бинарные файлы и зависимости без обсуждения в issue.
 
-## Upstream
+Направляя изменения, вы подтверждаете, что вправе их передать, и соглашаетесь с тем, что они распространяются на условиях [лицензии MIT](LICENSE).
 
-Buff Code is a fork of [opencode](https://github.com/anomalyco/opencode). A fix that belongs to the
-core is often better sent upstream as well — we pick up upstream releases regularly.
+## Изменения, сделанные с помощью ИИ
 
-## License
+Пользоваться ИИ-помощниками (Claude, Copilot, Buff и другими) можно — мы сами так работаем. Правила:
 
-By contributing you agree that your contribution is licensed under the [MIT License](LICENSE).
+- **Отвечает человек.** Вы прочитали и поняли каждую строку, которую отправляете, и проверили её запуском. «Так сделала модель» — не аргумент в обсуждении.
+- **Скажите об этом.** В сообщении коммита добавьте трейлер `Assisted-with: <инструмент>` (например `Assisted-with: Claude Code`). Соавторство ИИ как человека (`Co-authored-by`) не указывайте.
+- **Без потока.** Не присылайте серии сгенерированных PR или issues «на всякий случай». Issue без воспроизведения и PR без проверки закрываются.
+- **Без чужих секретов и данных.** В контекст модели не попадают токены, пароли и журналы с персональными данными — а значит, и в PR.
+- Текст, который модель написала за вас (описание PR, комментарий), должен быть по делу и короче, чем вам кажется.

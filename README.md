@@ -1,49 +1,94 @@
 <p align="center">
-  <img src="buff/assets/mark-512.png" alt="Buff" width="96" height="96">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="buff/assets/logo-dark.svg">
+    <img src="buff/assets/logo.svg" alt="Buff Development" width="420">
+  </picture>
 </p>
-<h1 align="center">Buff Code</h1>
-<p align="center">An AI coding agent for your terminal and desktop — with your own models, or with the models your company gives you through <a href="https://buff.systems">Buff</a>.</p>
-<p align="center"><a href="README.ru.md">По-русски</a></p>
+
+<p align="center">
+  <b>Buff Code — среда разработки для инженеров, которые пишут код сами.</b><br>
+  Консоль и приложение на моделях, знаниях и подключениях вашей организации — или на вашей собственной модели.
+</p>
+
+<p align="center">
+  <a href="https://github.com/buffsystems/buff-code/releases"><img alt="Выпуск" src="https://img.shields.io/github/v/release/buffsystems/buff-code?label=выпуск&color=2563eb"></a>
+  <a href="LICENSE"><img alt="Лицензия" src="https://img.shields.io/badge/лицензия-MIT-64748b"></a>
+  <a href="https://buff.systems/docs/buff-code"><img alt="Документация" src="https://img.shields.io/badge/документация-buff.systems-0b0d12"></a>
+</p>
+
+<p align="center">
+  <a href="#установка">Установка</a> ·
+  <a href="#что-умеет">Что умеет</a> ·
+  <a href="#как-это-работает">Как это работает</a> ·
+  <a href="#сборка-из-исходников">Сборка</a> ·
+  <a href="https://buff.systems/docs/buff-code">Документация</a> ·
+  <a href="README.en.md">English</a>
+</p>
 
 ---
 
-## Install
+**Buff Code** — агент в вашей папке проекта: консоль `buff` и приложение для Linux, macOS и Windows. Это второй способ работать с [Buff](https://buff.systems): в веб-приложении задачу ведёт платформа — сама пишет код, проверяет и приносит на приёмку; в Buff Code код пишет инженер, а модель помогает ему в его папке и терминале — с тем же знанием о компании.
 
-```bash
+К моделям Buff Code подключается через коннектор компании, через LiteLLM или напрямую — подходит любой OpenAI-совместимый эндпоинт. Через коннектор он получает и остальное, что есть у организации: знания, репозитории, подключения и запись каждого хода в кабинете.
+
+<p align="center">
+  <img src="buff/assets/shots/console.png" alt="Buff Code в терминале: модель открыла запись базы знаний и ответила по правилу команды" width="430">
+  <img src="buff/assets/shots/window.png" alt="Приложение Buff Code: ответ агента в окне" width="430">
+</p>
+
+## Установка
+
+Консоль — одной командой:
+
+```sh
 curl -fsSL https://buff.systems/install | bash
 ```
 
-Desktop builds for Linux, macOS and Windows, and every release's checksums and signatures, are on
-[buff.systems/downloads](https://buff.systems/downloads) and in this repository's
-[releases](https://github.com/buffsystems/buff-code/releases).
+Приложение для Linux, macOS и Windows, контрольные суммы и подписи cosign каждого выпуска — в [выпусках](https://github.com/buffsystems/buff-code/releases) и на [buff.systems/downloads](https://buff.systems/downloads). При первом запуске Buff Code спросит адрес коннектора вашей компании и код из кабинета — или предложит подключить свою модель. Подробно — [Установка](https://buff.systems/docs/buff-code/install) и [Вход](https://buff.systems/docs/buff-code/sign-in).
 
-## What it is
+## Что умеет
 
-- **`buff`** — the agent in the terminal: reads and edits code, runs commands, works with git.
-- **Buff Code desktop** — the same agent in a window, with sessions, diffs and review.
-- **Your models or your company's.** Connect any provider you have a key or subscription for, or
-  sign in to Buff and work with the models, tools and knowledge your organization set up.
+| | |
+|---|---|
+| **Знания компании под рукой** | Модель читает базу знаний организации и предлагает в неё записи, ищет по репозиториям проекта без клона на машине и вызывает инструменты подключений коннектора — трекеры, wiki, ваши серверы MCP. |
+| **Видно и обратимо** | Под каждым ответом — что агент изменил; дифф, безопасный откат с проверкой чужих правок. Запросы разрешений с предпросмотром правки. |
+| **Большие задачи — по плану** | План с утверждением, список дел агента и цель `/goal`: агент делает ходы, пока проверка не подтвердит результат. Сценарии — субагенты по фазам с проверками. |
+| **По расписанию** | Автоматизации: задачи агенту по расписанию, их запускает служба на машине — и при закрытом окне. |
+| **Git в окне** | Что изменено, коммит с сообщением от агента, отправка, ветки и история. |
+| **Расширяется** | Свои серверы MCP, навыки, команды, субагенты, память `AGENTS.md` и хуки — из настроек окна и консоли. |
+| **Любые модели** | Модели организации через коннектор, шлюз LiteLLM или провайдер напрямую — OpenRouter, Anthropic, OpenAI, Ollama, LM Studio и любой OpenAI-совместимый эндпоинт; можно сочетать. |
+| **Каждый ход записан** | Сессии разработки видны в кабинете: разработчику — свои, владельцу — все; по записям можно задавать вопросы. |
 
-Buff Code is a fork of [opencode](https://github.com/anomalyco/opencode) (MIT). We keep the core close
-to upstream and build our part on its extension points.
+## Как это работает
 
-## Build from source
+Три пути к моделям — их можно сочетать:
 
-Requires [Bun](https://bun.sh) 1.4.
-
-```bash
-bun install
-bun dev ~/my-project  # the terminal app from source, on a project directory
+```
+                ┌─▶ коннектор компании ──▶ Buff  (модели организации, знания, записи)
+Buff Code ──────┼─▶ LiteLLM               (OpenAI-совместимый шлюз к моделям)
+(машина         └─▶ провайдер напрямую    (OpenRouter, Anthropic, OpenAI, Ollama, LM Studio…)
+ разработчика)
 ```
 
-`buff/Makefile` builds the release artifacts (`make -C buff dist`, `make -C buff desktop`) in a
-container, so the toolchain is the same everywhere.
+- **Через [коннектор](https://github.com/buffsystems/buff-connector) компании** (шлюз разработчика) — модели, которые выбрал администратор, база знаний, репозитории проекта и инструменты подключений, запись каждого хода в кабинете. Ключей провайдеров на машине разработчика нет; вход — по коду из кабинета.
+- **Через LiteLLM** — шлюз к моделям по OpenAI-совместимому API: ключ шлюза вместо ключей провайдеров.
+- **Напрямую** — к любому OpenAI-совместимому эндпоинту: облачный провайдер со своим ключом или локальная модель.
 
-## Contributing
+Buff Code — форк [opencode](https://github.com/anomalyco/opencode) (MIT): ядро держим близко к апстриму, своё строим на его точках расширения.
 
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). This repository is
-published as one snapshot per Buff release; accepted changes ship in the next one.
+## Сборка из исходников
 
-## License
+Нужен [Bun](https://bun.sh) 1.4.
 
-[MIT](LICENSE) — © opencode, © Buff Systems.
+```sh
+bun install
+bun dev ~/my-project  # консоль из исходников на каталоге проекта
+```
+
+`buff/Makefile` собирает артефакты выпуска (`make -C buff dist`, `make -C buff desktop`) в контейнере — инструменты одинаковы везде.
+
+## Участие и лицензия
+
+Ошибки и предложения — через [issues](https://github.com/buffsystems/buff-code/issues), правки — pull request'ом; правила — в [CONTRIBUTING.md](CONTRIBUTING.md) (включая работу с ИИ-помощниками). Репозиторий публикуется снимком на каждый выпуск Buff: принятые изменения выходят в следующем.
+
+Лицензия — [MIT](LICENSE): © opencode, © Buff Systems. Дизайн-система — [buff-ui](https://github.com/buffsystems/buff-ui).
