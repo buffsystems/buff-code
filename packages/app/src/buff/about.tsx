@@ -8,8 +8,8 @@ import { useBuffText } from "./i18n"
 /** Страница «About» настроек (#462); что на ней написано — в `about-content.ts`. */
 export function BuffAbout() {
   const platform = usePlatform()
-  const { t } = useBuffText()
-  const about = () => aboutContent(platform.version, t)
+  const { t, locale } = useBuffText()
+  const about = () => aboutContent(platform.version, t, locale())
   return (
     <div class="settings-about-content" data-component="buff-about">
       <Logo class="settings-about-wordmark" />

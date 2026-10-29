@@ -6,6 +6,7 @@ import { SessionRestart } from "@opencode/core/session/execution/restart"
 import { BuffAutomationService } from "@opencode/core/buff/automation-service"
 import { BuffWorkflowService } from "@opencode/core/buff/workflow-service"
 import { BuffGoalService } from "@opencode/core/buff/goal-service"
+import { BuffMobileService } from "@opencode/core/buff/mobile-service"
 import { InstallationEvent } from "@opencode/schema/installation-event"
 import { hasPtyConnectTicketURL } from "@opencode/protocol/groups/pty"
 import { hasPersistentPtyConnectTicketURL } from "@opencode/protocol/groups/persistent-pty"
@@ -124,6 +125,12 @@ export const start = Effect.fn("ServerProcess.start")(function* <E, R>(
       yield* Context.get(context, BuffGoalService.Service).start.pipe(
         Effect.provideService(Scope.Scope, applicationScope),
       )
+      // Buff (#639): телефон — агент машины ходит в этот же сервер по петле, с паролем службы.
+      const loop = bound.server.address()
+      if (loop && typeof loop !== "string")
+        yield* Context.get(context, BuffMobileService.Service)
+          .start({ url: `http://127.0.0.1:${loop.port}`, password })
+          .pipe(Effect.provideService(Scope.Scope, applicationScope))
     }
     const app = Context.get(context, HttpRouter.HttpRouter)
       .asHttpEffect()

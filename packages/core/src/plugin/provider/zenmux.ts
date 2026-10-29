@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { define } from "@opencode/plugin/effect/plugin"
+import { BuffBrand } from "../../buff/brand.js"
 
 export const ZenmuxPlugin = define({
   id: "opencode.provider.zenmux",
@@ -10,8 +11,8 @@ export const ZenmuxPlugin = define({
         if (item.provider.settings?.baseURL !== "https://zenmux.ai/api/v1") continue
         evt.update(item.provider.id, (provider) => {
           provider.headers = {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": BuffBrand.ATTRIBUTION.referer,
+            "X-Title": BuffBrand.ATTRIBUTION.title,
             ...provider.headers,
           }
         })

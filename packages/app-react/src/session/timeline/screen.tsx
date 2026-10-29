@@ -2,6 +2,8 @@
 // wide screens by the title row with the Find bar, sticky inside the scroller as in the Solid
 // window (a phone shows the title in its tab sheet).
 
+import { PhoneSessionBanner } from "@buff/ui/react"
+import { BuffMobile } from "@opencode/schema/buff-mobile"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import type { Server } from "../../core/servers"
@@ -235,6 +237,12 @@ function TimelineTitleRow(props: { active: boolean }) {
   const navigateToSession = useNavigateToSession(session.server, session.sessionID)
   const view = useSessionView()
   const child = useServerData(session.server, (state) => !!state.session.info[session.sessionID]?.parentID)
+  const i18n = useI18n()
+  // Buff (#640): a session started on a phone says so under its title.
+  const phone = useServerData(session.server, (state) => {
+    const origin = BuffMobile.phoneOrigin(state.session.info[session.sessionID]?.metadata)
+    return origin ? (origin.device ?? "") : null
+  })
   return (
     <TimelineHeader
       server={session.server}
@@ -256,6 +264,7 @@ function TimelineTitleRow(props: { active: boolean }) {
           </SessionHeaderActions>
         </>
       }
+      below={phone !== null && <PhoneSessionBanner device={phone} locale={i18n.locale === "ru" ? "ru" : "en"} />}
     />
   )
 }

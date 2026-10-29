@@ -122,23 +122,25 @@ describe("BuffTools knowledge (#371)", () => {
     Effect.sync(() => {
       const me = { connector: "https://c.local:8767", token: "T" }
       expect(BuffTools.knowledgeConfig(undefined, null)).toBeUndefined()
-      expect(BuffTools.knowledgeConfig(me, null)).toEqual({
+      expect(BuffTools.knowledgeConfig(me, null, "ru")).toEqual({
         type: "remote",
         url: "https://c.local:8767/v1/knowledge/mcp",
-        headers: { Authorization: "Bearer T" },
+        headers: { Authorization: "Bearer T", "X-Buff-Lang": "ru" },
         oauth: false,
         codemode: false,
       })
       expect(
-        BuffTools.knowledgeConfig(me, { org: "acme", project: "shop", spaces: ["handbook", "wiki"] })?.headers,
+        BuffTools.knowledgeConfig(me, { org: "acme", project: "shop", spaces: ["handbook", "wiki"] }, "en")?.headers,
       ).toEqual({
         Authorization: "Bearer T",
+        "X-Buff-Lang": "en",
         "X-Buff-Org": "acme",
         "X-Buff-Project": "shop",
         "X-Buff-Spaces": "handbook,wiki",
       })
-      expect(BuffTools.knowledgeConfig(me, { org: "acme", project: null, spaces: [] })?.headers).toEqual({
+      expect(BuffTools.knowledgeConfig(me, { org: "acme", project: null, spaces: [] }, "ru")?.headers).toEqual({
         Authorization: "Bearer T",
+        "X-Buff-Lang": "ru",
         "X-Buff-Org": "acme",
       })
     }),
@@ -178,10 +180,10 @@ describe("BuffTools knowledge (#371)", () => {
     Effect.sync(() => {
       const me = { connector: "https://c.local:8767", token: "T" }
       expect(BuffTools.reposConfig(undefined, null)).toBeUndefined()
-      expect(BuffTools.reposConfig(me, { org: "acme", project: "shop", spaces: [] })).toEqual({
+      expect(BuffTools.reposConfig(me, { org: "acme", project: "shop", spaces: [] }, "en")).toEqual({
         type: "remote",
         url: "https://c.local:8767/v1/repos/mcp",
-        headers: { Authorization: "Bearer T", "X-Buff-Org": "acme", "X-Buff-Project": "shop" },
+        headers: { Authorization: "Bearer T", "X-Buff-Lang": "en", "X-Buff-Org": "acme", "X-Buff-Project": "shop" },
         oauth: false,
         codemode: false,
       })

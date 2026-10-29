@@ -248,7 +248,7 @@ function ServerHome(props: { conn: ServerConnection; selection: ReturnType<typeo
     onMoveProject: (conn, directory, index) =>
       core.serverState.projects(core.scope(serverKey(conn))).move(directory, index),
     onOpenSettings: () => navigate("/settings"),
-    onOpenHelp: () => platform.openExternal(BuffLinks.docs),
+    onOpenHelp: () => platform.openExternal(BuffLinks.localized(BuffLinks.docs, i18n.buff.locale)),
   }
 
   return (

@@ -2,6 +2,9 @@ export * as BuffBrand from "./brand.js"
 
 import { BuffRunnerMode } from "./runner.js"
 
+/** Как Buff Code называет себя провайдерам моделей: адрес и имя приложения в заголовках запроса. */
+export const ATTRIBUTION = { referer: "https://buff.systems/", title: "Buff Code", source: "buff-code" } as const
+
 /** В закрытом контуре каталог моделей берётся из вшитого снимка, без хождения наружу. */
 export const OFFLINE_MODEL_CATALOG = true
 

@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { define } from "@opencode/plugin/effect/plugin"
+import { BuffBrand } from "../../buff/brand.js"
 
 export const NvidiaPlugin = define({
   id: "opencode.provider.nvidia",
@@ -11,9 +12,9 @@ export const NvidiaPlugin = define({
         evt.update(item.provider.id, (provider) => {
           provider.headers = {
             ...provider.headers,
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
-            "X-BILLING-INVOKE-ORIGIN": provider.headers?.["X-BILLING-INVOKE-ORIGIN"] ?? "OpenCode",
+            "HTTP-Referer": BuffBrand.ATTRIBUTION.referer,
+            "X-Title": BuffBrand.ATTRIBUTION.title,
+            "X-BILLING-INVOKE-ORIGIN": provider.headers?.["X-BILLING-INVOKE-ORIGIN"] ?? BuffBrand.ATTRIBUTION.title,
           }
         })
       }

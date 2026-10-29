@@ -26,6 +26,7 @@ const it = testEffect(Layer.merge(PluginTestLayerWithModels, Config.testLayer())
 function fakeServer() {
   const seen: string[] = []
   const limits: (number | undefined)[] = []
+  const models: (string | undefined)[] = []
   const chunk = (delta: object, finish: string | null) =>
     `data: ${JSON.stringify({ id: "c1", object: "chat.completion.chunk", created: 1, model: "m1", choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`
   const server = Bun.serve({
@@ -36,7 +37,13 @@ function fakeServer() {
       if (auth !== "Bearer sk-good") return Response.json({ error: { message: "bad key", code: 401 } }, { status: 401 })
       const url = new URL(request.url)
       if (url.pathname === "/v1/models") return Response.json({ object: "list", data: [{ id: "m2" }, { id: "m1" }] })
-      const body = (await request.json()) as { stream?: boolean; max_tokens?: number; max_completion_tokens?: number }
+      const body = (await request.json()) as {
+        model?: string
+        stream?: boolean
+        max_tokens?: number
+        max_completion_tokens?: number
+      }
+      models.push(body.model)
       limits.push(body.max_tokens ?? body.max_completion_tokens)
       if (!body.stream)
         return Response.json({
@@ -52,7 +59,7 @@ function fakeServer() {
       })
     },
   })
-  return { server, seen, limits, baseURL: `http://127.0.0.1:${server.port}/v1` }
+  return { server, seen, limits, models, baseURL: `http://127.0.0.1:${server.port}/v1` }
 }
 
 const setup = Effect.gen(function* () {
@@ -148,6 +155,18 @@ describe("BuffProvider (#562)", () => {
       // Без нового ключа остаётся прежний.
       yield* rpc.save(draft(fake.baseURL))
       expect((yield* rpc.list())[0]?.hasKey).toBe(true)
+    }),
+  )
+
+  it.live("a model typed by hand is checked on its provider even when the catalogue lacks it", () =>
+    Effect.gen(function* () {
+      const { rpc, fake, loaded, ready } = yield* setup
+      yield* rpc.save(draft(fake.baseURL, "sk-good"))
+      yield* loaded
+      yield* ready("litellm")
+      expect(yield* rpc.test({ providerID: "litellm", modelID: "m2" })).toMatchObject({ text: "OK" })
+      expect(fake.models.at(-1)).toBe("m2")
+      expect(fake.seen.at(-1)).toBe("Bearer sk-good")
     }),
   )
 

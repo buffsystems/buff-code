@@ -39,13 +39,13 @@ const make = Effect.gen(function* () {
       remove: (session) => run(kv.remove(key(session))).then(() => undefined),
     },
     // Служебная отметка «Цель», а не сообщение человека: будит модель, человек видит её свёрнутой.
-    prompt: (session, text) =>
+    prompt: (session, text, summary) =>
       run(
         sessions.synthetic({
           sessionID: id(session),
           text,
           description: BuffLocale.t("Goal"),
-          metadata: { source: "buff-goal" },
+          metadata: { source: "buff-goal", summary },
         }),
       ).then(() => undefined),
     generate: (session, prompt) => run(sessions.generate({ sessionID: id(session), prompt })),

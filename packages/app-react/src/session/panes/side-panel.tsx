@@ -23,7 +23,7 @@ import { diffStyleOf } from "./layout"
 import { ReviewModeMenu } from "./review/mode-menu"
 import { ReviewPanel, ReviewSidebarToggle } from "./review/panel"
 import { useReviewModel, reviewEmptyState, type ReviewModel } from "./review/model"
-import { fileBrowserVisible } from "./side-tabs"
+import { fileBrowserVisible, fileTreeToggles } from "./side-tabs"
 import { SideConversationPanel, SideConversationTabTrigger } from "./side-conversation-tab"
 import { PaneTab, PaneTabList, SortablePaneTab } from "./tabs"
 import { ReviewSurface } from "../regions"
@@ -129,8 +129,11 @@ function TabBar(props: { side: SideController; review: ReviewModel; openIn: Open
     <div className="session-review-v2-tabs-bar sticky top-0 flex shrink-0 items-center">
       <PaneTabList listRef={list} className="panes-tablist" onMove={side.move}>
         <div className="session-review-v2-sidebar-toggle-slot sticky start-0 z-10 flex h-full shrink-0 items-center justify-center">
+          {/* Buff (#705): only where a tree is; the slot keeps its room so the tabs do not shift. */}
           {side.session.window && (
-            <ReviewSidebarToggle layout={side.session.window.layout} disabled={active === SESSION_OPEN_FILE_TAB} />
+            <div className={fileTreeToggles(active) ? "contents" : "invisible"} inert={!fileTreeToggles(active)}>
+              <ReviewSidebarToggle layout={side.session.window.layout} disabled={!fileTreeToggles(active)} />
+            </div>
           )}
         </div>
         <PaneTab

@@ -22,7 +22,14 @@ export const PRESETS = {
 } as const
 export type Preset = keyof typeof PRESETS
 
-export const Model = Schema.Struct({ id: Schema.String, name: Schema.optional(Schema.String) })
+/** A model of one's own provider: its id, its name, and what it reads and writes (#27) —
+ *  `images`: it sees pictures; `draws`: it answers with them. Unset — text only. */
+export const Model = Schema.Struct({
+  id: Schema.String,
+  name: Schema.optional(Schema.String),
+  images: Schema.optional(Schema.Boolean),
+  draws: Schema.optional(Schema.Boolean),
+})
 export type Model = typeof Model.Type
 
 export const Entry = Schema.Struct({
@@ -48,7 +55,18 @@ export type Draft = typeof Draft.Type
 /** Отказ провайдера в тех же полях, что и отказ хода, — чтобы прочитать его теми же словами. */
 const Failure = Schema.Struct({ error: SessionError.Error })
 
-export const Discovered = Schema.Union([Schema.Struct({ models: Schema.Array(Schema.String) }), Failure])
+/** What a server says a model reads and writes (#27), when its list says it. */
+export const Modalities = Schema.Struct({ images: Schema.Boolean, draws: Schema.Boolean })
+export type Modalities = typeof Modalities.Type
+
+export const Discovered = Schema.Union([
+  Schema.Struct({
+    models: Schema.Array(Schema.String),
+    /** Per model, where the server's list states it; a model not here — the person says. */
+    modalities: Schema.optional(Schema.Record(Schema.String, Modalities)),
+  }),
+  Failure,
+])
 export type Discovered = typeof Discovered.Type
 
 export const Checked = Schema.Union([Schema.Struct({ ms: Schema.Number, text: Schema.String }), Failure])

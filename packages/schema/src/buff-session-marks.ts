@@ -126,7 +126,7 @@ interface Listed {
 export interface Section<Item> {
   readonly key: string
   readonly title: string
-  readonly kind: "pinned" | "group" | "time"
+  readonly kind: "pinned" | "group" | "time" | "project"
   readonly group?: Group
   readonly items: readonly Item[]
 }
@@ -139,7 +139,8 @@ const startOfDay = (time: number) => {
 const newestFirst = <Item extends Listed>(items: readonly Item[]) => items.toSorted((a, b) => b.updated - a.updated)
 
 /**
- * Список сессий по разделам: закреплённые (в порядке закрепления), группы, затем по времени.
+ * Список сессий по разделам: закреплённые (в порядке закрепления), группы, затем по времени —
+ * или по проектам, когда окно даёт `projectOf` (#709): свежий проект выше, заголовок — имя папки.
  * Архивные и побочные диалоги не показываются. Группа видна и пустой — в неё можно класть. При поиске пустые
  * разделы пропадают.
  */
@@ -148,6 +149,7 @@ export function sections<Item extends Listed>(
   marks: State,
   now: number,
   query = "",
+  projectOf?: (item: Item) => string,
 ): Section<Item>[] {
   const needle = query.trim().toLowerCase()
   const out = hidden(marks)
@@ -163,6 +165,11 @@ export function sections<Item extends Listed>(
     return { key: `group:${group.id}`, title: group.name, kind: "group", group, items }
   })
   const rest = newestFirst(shown.filter((item) => !taken.has(item.id)))
+  const head = [
+    ...(pinned.length ? [{ key: "pinned", title: "Pinned", kind: "pinned" as const, items: pinned }] : []),
+    ...groups.filter((section) => !needle || section.items.length),
+  ]
+  if (projectOf) return [...head, ...byProject(rest, projectOf)]
   const today = startOfDay(now)
   const time: Section<Item>[] = [
     { key: "today", title: "Today", kind: "time", items: rest.filter((item) => item.updated >= today) },
@@ -174,11 +181,22 @@ export function sections<Item extends Listed>(
     },
     { key: "older", title: "Earlier", kind: "time", items: rest.filter((item) => item.updated < today - DAY) },
   ]
-  return [
-    ...(pinned.length ? [{ key: "pinned", title: "Pinned", kind: "pinned" as const, items: pinned }] : []),
-    ...groups.filter((section) => !needle || section.items.length),
-    ...time.filter((section) => section.items.length),
-  ]
+  return [...head, ...time.filter((section) => section.items.length)]
+}
+
+/** Сессии по проектам; `items` уже свежие первыми, поэтому и проекты встают по свежести. */
+function byProject<Item extends Listed>(items: readonly Item[], projectOf: (item: Item) => string): Section<Item>[] {
+  const out = new Map<string, Item[]>()
+  for (const item of items) {
+    const project = projectOf(item)
+    out.set(project, [...(out.get(project) ?? []), item])
+  }
+  return [...out].map(([project, list]) => ({
+    key: `project:${project}`,
+    title: project.split(/[\\/]/).filter(Boolean).pop() ?? project,
+    kind: "project" as const,
+    items: list,
+  }))
 }
 
 /** Архив — отдельным списком, свежие первыми. */

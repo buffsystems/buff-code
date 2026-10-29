@@ -38,6 +38,12 @@ export function defaultCheckModel(input: {
   )
 }
 
+/** Whether a model may be checked: any id the person gave — one typed by hand too, which the
+ *  provider knows before the catalogue does (#27). */
+export function checkable(model: string): boolean {
+  return model.trim().length > 0
+}
+
 export function ModelCheck(props: {
   server: Server
   directory?: string
@@ -78,7 +84,6 @@ export function ModelCheck(props: {
   })
   const [typed, setTyped] = useState<string>()
   const model = typed ?? fallback ?? ""
-  const known = models.some((item) => item.id === model)
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<Result>()
   const [open, setOpen] = useState(false)
@@ -132,8 +137,8 @@ export function ModelCheck(props: {
         <Button
           variant="outline"
           data-action="model-check"
-          disabled={!known || running}
-          onClick={() => void run(model)}
+          disabled={!checkable(model) || running}
+          onClick={() => void run(model.trim())}
         >
           {running ? <Spinner /> : t("Check the model")}
         </Button>

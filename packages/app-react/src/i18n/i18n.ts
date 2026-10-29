@@ -3,7 +3,7 @@
 // (BuffI18n). Only the locales Buff Code offers are loaded.
 
 import { brandDictionary } from "@opencode/app/react-reuse/brand"
-import { DEFAULT_LOCALE, offeredLocale, type OfferedLocale } from "@opencode/app/react-reuse/locales"
+import { DEFAULT_LOCALE, offeredLocale, systemLocale, type OfferedLocale } from "@opencode/app/react-reuse/locales"
 import { dict as appEnglish } from "@opencode/app/i18n/en"
 import { dict as uiEnglish } from "@opencode/ui/i18n/en"
 import { BuffI18n } from "@opencode/schema/buff-i18n"
@@ -35,9 +35,9 @@ export async function loadDictionary(locale: Locale): Promise<Dictionary> {
   }
 }
 
-/** A stored or detected language, narrowed to the offered ones. */
-export function normalizeLocale(value: string | undefined) {
-  return value ? offeredLocale(value) : DEFAULT_LOCALE
+/** A stored language narrowed to the offered ones; nothing stored yet — the system's (#713). */
+export function normalizeLocale(value: string | undefined, languages?: readonly string[]) {
+  return value ? offeredLocale(value) : systemLocale(languages)
 }
 
 export function createTranslator(locale: Locale, dictionary: Dictionary) {
@@ -55,6 +55,7 @@ export function createTranslator(locale: Locale, dictionary: Dictionary) {
     },
     /** Buff's own strings: English in code, Russian from the shared catalog. */
     buff: {
+      locale: buff,
       t: (text: string, params?: BuffI18n.Params) => BuffI18n.t(buff, text, params),
       n: (count: number, forms: string, params?: BuffI18n.Params) => BuffI18n.n(buff, count, forms, params),
     },

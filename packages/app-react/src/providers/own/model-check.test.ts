@@ -1,6 +1,6 @@
 // Which model the check offers first (#562): never a random catalog entry.
 import { describe, expect, test } from "bun:test"
-import { defaultCheckModel } from "./model-check"
+import { checkable, defaultCheckModel } from "./model-check"
 
 const models = [
   { id: "prism-ml/ternary-bonsai", released: "2026-10-01" },
@@ -29,5 +29,12 @@ describe("the model to check first", () => {
   test("a server without release dates offers its first model; none — nothing", () => {
     expect(defaultCheckModel({ providerID: "litellm", models: [{ id: "a" }, { id: "b" }], recent: [] })).toBe("a")
     expect(defaultCheckModel({ providerID: "litellm", models: [], recent: [] })).toBeUndefined()
+  })
+})
+
+describe("the check button", () => {
+  test("takes a model typed by hand, not only one the catalogue lists (#27)", () => {
+    expect(checkable("deepseek/deepseek-v4.1-flash-1017")).toBe(true)
+    expect(checkable("  ")).toBe(false)
   })
 })

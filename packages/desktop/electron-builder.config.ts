@@ -30,7 +30,7 @@ export function macSignOptions(options: CustomMacSignOptions): CustomMacSignOpti
     ...options,
     optionsForFile: (file) => {
       const defaults = options.optionsForFile?.(file)
-      if (file !== path.join(options.app, "Contents/Resources/opencode-cli")) return defaults ?? {}
+      if (file !== path.join(options.app, "Contents/Resources/buff")) return defaults ?? {}
       // The Bun CLI loads bun-pty's native library; Electron and its helpers do not need this exception.
       return { ...defaults, entitlements: path.join(packageDir, "resources/entitlements.cli.plist") }
     },
@@ -67,7 +67,10 @@ const getBase = (appId: string): Configuration => ({
   files: [
     "out/**/*",
     "resources/**/*",
-    "!resources/opencode-cli*",
+    "!resources/buff",
+    "!resources/buff.*",
+    "!resources/buff-dev*",
+    "!resources/buff-wsl*",
     "!resources/buff-rg*",
     "!resources/buff-git{,/**/*}",
     // Log export imports Zip.js as ESM. Keep index.js and lib, including its inline worker.
@@ -90,7 +93,7 @@ const getBase = (appId: string): Configuration => ({
       from: "resources/",
       to: "",
       // Buff: buff-rg — ripgrep для поиска по файлам без сети, рядом с консолью.
-      filter: ["opencode-cli", "opencode-cli.exe", "opencode-cli.version", "buff-rg", "buff-rg.exe"],
+      filter: ["buff", "buff.exe", "buff.version", "buff-rg", "buff-rg.exe"],
     },
     // Buff (#495): встроенный git — снимкам сессии нужен git от 2.35, на Windows его может не быть вовсе.
     { from: "resources/buff-git", to: "buff-git", filter: ["**/*"] },
@@ -98,11 +101,11 @@ const getBase = (appId: string): Configuration => ({
   afterPack: async (context) => {
     const cli = path.join(
       context.packager.getResourcesDir(context.appOutDir),
-      context.electronPlatformName === "win32" ? "opencode-cli.exe" : "opencode-cli",
+      context.electronPlatformName === "win32" ? "buff.exe" : "buff",
     )
     const file = await stat(cli)
     if (!file.isFile() || file.size === 0) throw new Error(`Bundled CLI must be a non-empty file: ${cli}`)
-    const version = path.join(path.dirname(cli), "opencode-cli.version")
+    const version = path.join(path.dirname(cli), "buff.version")
     if ((await stat(version)).size === 0) throw new Error(`Bundled CLI version must be a non-empty file: ${version}`)
     const ripgrep = path.join(path.dirname(cli), context.electronPlatformName === "win32" ? "buff-rg.exe" : "buff-rg")
     if (!(await stat(ripgrep).catch(() => undefined))?.size) throw new Error(`Bundled ripgrep is missing: ${ripgrep}`)

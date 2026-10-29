@@ -206,3 +206,55 @@ test("риска карты запросов не заливается квад�
   expect(css).toContain("background-clip: content-box")
   expect(css).not.toMatch(/^\s*background:/m)
 })
+
+test("пользователь не читает «OpenCode» как имя нашего продукта (#596, #628)", async () => {
+  // Сообщения об ошибках, текст окна, консоли и терминального интерфейса называют продукт
+  // Buff Code. Имя апстрима остаётся только там, где речь о нём самом или его сервисах, и там,
+  // где это идентификатор, который человек не читает.
+  const { brandStrings } = await import("./brand-scan")
+  const allowed: { path: RegExp; text: RegExp; reason: string }[] = [
+    {
+      path: /^packages\/(app\/src\/buff\/about-content|schema\/src\/buff-i18n\/ru-account)\.ts$/,
+      text: /Based on OpenCode|Основан на OpenCode|OpenCode ©|OpenCode is a registered trademark|OpenCode — зарегистрированный/,
+      reason: "указание на апстрим и его товарный знак — по лицензии",
+    },
+    {
+      path: /^packages\/(session-ui\/src\/(components\/markdown(\.worker)?|pierre\/(worker|index))|ui\/src\/context\/marked(-theme|-theme-register)?|app-react\/src\/session\/timeline\/markdown\/markdown-view)\.tsx?$/,
+      text: /^(shiki )?OpenCode$/,
+      reason: "имя темы подсветки кода — идентификатор, на экран не выводится",
+    },
+    {
+      path: /^packages\/(session-ui\/src\/tools\/tool-renderer\.tsx|app-react\/src\/session\/timeline\/tools\/info\.ts|core\/src\/plugin\/provider\/opencode\.ts)$/,
+      text: /OpenCode/,
+      reason: "облачный сервис апстрима (OpenCode Zen/Console) — имя провайдера, как Anthropic или OpenAI",
+    },
+    {
+      path: /^packages\/core\/src\/plugin\/skill\.ts$/,
+      text: /OpenCode|opencode/,
+      reason: "встроенные навыки апстрима о нём самом — в Buff Code вырезаны (UPSTREAM_CUT, #445)",
+    },
+    {
+      path: /^packages\/(desktop\/src\/main\/browser\/network\.ts|plugin-browser\/src\/proxy\.ts)$/,
+      text: /realm="?OpenCode Browser Proxy|^OpenCode Browser Proxy$/,
+      reason: "realm внутреннего прокси браузера: окно отвечает на него само, человек его не видит",
+    },
+    {
+      path: /^packages\/cli\/src\/commands\/handlers\/uninstall\.ts$/,
+      text: /^# opencode$/,
+      reason: "метка, которую установщик апстрима оставил в профиле оболочки, — по ней её убирают",
+    },
+    {
+      path: /^packages\/tui\/src\/mini\/demo\.ts$/,
+      text: /"name": "opencode"/,
+      reason: "содержимое демонстрационного файла package.json",
+    },
+  ]
+  const found = brandStrings()
+  const leaks = found
+    .filter((hit) => !allowed.some((rule) => rule.path.test(hit.path) && rule.text.test(hit.text)))
+    .map((hit) => `${hit.path}:${hit.line}: «${hit.text}»`)
+  expect(leaks).toEqual([])
+  // Исключение без находки устарело — его убирают, чтобы список не прикрывал будущие строки.
+  const stale = allowed.filter((rule) => !found.some((hit) => rule.path.test(hit.path) && rule.text.test(hit.text)))
+  expect(stale.map((rule) => rule.reason)).toEqual([])
+})

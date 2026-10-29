@@ -36,7 +36,8 @@ export interface Store {
 
 export interface Sessions extends WorkflowActors.Sessions {
   readonly createRoot: (input: { directory: string; title: string }) => Promise<string>
-  readonly synthetic: (session: string, text: string) => Promise<void>
+  /** Отметка в сессии: текст — модели, `summary` — человеку рядом с «Сценарий» (#711). */
+  readonly synthetic: (session: string, text: string, summary: string) => Promise<void>
   readonly interrupt: (session: string) => Promise<void>
 }
 
@@ -238,6 +239,7 @@ export function make(deps: {
         await deps.sessions.synthetic(
           finished.session,
           WorkflowNotify.done(finished, await deps.store.items(run.id), await deps.store.artifacts(run.id)),
+          WorkflowNotify.doneSummary(finished),
         )
     })
     live.set(run.id, { run, compiled, controller, sessions, steps, done })
@@ -362,7 +364,8 @@ export function make(deps: {
       const answer = new Promise<string>((resolve) =>
         questions.set(asked.id, { run: owner.run, resolve, question: asked }),
       )
-      if (run?.session) await deps.sessions.synthetic(run.session, WorkflowNotify.question(run, asked))
+      if (run?.session)
+        await deps.sessions.synthetic(run.session, WorkflowNotify.question(run, asked), WorkflowNotify.questionSummary(asked))
       return answer
     },
     /** Актёр спросил разрешения у человека (или получил ответ): его шаг ждёт — это видно в ходе прогона. */

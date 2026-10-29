@@ -4,6 +4,7 @@ import { BuffWorkflow } from "@opencode/schema/buff-workflow"
 import doneText from "./prompts/run-done.md" with { type: "text" }
 import questionText from "./prompts/run-question.md" with { type: "text" }
 import { WorkflowActors } from "./actors.js"
+import { BuffLocale } from "../locale.js"
 
 /**
  * Что получает сессия, из которой запущен сценарий (#448): итог прогона — статус словами,
@@ -44,4 +45,16 @@ export function question(run: BuffWorkflow.Run, asked: BuffWorkflow.Question): s
     text: asked.text,
     id: asked.id,
   })
+}
+
+/** Что видит человек рядом с отметкой «Сценарий» (#711): конец прогона словами. */
+export function doneSummary(run: BuffWorkflow.Run): string {
+  if (run.status === "errored") return BuffLocale.t("«{label}» — error", { label: run.label })
+  if (run.status === "stopped") return BuffLocale.t("«{label}» stopped", { label: run.label })
+  return BuffLocale.t("«{label}» finished", { label: run.label })
+}
+
+/** …и вопрос актёра как он задан. */
+export function questionSummary(asked: BuffWorkflow.Question): string {
+  return `${asked.actor}: ${asked.text}`
 }

@@ -13,14 +13,19 @@ export interface AboutContent {
   readonly origin: readonly string[]
 }
 
-/** Слова — через переводчика экрана (#472); без него — английские исходные строки. */
-export function aboutContent(version: string | undefined, t: BuffI18n.T = BuffI18n.english): AboutContent {
+/** Слова — через переводчика экрана (#472); без него — английские исходные строки. Ссылки на сайт —
+ *  на языке экрана (#720). */
+export function aboutContent(
+  version: string | undefined,
+  t: BuffI18n.T = BuffI18n.english,
+  locale: BuffI18n.Locale = BuffI18n.DEFAULT_LOCALE,
+): AboutContent {
   return {
     version: version ? t("Version {version}", { version }) : t("Development build"),
     description: t("Buff Code is the development tool of the Buff platform: an agent for working with code in the window and in the console."),
     links: [
-      { label: "buff.systems", href: BuffLinks.site },
-      { label: t("Documentation"), href: BuffLinks.docs },
+      { label: "buff.systems", href: BuffLinks.localized(BuffLinks.site, locale) },
+      { label: t("Documentation"), href: BuffLinks.localized(BuffLinks.docs, locale) },
       { label: BuffLinks.supportAddress, href: BuffLinks.support },
     ],
     origin: [

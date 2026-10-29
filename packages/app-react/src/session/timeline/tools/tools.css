@@ -491,6 +491,10 @@
   .tool-plan[data-full="true"] .tool-plan__text {
     max-height: none;
   }
+  .tool-send-file__path {
+    color: var(--muted-foreground);
+    overflow-wrap: anywhere;
+  }
   .tool-plan__actions {
     display: flex;
     gap: 0.25rem;

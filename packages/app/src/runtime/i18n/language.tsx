@@ -16,7 +16,7 @@ import { Persistence } from "@/runtime/persistence/schema"
 import en from "@/runtime/i18n/en"
 import { brandDictionary } from "@/buff/brand"
 import { RU_UPSTREAM, RU_UPSTREAM_FIXES } from "@/buff/i18n/ru-upstream"
-import { DEFAULT_LOCALE, OFFERED_LOCALES, offeredLocale } from "@/buff/locales"
+import { OFFERED_LOCALES, offeredLocale, systemLocale } from "@/buff/locales"
 import { dict } from "@opencode/ui/i18n/en"
 import {
   createDesktopNativeBundle,
@@ -162,9 +162,9 @@ export function loadLocaleDict(locale: Locale) {
   return loadDict(locale).then(() => undefined)
 }
 
-// Buff (#471): пока язык не выбран — русский, как кабинет, а не язык системы.
+// Buff (#713): пока язык не выбран — язык системы, русский, если она ни русская, ни английская.
 function detectLocale(): Locale {
-  return DEFAULT_LOCALE
+  return systemLocale()
 }
 
 export function normalizeLocale(value: string): Locale {

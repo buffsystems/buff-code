@@ -19,7 +19,7 @@ export const description = `Use this tool when you need to ask the user question
 
 Usage notes:
 - A "Type your own answer" option is added automatically; don't include a separate option for free form answers
-- Set \`multiple: true\` to allow selecting more than one option
+- Set \`multiple\` on every question: \`true\` when the person may pick several options (which of these to include, use or keep), \`false\` when exactly one
 - If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label`
 
 export const Input = Schema.Struct({

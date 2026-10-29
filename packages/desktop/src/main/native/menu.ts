@@ -11,7 +11,7 @@ import { emitIpcEvent } from "../ipc-events"
 
 import { CHANNEL, UPDATER_ENABLED } from "../constants"
 import { runDesktopMenuAction } from "./menu-actions"
-import { nativeT } from "./translations"
+import { buffNativeHref, nativeT } from "./translations"
 
 type Deps = {
   trigger: (id: string) => void
@@ -72,7 +72,7 @@ function nativeItem(entry: DesktopMenuEntry, deps: Deps): MenuItemConstructorOpt
   }
   if (entry.href) {
     const href = entry.href
-    item.click = () => deps.openExternal(href)
+    item.click = () => deps.openExternal(buffNativeHref(href))
   }
 
   return item

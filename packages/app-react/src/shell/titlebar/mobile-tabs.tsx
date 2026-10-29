@@ -81,7 +81,7 @@ export function MobileTabs() {
               </DrawerButton>
               <DrawerButton
                 action="mobile-tabs-help"
-                onClick={() => close(() => platform.openExternal(BuffLinks.docs))}
+                onClick={() => close(() => platform.openExternal(BuffLinks.localized(BuffLinks.docs, i18n.buff.locale)))}
               >
                 <CircleHelp aria-hidden className="size-4" />
                 {i18n.t("sidebar.help")}

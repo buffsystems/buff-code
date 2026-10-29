@@ -97,3 +97,10 @@ export const fileBrowserVisible = (active: string) =>
   !isSessionBrowserTab(active) &&
   // Buff (#464): a side conversation is a tab of its own.
   !sideSessionOf(active)
+
+/**
+ * Buff (#705): the file-tree toggle shows where there is a tree — Review and a file's tab. On
+ * Context, a browser, a side chat or the «open a file» placeholder it toggled nothing seen.
+ */
+export const fileTreeToggles = (active: string) =>
+  active === "review" || (fileBrowserVisible(active) && active !== SESSION_OPEN_FILE_TAB)

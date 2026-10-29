@@ -22,6 +22,7 @@ import BuffPermissionMode from "../feature-plugins/buff/permission-mode"
 import BuffGit from "../feature-plugins/buff/git"
 import BuffBilling from "../feature-plugins/buff/billing"
 import BuffAutomation from "../feature-plugins/buff/automation"
+import BuffPhone from "../feature-plugins/buff/phone"
 import BuffWorkflow from "../feature-plugins/buff/workflow"
 import BuffTodo from "../feature-plugins/buff/todo"
 import BuffGoal from "../feature-plugins/buff/goal"
@@ -46,6 +47,7 @@ export const builtins = [
   BuffBilling,
   // Buff: задачи агенту по расписанию (#447).
   BuffAutomation,
+  BuffPhone,
   // Buff: сценарии — субагенты по фазам (#448).
   BuffWorkflow,
   // Buff: список дел — строка прогресса и /todos (#463).

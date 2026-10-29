@@ -1265,8 +1265,9 @@ test("configured app binding opens settings", async () => {
   await setup.waitForFrame((frame) => frame.includes("команды"))
 
   setup.mockInput.pressKey("F6")
-  const settings = await setup.waitForFrame((frame) => frame.includes("Настройки"))
-  expect(settings).toContain("Цветовой режим")
+  // «Настройки» alone is the home footer's link (#704): wait for the settings dialog itself.
+  const settings = await setup.waitForFrame((frame) => frame.includes("Цветовой режим"))
+  expect(settings).toContain("Настройки")
   expect(settings).toContain("Анимация")
 })
 

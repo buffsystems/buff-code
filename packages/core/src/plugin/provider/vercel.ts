@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Provider } from "../../provider.js"
+import { BuffBrand } from "../../buff/brand.js"
 
 export const VercelPlugin = define({
   id: "opencode.provider.vercel",
@@ -10,7 +11,11 @@ export const VercelPlugin = define({
         if (!Provider.isAISDK(item.provider.package)) continue
         if (Provider.packageName(item.provider.package) !== "@ai-sdk/vercel") continue
         evt.update(item.provider.id, (provider) => {
-          provider.headers = { ...provider.headers, "http-referer": "https://opencode.ai/", "x-title": "opencode" }
+          provider.headers = {
+            ...provider.headers,
+            "http-referer": BuffBrand.ATTRIBUTION.referer,
+            "x-title": BuffBrand.ATTRIBUTION.title,
+          }
         })
       }
     })

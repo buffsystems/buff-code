@@ -51,17 +51,41 @@ export function requestHeaders(
   }
 }
 
-/** Модель из списка коннектора: идентификатор и имя, под которым её показывать. */
-export type Listed = { readonly id: string; readonly name: string }
+/** Модель из списка коннектора: идентификатор, имя, под которым её показывать, и что она
+ *  читает и пишет (#27) — картинку Buff Code отправляет только видящей модели. */
+export type Listed = {
+  readonly id: string
+  readonly name: string
+  readonly input: readonly string[]
+  readonly output: readonly string[]
+}
+
+/** Модальности из списка, как их пишет OpenRouter; текст есть всегда, о чём не сказано — нет. */
+function modalities(value: unknown): string[] {
+  const said = Array.isArray(value) ? value.filter((m): m is string => typeof m === "string" && m !== "") : []
+  return ["text", ...said.filter((m) => m !== "text")]
+}
 
 /** Ответ /v1/models → модели. Имя даёт бэкенд (#435): для нашей модели это тариф, сама
  *  модель — только там, где её выбрала организация. Без имени показывается идентификатор. */
 export function listedModels(reply: unknown): Listed[] {
   const data = (reply as { data?: unknown } | null)?.data
   return (Array.isArray(data) ? data : []).flatMap((item) => {
-    const { id, name } = (item ?? {}) as { id?: unknown; name?: unknown }
+    const { id, name, input_modalities, output_modalities } = (item ?? {}) as {
+      id?: unknown
+      name?: unknown
+      input_modalities?: unknown
+      output_modalities?: unknown
+    }
     if (typeof id !== "string" || !id) return []
-    return [{ id, name: typeof name === "string" && name ? name : id }]
+    return [
+      {
+        id,
+        name: typeof name === "string" && name ? name : id,
+        input: modalities(input_modalities),
+        output: modalities(output_modalities),
+      },
+    ]
   })
 }
 
@@ -107,11 +131,12 @@ export const register = Effect.fn("BuffModels.register")(function* (
       provider.package = "@opencode/ai/providers/openai-compatible"
       provider.settings = { baseURL: `${connector}/v1`, provider: "buff" }
     })
-    for (const { id, name } of loaded.models) {
+    for (const { id, name, input, output } of loaded.models) {
       providers.models.update(providerID, id, (model) => {
         model.modelID = Model.ID.make(id)
         model.name = name
-        model.capabilities = { tools: true, input: ["text"], output: ["text"] }
+        // Что модель читает и пишет — как сказал бэкенд по живому каталогу провайдера (#27).
+        model.capabilities = { tools: true, input: [...input], output: [...output] }
         // Модель организации актуальна по определению — её выбрал администратор. Выбор
         // моделей в десктопе показывает только последнюю модель своего семейства за полгода:
         // без даты она читается как 1970 год, без семейства не считается ничьей последней.

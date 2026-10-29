@@ -37,6 +37,8 @@ export function TimelineHeader(props: {
   /** Before the title: the session's project menu. */
   leading?: ReactNode
   actions?: ReactNode
+  /** Under the title, held at the top with it: what the reader must see first (#640). */
+  below?: ReactNode
 }) {
   const i18n = useI18n()
   const navigate = useNavigate()
@@ -190,6 +192,7 @@ export function TimelineHeader(props: {
           <div className="size-7 shrink-0" aria-hidden="true" />
         </div>
       </div>
+      {props.below}
       <ConfirmDialog
         open={menu.remove}
         danger

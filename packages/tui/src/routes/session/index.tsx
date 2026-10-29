@@ -45,6 +45,7 @@ import { Locale } from "../../util/locale"
 import { FilePath } from "../../ui/file-path"
 import { BuffPlan } from "@opencode/schema/buff-plan"
 import { BuffQuestion } from "@opencode/schema/buff-question"
+import { BuffSendFile } from "@opencode/schema/buff-send-file"
 import { BuffTodo } from "@opencode/schema/buff-todo"
 import { todoLines } from "../../feature-plugins/buff/todo-view"
 import { n, t } from "../../feature-plugins/buff/locale"
@@ -2103,6 +2104,7 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
   const completion = () => source() === "subagent" || source() === "shell"
   const childID = () => (source() === "subagent" ? stringValue(metadata()?.childID) : undefined)
   const state = () => stringValue(metadata()?.state)
+  const summary = () => stringValue(metadata()?.summary)
   const actor = () =>
     source() === "shell" ? t("Shell") : Locale.titlecase(stringValue(metadata()?.agent) ?? t("Subagent"))
   const text = () => {
@@ -2132,6 +2134,8 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
       fallback={
         <InlineToolRow icon="◈" color={theme.text.muted} pending={t("Notice")} complete={true}>
           {text()}
+          {/* Buff (#711): beside «Goal»/«Workflow» — the goal itself or what the run came to. */}
+          {summary() ? ` · ${summary()}` : ""}
         </InlineToolRow>
       }
     >
@@ -2612,6 +2616,10 @@ function ToolPart(props: { part: SessionMessageAssistantTool; images?: boolean }
       </Match>
       <Match when={props.part.name === BuffPlan.TOOL}>
         <PlanCard {...toolprops} />
+      </Match>
+      {/* Buff (#708): файл, который агент отдал человеку. */}
+      <Match when={props.part.name === BuffSendFile.TOOL}>
+        <SendFile {...toolprops} />
       </Match>
       <Match when={true}>
         <GenericTool {...toolprops} />
@@ -3678,6 +3686,17 @@ function PlanCard(props: ToolProps) {
     <BlockTool title={`# ${t("Plan")} · ${BuffPlan.state(decided(), props.part.state.status, t)}`} part={props.part}>
       <text fg={theme.text.base}>{plan()}</text>
     </BlockTool>
+  )
+}
+
+function SendFile(props: ToolProps) {
+  const sent = createMemo(() => BuffSendFile.sentOf(props.metadata))
+  return (
+    <InlineTool icon="↓" pending={t("Handing over the file…")} complete={sent()} part={props.part}>
+      {t("File for you")}: {sent()?.file ?? stringValue(props.input.path)}
+      {sent() ? ` · ${BuffSendFile.sizeOf(sent()!.bytes, t)}` : ""}
+      {sent()?.note ? ` — ${sent()!.note}` : ""}
+    </InlineTool>
   )
 }
 

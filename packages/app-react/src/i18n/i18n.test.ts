@@ -34,5 +34,6 @@ test("Buff strings translate through the shared catalog", () => {
 test("only offered locales survive, Russian by default", () => {
   expect(normalizeLocale("ru")).toBe("ru")
   expect(normalizeLocale("de")).toBe("en")
-  expect(normalizeLocale(undefined)).toBe("ru")
+  expect(normalizeLocale(undefined, ["fr-FR"])).toBe("ru")
+  expect(normalizeLocale(undefined, ["en-GB"])).toBe("en")
 })

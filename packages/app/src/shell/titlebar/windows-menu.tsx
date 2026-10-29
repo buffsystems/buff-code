@@ -3,6 +3,8 @@ import { For, onMount, type JSX } from "solid-js"
 import { Menu } from "@opencode/ui/menu"
 import { Icon } from "@opencode/ui/icon"
 import { IconButton } from "@opencode/ui/icon-button"
+import { BuffI18n } from "@opencode/schema/buff-i18n"
+import { BuffLinks } from "@opencode/schema/buff-links"
 
 import { matchKeybind, parseKeybind, useCommand } from "@/shell/commands/command"
 import {
@@ -59,7 +61,7 @@ export function WindowsAppMenu(props: {
       runAction(entry.action)
       return
     }
-    if (entry.href) props.platform.openExternal(entry.href)
+    if (entry.href) props.platform.openExternal(BuffLinks.localized(entry.href, BuffI18n.locale(language.locale())))
   }
 
   onMount(() => {

@@ -1,14 +1,16 @@
 // The vertical column (#584, Buff #452): Home, Buff's pages and a new session at the top, the
-// open tabs under them, then every session of the server with its state.
+// open tabs under them, then every session of the server with its state; the phone and the
+// settings beside the pages at the top (#704, #709).
 
 import { ResizeHandle } from "@buff/ui/react"
-import { House, SquarePen, type LucideIcon } from "lucide-react"
+import { House, Settings, Smartphone, SquarePen, type LucideIcon } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { formatKeybind, type KeyLabel } from "../commands/keybind"
 import { useCommands } from "../commands/provider"
 import { useI18n } from "../i18n/provider"
 import { useStore } from "../react/use-store"
 import { useNavigate, useRoute } from "../router/router"
+import { useSettingsState, useSettingsSurface } from "../settings/context"
 import { useShellActions } from "./actions"
 import { PAGE_ENTRIES } from "./page-entries"
 import { WindowTabs } from "./tabs/tab-strip"
@@ -63,6 +65,7 @@ export function VerticalSidebar(props: { sessions?: ReactNode }) {
             onClick={() => navigate(page.path)}
           />
         ))}
+        <SidebarReach />
         <SidebarAction
           action="vertical-tabs-new-session"
           icon={SquarePen}
@@ -82,6 +85,35 @@ export function VerticalSidebar(props: { sessions?: ReactNode }) {
         )}
       </div>
     </aside>
+  )
+}
+
+/** The phone and the settings, always in reach (#704) — at the top beside the pages (#709): at the
+ *  foot a long session list pushed them out of the window. */
+function SidebarReach() {
+  const i18n = useI18n()
+  const route = useRoute()
+  const surface = useSettingsSurface()
+  const tab = useSettingsState((state) => (state.view.type === "project" ? undefined : state.view.tab))
+  const open = route.name === "settings"
+  return (
+    <>
+      <SidebarAction
+        action="buff-phone-open"
+        icon={Smartphone}
+        label={i18n.buff.t("Phone")}
+        pressed={open && tab === "phone"}
+        onClick={() => surface.open("phone")}
+      />
+      <SidebarAction
+        action="buff-settings-open"
+        icon={Settings}
+        label={i18n.t("sidebar.settings")}
+        pressed={open && tab !== "phone"}
+        keybind="settings.open"
+        onClick={() => surface.open()}
+      />
+    </>
   )
 }
 

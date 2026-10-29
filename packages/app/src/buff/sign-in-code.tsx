@@ -71,11 +71,11 @@ export function BuffSignInCodeStatus(props: {
 /** Под полем адреса: где его взять — и страница документации о входе. */
 export function BuffConnectorHint() {
   const platform = usePlatform()
-  const { t } = useBuffText()
+  const { t, locale } = useBuffText()
   return (
     <div class="buff-sign-in-hint" data-component="buff-connector-hint">
       {t(BuffFirstRun.CONNECTOR_HINT)}{" "}
-      <button type="button" class="buff-sign-in-link" onClick={() => platform.openExternal(BuffLinks.signIn)}>
+      <button type="button" class="buff-sign-in-link" onClick={() => platform.openExternal(BuffLinks.localized(BuffLinks.signIn, locale()))}>
         {t("Where to get the connector address")}
       </button>
     </div>

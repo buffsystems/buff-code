@@ -15,13 +15,13 @@ function layout(withGit: boolean) {
   const staged = path.join(root, "cli", "2.0.11")
   mkdirSync(staged, { recursive: true })
   mkdirSync(resources, { recursive: true })
-  writeFileSync(path.join(resources, "opencode-cli"), "cli")
+  writeFileSync(path.join(resources, "buff"), "cli")
   if (withGit) {
     mkdirSync(path.join(resources, "buff-git", "libexec", "git-core"), { recursive: true })
     writeFileSync(path.join(resources, "buff-git", "libexec", "git-core", "git"), "git")
     chmodSync(path.join(resources, "buff-git", "libexec", "git-core", "git"), 0o755)
   }
-  return { cli: path.join(resources, "opencode-cli"), staged }
+  return { cli: path.join(resources, "buff"), staged }
 }
 
 describe("staging the bundled git next to the staged CLI", () => {

@@ -64,3 +64,25 @@ describe("каталог Buff", () => {
     expect(BuffI18n.t("en", "Automations")).toBe("Automations")
   })
 })
+
+describe("system language (#713)", () => {
+  test("the first Russian or English language wins; any other, or none, is Russian", () => {
+    expect(BuffI18n.systemLocale(["de-DE", "en-US"])).toBe("en")
+    expect(BuffI18n.systemLocale(["ru_RU.UTF-8"])).toBe("ru")
+    expect(BuffI18n.systemLocale(["en_GB.UTF-8"])).toBe("en")
+    expect(BuffI18n.systemLocale(["de-DE"])).toBe("ru")
+    expect(BuffI18n.systemLocale(["C.UTF-8", "POSIX"])).toBe("ru")
+    expect(BuffI18n.systemLocale([])).toBe("ru")
+  })
+
+  test("the console's languages come in gettext order", () => {
+    expect(BuffI18n.envLanguages({ LANGUAGE: "de:en", LC_ALL: "ru_RU.UTF-8", LANG: "C" })).toEqual([
+      "de",
+      "en",
+      "ru_RU.UTF-8",
+      "C",
+    ])
+    expect(BuffI18n.systemLocale(BuffI18n.envLanguages({ LANG: "en_US.UTF-8" }))).toBe("en")
+    expect(BuffI18n.systemLocale(BuffI18n.envLanguages({}))).toBe("ru")
+  })
+})

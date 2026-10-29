@@ -157,7 +157,7 @@ export function ConnectServerScreen() {
           </Show>
           <footer>
             <p>{language.t("server.connect.pair.description")}</p>
-            <code dir="ltr">opencode pair</code>
+            <code dir="ltr">buff pair</code>
           </footer>
         </Show>
       </div>

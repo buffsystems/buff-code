@@ -40,7 +40,7 @@ shots:                      ## снимки терминального инте�
 DESKTOP_RUN = docker run --rm -v $(ROOT):/src -w /src/packages/desktop -e HOME=/tmp \
 	-e OPENCODE_CHANNEL=prod -e OPENCODE_VERSION=$(VERSION) -e OPENCODE_CLI_DIST=$(DIST) \
 	-e BUFF_BINARY=$(BINARY) -e WINEDEBUG=-all -e OPENCODE_CLI_TARGET=$(1) $(IMAGE) \
-	bash -c 'rm -f resources/opencode-cli resources/opencode-cli.exe && bun run prebuild && $(2)'
+	bash -c 'rm -f resources/buff resources/buff.exe && bun run prebuild && $(2)'
 
 EB := bunx electron-builder --config electron-builder.config.ts -c.extraMetadata.version=$(VERSION)
 

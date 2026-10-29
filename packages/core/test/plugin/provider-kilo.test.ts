@@ -35,8 +35,8 @@ describe("KiloPlugin", () => {
       yield* addPlugin()
       expect((yield* catalog.get(Provider.ID.make("kilo")))?.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://opencode.ai/",
-        "X-Title": "opencode",
+        "HTTP-Referer": "https://buff.systems/",
+        "X-Title": "Buff Code",
       })
       expect((yield* catalog.get(Provider.ID.openrouter))?.headers).toBeUndefined()
     }),
@@ -54,8 +54,8 @@ describe("KiloPlugin", () => {
       yield* addPlugin()
 
       expect((yield* catalog.get(Provider.ID.make("kilo")))?.headers).toEqual({
-        "HTTP-Referer": "https://opencode.ai/",
-        "X-Title": "opencode",
+        "HTTP-Referer": "https://buff.systems/",
+        "X-Title": "Buff Code",
       })
       expect((yield* catalog.get(Provider.ID.make("kilo")))?.headers).not.toHaveProperty("http-referer")
       expect((yield* catalog.get(Provider.ID.make("kilo")))?.headers).not.toHaveProperty("x-title")
@@ -79,8 +79,8 @@ describe("KiloPlugin", () => {
 
       expect((yield* catalog.get(Provider.ID.make("kilo")))?.headers).toBeUndefined()
       expect((yield* catalog.get(Provider.ID.make("custom-kilo")))?.headers).toEqual({
-        "HTTP-Referer": "https://opencode.ai/",
-        "X-Title": "opencode",
+        "HTTP-Referer": "https://buff.systems/",
+        "X-Title": "Buff Code",
       })
     }),
   )

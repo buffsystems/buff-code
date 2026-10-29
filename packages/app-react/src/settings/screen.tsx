@@ -20,7 +20,7 @@ import { useStore } from "../react/use-store"
 import { useMobile } from "../shell/media"
 import { useSettings } from "../shell/settings-context"
 import { useSettingsState, useSettingsSurface } from "./context"
-import { pageIcons } from "./icons"
+import { pageIcons, pageLabel, pageLabels } from "./icons"
 import { displayName, knownProject, type SettingsServer } from "./inventory"
 import { SettingsNavigation, type SettingsNavGroup } from "./navigation"
 import { SettingsAbout } from "./pages/about"
@@ -30,6 +30,7 @@ import { SettingsExtensions } from "./pages/extensions"
 import { SettingsGeneral } from "./pages/general"
 import { SettingsModels } from "./pages/models"
 import { SettingsNotifications } from "./pages/notifications"
+import { SettingsPhone } from "./pages/phone"
 import { SettingsProjectGeneral } from "./pages/project"
 import { SettingsProjects } from "./pages/projects"
 import { SettingsProviders } from "./pages/providers"
@@ -52,13 +53,7 @@ const clientTabs = [
   { value: "shortcuts", label: "settings.tab.shortcuts" },
 ] as const
 
-const scopedTabs = [
-  { value: "projects", label: "settings.tab.projects" },
-  { value: "workspaces", label: "settings.tab.workspaces" },
-  { value: "providers", label: "settings.providers.title" },
-  { value: "models", label: "settings.models.title" },
-  { value: "extensions", label: "settings.tab.extensions" },
-] as const
+const scopedTabs = ["projects", "workspaces", "providers", "models", "extensions", "phone"] as const
 
 const scopedRoot: readonly SettingsRootTab[] = [
   "projects",
@@ -66,6 +61,7 @@ const scopedRoot: readonly SettingsRootTab[] = [
   "providers",
   "models",
   "extensions",
+  "phone",
   "servers",
 ]
 
@@ -212,12 +208,12 @@ function RootSettings(props: { view: Extract<SettingsView, { type: "root" }>; se
         }
       : {
           items: [
-            ...scopedTabs.map((item) => ({
-              value: item.value,
-              icon: pageIcons[item.value],
-              label: i18n.t(item.label),
+            ...scopedTabs.map((value) => ({
+              value,
+              icon: pageIcons[value],
+              label: pageLabel(pageLabels[value], i18n.t, i18n.buff.t),
               disabled: !single?.connection,
-              onPrefetch: item.value === "workspaces" ? prefetchRoot : undefined,
+              onPrefetch: value === "workspaces" ? prefetchRoot : undefined,
             })),
             { value: "servers", icon: pageIcons.servers, label: i18n.t("settings.section.server") },
           ],
@@ -255,6 +251,7 @@ function RootSettings(props: { view: Extract<SettingsView, { type: "root" }>; se
     if (tab === "workspaces") return scoped(() => <SettingsWorkspaces resetFilter={reset} />)
     if (tab === "providers") return scoped(() => <SettingsProviders />)
     if (tab === "models") return scoped(() => <SettingsModels autofocus={autofocus} />)
+    if (tab === "phone") return scoped(() => <SettingsPhone />)
     return scoped(() => <SettingsExtensions subtab={props.view.subtab} onSubtab={(subtab) => surface.subtab(subtab)} />)
   }
 
@@ -287,12 +284,12 @@ function ServerSettings(props: { view: Extract<SettingsView, { type: "server" }>
     {
       items: [
         { value: "general", icon: pageIcons.servers, label: props.entry.name },
-        ...scopedTabs.map((item) => ({
-          value: item.value,
-          icon: pageIcons[item.value],
-          label: i18n.t(item.label),
+        ...scopedTabs.map((value) => ({
+          value,
+          icon: pageIcons[value],
+          label: pageLabel(pageLabels[value], i18n.t, i18n.buff.t),
           disabled: !conn,
-          onPrefetch: item.value === "workspaces" ? prefetchServer : undefined,
+          onPrefetch: value === "workspaces" ? prefetchServer : undefined,
         })),
       ],
     },
@@ -313,6 +310,7 @@ function ServerSettings(props: { view: Extract<SettingsView, { type: "server" }>
         {tab === "workspaces" && <SettingsWorkspaces resetFilter={reset} />}
         {tab === "providers" && <SettingsProviders />}
         {tab === "models" && <SettingsModels autofocus />}
+        {tab === "phone" && <SettingsPhone />}
         {tab === "extensions" && (
           <SettingsExtensions subtab={props.view.subtab} onSubtab={(subtab) => surface.subtab(subtab)} />
         )}

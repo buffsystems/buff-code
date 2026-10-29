@@ -6,6 +6,7 @@ import { Global } from "@opencode/util/global"
 import { createEventStream, createFetch, directory, json } from "./fixture/tui-client"
 import { tmpdir } from "./fixture/fixture"
 
+// It boots the whole app: on a busy machine that alone nears the default 5 s.
 test.each(["success", "failure", "home"])("Copy session ID from Ctrl+P (%s)", async (mode) => {
   await using state = await tmpdir()
   const setup = await createTestRenderer({ width: 100, height: 30, useThread: false, kittyKeyboard: true })
@@ -75,4 +76,4 @@ test.each(["success", "failure", "home"])("Copy session ID from Ctrl+P (%s)", as
     await task
     await server.stop()
   }
-})
+}, 15_000)

@@ -69,6 +69,29 @@ describe("the list", () => {
     ])
   })
 
+  // #709: вне закреплённых и групп — по проектам, свежий проект выше; заголовок — имя папки.
+  test("by project instead of by time when the window asks", () => {
+    const where: Record<string, string> = {
+      today: "/w/shop",
+      yesterday: "/w/blog",
+      old: "/w/shop",
+      grouped: "/w/blog",
+      pinned: "/w/shop",
+    }
+    const projectOf = (item: { id: string }) => where[item.id] ?? ""
+    const sections = Marks.sections(sessions, marks, now, "", projectOf)
+    expect(shape(sections)).toEqual([
+      ["Pinned", ["pinned"]],
+      ["Выпуск", ["grouped"]],
+      ["shop", ["today", "old"]],
+      ["blog", ["yesterday"]],
+    ])
+    expect(sections.slice(2).map((section) => [section.kind, section.key])).toEqual([
+      ["project", "project:/w/shop"],
+      ["project", "project:/w/blog"],
+    ])
+  })
+
   test("a pinned session of a group shows among the pinned only", () => {
     const both = { ...marks, pinned: ["pinned", "grouped"] }
     expect(shape(Marks.sections(sessions, both, now)).slice(0, 2)).toEqual([

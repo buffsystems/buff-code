@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { serviceCommand } from "./service-command"
 
-const command = ["/opt/buff/opencode-cli", "serve", "--service"]
+const command = ["/opt/buff/buff", "serve", "--service"]
 
 describe("serviceCommand", () => {
   test("macOS and Windows spawn the service as it is", () => {

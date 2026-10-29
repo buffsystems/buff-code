@@ -8,6 +8,12 @@ describe("Core test environment", () => {
     expect(process.env.NPM_CONFIG_AUDIT).toBe("false")
   })
 
+  test("pins a system language that is neither Russian nor English (#713)", () => {
+    expect(process.env.LANG).toBe("C.UTF-8")
+    expect(process.env.LANGUAGE).toBeUndefined()
+    expect(process.env.LC_ALL).toBeUndefined()
+  })
+
   test("isolates global home and XDG roots", () => {
     const home = process.env.OPENCODE_TEST_HOME
     expect(home).toBeDefined()

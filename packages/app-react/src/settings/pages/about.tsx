@@ -8,7 +8,7 @@ import { usePlatform } from "../../platform/context"
 export function SettingsAbout() {
   const i18n = useI18n()
   const platform = usePlatform()
-  const about = aboutContent(platform.version, i18n.buff.t)
+  const about = aboutContent(platform.version, i18n.buff.t, i18n.buff.locale)
   return (
     <div className="settings-about-content" data-component="buff-about">
       <span className="settings-about-wordmark ui-title ui-title--lg" aria-hidden="true">

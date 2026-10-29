@@ -15,9 +15,9 @@ function layout(withRipgrep: boolean) {
   const staged = path.join(root, "cli", "2.0.11")
   mkdirSync(resources, { recursive: true })
   mkdirSync(staged, { recursive: true })
-  writeFileSync(path.join(resources, "opencode-cli"), "cli")
+  writeFileSync(path.join(resources, "buff"), "cli")
   if (withRipgrep) writeFileSync(path.join(resources, BuffRipgrepStage.name("linux")), "rg")
-  return { cli: path.join(resources, "opencode-cli"), staged }
+  return { cli: path.join(resources, "buff"), staged }
 }
 
 describe("staging the bundled ripgrep next to the staged CLI", () => {

@@ -58,3 +58,15 @@ describe("the question notice", () => {
     expect(text).toContain('question_id: "q1"')
   })
 })
+
+// #711: beside «Workflow» in the conversation the person reads what happened, in their language.
+describe("what the person reads beside the notice", () => {
+  test("the run's end in words, the actor's question as asked", () => {
+    expect(WorkflowNotify.doneSummary(run)).toBe("«Проверка ветки» завершён")
+    expect(WorkflowNotify.doneSummary({ ...run, status: "errored" })).toBe("«Проверка ветки» — ошибка")
+    expect(WorkflowNotify.doneSummary({ ...run, status: "stopped" })).toBe("«Проверка ветки» остановлен")
+    expect(WorkflowNotify.questionSummary({ id: "q", actor: "reviewer", text: "Какую ветку взять?" } as never)).toBe(
+      "reviewer: Какую ветку взять?",
+    )
+  })
+})

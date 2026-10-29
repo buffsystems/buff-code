@@ -68,13 +68,13 @@ export function make(sessions: Session.Interface): WorkflowEngine.Sessions {
       run(sessions.diff({ sessionID: id(input.session), from: input.from as never })).then((files) =>
         files.map((file) => ({ status: file.status, additions: file.additions, deletions: file.deletions })),
       ),
-    synthetic: (session, text) =>
+    synthetic: (session, text, summary) =>
       run(
         sessions.synthetic({
           sessionID: id(session),
           text,
           description: BuffLocale.t("Workflow"),
-          metadata: { source: "buff-workflow" },
+          metadata: { source: "buff-workflow", summary },
         }),
       ).then(() => undefined),
     interrupt: (session) => run(sessions.interrupt(id(session))).then(() => undefined),

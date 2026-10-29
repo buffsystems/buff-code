@@ -10,8 +10,15 @@ test("audits deterministic flowchart and state layout families", () => {
   expect(states.length).toBeGreaterThanOrEqual(100)
   expect(new Set(fixtures.map((fixture) => fixture.id)).size).toBe(fixtures.length)
 
+  // The budget guards the audit's own work, so it is measured as CPU time of this thread (the
+  // audit is synchronous on it), not wall time: on a shared runner the wall clock also counts
+  // the time other jobs hold the CPU (28 s of CPU took 43 s of wall under 4 parallel jobs, 60 s
+  // with two audits on one core), while this thread's CPU time stays the same.
   const startedAt = performance.now()
+  const cpuAt = process.threadCpuUsage()
   const audits = auditAllFixtures()
+  const cpu = process.threadCpuUsage(cpuAt)
+  const cpuMs = (cpu.user + cpu.system) / 1000
   const elapsedMs = performance.now() - startedAt
   const violations = audits.flatMap((audit) =>
     audit.violations.map((violation) => `${audit.fixture.id} @${audit.viewport}: ${violation}`),
@@ -20,7 +27,7 @@ test("audits deterministic flowchart and state layout families", () => {
 
   expect(audits.length).toBeGreaterThanOrEqual(fixtures.length)
   expect(violations).toEqual([])
-  expect(elapsedMs).toBeLessThan(35_000)
+  expect(cpuMs).toBeLessThan(35_000)
   for (const audit of audits.filter((audit) => audit.fixture.kind === "state")) {
     expect(audit.viewport).toBe(audit.fixture.profile === "short" ? 60 : audit.fixture.profile === "unicode" ? 80 : 120)
   }
@@ -59,7 +66,7 @@ test("audits deterministic flowchart and state layout families", () => {
   }
 
   console.log(
-    `[layout-audit] ${fixtures.length} sources, ${audits.length} runs, ${elapsedMs.toFixed(0)}ms`,
+    `[layout-audit] ${fixtures.length} sources, ${audits.length} runs, ${cpuMs.toFixed(0)}ms cpu, ${elapsedMs.toFixed(0)}ms wall`,
     JSON.stringify({
       summary,
       worst: {
@@ -78,4 +85,5 @@ test("audits deterministic flowchart and state layout families", () => {
       },
     }),
   )
-}, 40_000)
+  // Wall-clock timeout only catches a hang; the CPU budget above is what catches a slowdown.
+}, 180_000)

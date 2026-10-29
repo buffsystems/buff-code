@@ -107,6 +107,7 @@ import { PanelProvider, usePanel } from "./context/panel"
 import { SessionFrame } from "./component/session-frame"
 import { createTuiClipboard } from "./clipboard"
 import { t } from "./feature-plugins/buff/locale"
+import { currentLocale } from "./feature-plugins/buff/locale-state"
 
 registerOpencodeSpinner()
 
@@ -1109,7 +1110,7 @@ function App(props: { pair?: DialogPairCredentials }) {
         name: "docs.open",
         title: t("Open docs"),
         run: () => {
-          open(BuffLinks.docs).catch(() => {})
+          open(BuffLinks.localized(BuffLinks.docs, currentLocale())).catch(() => {})
           dialog.clear()
         },
         category: t("System"),

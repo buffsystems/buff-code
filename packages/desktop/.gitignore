@@ -24,7 +24,11 @@ dist-ssr
 *.sw?
 out/
 
-resources/opencode-cli*
+resources/buff
+resources/buff.exe
+resources/buff.version
+resources/buff-dev*
+resources/buff-wsl*
 resources/buff-rg*
 resources/buff-git/
 resources/icons

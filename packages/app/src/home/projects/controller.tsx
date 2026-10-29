@@ -1,3 +1,4 @@
+import { BuffI18n } from "@opencode/schema/buff-i18n"
 import { BuffLinks } from "@opencode/schema/buff-links"
 import { BuffFeatures } from "@opencode/schema/buff-features"
 import { useDirectoryPicker } from "@/workspaces/selection/picker"
@@ -180,7 +181,7 @@ export function createHomeProjectsController(home: HomeController) {
     },
     utility: {
       settings: openSettings,
-      help: () => platform.openExternal(BuffLinks.docs),
+      help: () => platform.openExternal(BuffLinks.localized(BuffLinks.docs, BuffI18n.locale(language.locale()))),
     },
   }
 }

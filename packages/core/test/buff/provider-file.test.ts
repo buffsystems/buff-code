@@ -100,3 +100,29 @@ describe("the form", () => {
     expect(BuffProvider.draftProblem({ ...good, models: [{ id: " " }] })).toContain("model")
   })
 })
+
+describe("what a model reads and writes (#27)", () => {
+  test("the person's marks are written as capabilities and read back", () => {
+    const text = BuffProviderFile.withProvider("", "own", {
+      name: "Own",
+      baseURL: "http://h/v1",
+      models: [{ id: "llava", images: true }, { id: "flux", images: false, draws: true }, { id: "plain" }],
+    })
+    const models = JSON.parse(text).providers.own.models
+    expect(models.llava.capabilities).toEqual({ tools: true, input: ["text", "image"], output: ["text"] })
+    expect(models.flux.capabilities).toEqual({ tools: true, input: ["text"], output: ["text", "image"] })
+    expect(models.plain.capabilities).toBeUndefined()
+    expect(BuffProviderFile.providers(text)[0]!.models).toEqual([
+      { id: "llava", images: true, draws: false },
+      { id: "flux", images: false, draws: true },
+      { id: "plain" },
+    ])
+  })
+
+  test("a server's list says what a model reads when it says it — OpenRouter's way or LiteLLM's", () => {
+    expect(BuffProviderFile.listedModalities({ id: "a", architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] } })).toEqual({ images: true, draws: false })
+    expect(BuffProviderFile.listedModalities({ id: "b", input_modalities: ["text"], output_modalities: ["image", "text"] })).toEqual({ images: false, draws: true })
+    expect(BuffProviderFile.listedModalities({ id: "c", model_info: { supports_vision: true } })).toEqual({ images: true, draws: false })
+    expect(BuffProviderFile.listedModalities({ id: "d", object: "model" })).toBeNull()
+  })
+})

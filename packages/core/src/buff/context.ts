@@ -6,6 +6,7 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { BuffContext } from "@opencode/schema/buff-context"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { BuffBillingReader } from "./billing.js"
+import { BuffDraw } from "./draw.js"
 import { BuffModels } from "./models.js"
 import { BuffOutboxSender } from "./outbox-sender.js"
 import { BuffTools } from "./tools.js"
@@ -151,6 +152,8 @@ export const Plugin = define<HttpClient.HttpClient | Scope.Scope>({
 
     const reloadModels = yield* BuffModels.register(ctx, http, { signedIn, choice: saved })
     const recheckTools = yield* BuffTools.register(ctx, signedIn, saved)
+    // Картинки по просьбе (#27): художник организации, файл — в папку сессии.
+    yield* BuffDraw.register(ctx, { signedIn, choice: saved })
     yield* BuffBillingReader.register(ctx, http, { signedIn, choice: saved })
 
     // The event is sent through the registration the handlers belong to, which exists only

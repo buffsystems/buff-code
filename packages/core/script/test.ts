@@ -32,6 +32,12 @@ const environment = {
   OPENCODE_CONFIG: undefined,
   OPENCODE_CONFIG_CONTENT: undefined,
   TMPDIR: temporary,
+  // The language follows the system until one is chosen (#713): pin a system that is neither
+  // Russian nor English, so the suite reads the same on every machine (Russian).
+  LANGUAGE: undefined,
+  LC_ALL: undefined,
+  LC_MESSAGES: undefined,
+  LANG: "C.UTF-8",
   ...(process.platform === "win32" ? { USERPROFILE: home, TMP: temporary, TEMP: temporary } : {}),
 }
 

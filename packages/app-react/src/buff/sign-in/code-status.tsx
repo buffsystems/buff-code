@@ -57,11 +57,11 @@ export function BuffSignInCodeStatus(props: {
 
 export function BuffConnectorHint() {
   const platform = usePlatform()
-  const t = useI18n().buff.t
+  const { t, locale } = useI18n().buff
   return (
     <div className="ui-hint" data-component="buff-connector-hint">
       {t(BuffFirstRun.CONNECTOR_HINT)}{" "}
-      <button type="button" className="ui-link" onClick={() => platform.openExternal(BuffLinks.signIn)}>
+      <button type="button" className="ui-link" onClick={() => platform.openExternal(BuffLinks.localized(BuffLinks.signIn, locale))}>
         {t("Where to get the connector address")}
       </button>
     </div>

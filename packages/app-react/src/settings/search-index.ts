@@ -3,7 +3,7 @@
 
 import type { Translator } from "../i18n/i18n"
 import { displayName, type SettingsProject } from "./inventory"
-import { pageLabels } from "./icons"
+import { pageLabel, pageLabels } from "./icons"
 import { clientSettings, projectSettings, serverSettings } from "./search-catalog"
 import type { SettingsSearchResult } from "./search-results"
 import type { SettingsServerTab, SettingsView } from "./surface"
@@ -22,6 +22,8 @@ export function settingsSearchIndex(input: {
   dev: boolean
   mobile: boolean
   translate: Translator["t"]
+  /** Buff's own words (a page Buff added names itself by them). */
+  buff: Translator["buff"]["t"]
 }) {
   const items: SettingsSearchResult[] = []
   const add = (
@@ -35,12 +37,11 @@ export function settingsSearchIndex(input: {
     const page =
       !server && view.tab === "general" && view.target
         ? `${input.translate(pageLabels.general)} / ${input.translate(entry.section ?? "settings.general.section.general")}`
-        : input.translate(
-            entry.section ??
-              (view.type !== "root" && view.tab === "general"
-                ? "settings.general.section.general"
-                : pageLabels[view.tab]),
-          )
+        : entry.section
+          ? input.translate(entry.section)
+          : view.type !== "root" && view.tab === "general"
+            ? input.translate("settings.general.section.general")
+            : pageLabel(pageLabels[view.tab], input.translate, input.buff)
     items.push({
       id: JSON.stringify([server, project, view.tab, view.target, view.subtab, entry.label]),
       title: input.translate(entry.label),

@@ -177,7 +177,7 @@ for (const channel of ["dev", "beta"] as const) {
     if (previous === undefined) delete process.env.OPENCODE_CHANNEL
     else process.env.OPENCODE_CHANNEL = previous
 
-    expect(config.files).toContain("!resources/opencode-cli*")
+    expect(config.files).toContain("!resources/buff")
     // Buff: ripgrep сборки — рядом с консолью, вне архива приложения.
     expect(config.files).toContain("!resources/buff-rg*")
     // Buff (#495): встроенный git — тоже вне архива, каталогом.
@@ -186,7 +186,7 @@ for (const channel of ["dev", "beta"] as const) {
       {
         from: "resources/",
         to: "",
-        filter: ["opencode-cli", "opencode-cli.exe", "opencode-cli.version", "buff-rg", "buff-rg.exe"],
+        filter: ["buff", "buff.exe", "buff.version", "buff-rg", "buff-rg.exe"],
       },
       { from: "resources/buff-git", to: "buff-git", filter: ["**/*"] },
     ])

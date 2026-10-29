@@ -193,3 +193,62 @@ test.each([40, 120])("subagent completion notices navigate to the child session 
     await server.stop()
   }
 })
+
+// #711: a goal or workflow notice shows what it is about beside its label.
+test("a goal notice shows the goal beside «Goal»", async () => {
+  await using state = await tmpdir()
+  const setup = await createTestRenderer({ width: 120, height: 20, useThread: false, kittyKeyboard: true })
+  setup.renderer.start()
+  const session = {
+    id: "ses_goal",
+    title: "Goal notice",
+    projectID: "project",
+    location: { directory },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    time: { created: 0, updated: 0 },
+  }
+  const messages = [
+    { id: "user-0", type: "user", text: "Start", time: { created: 0 } },
+    {
+      id: "notice-goal",
+      type: "synthetic",
+      text: "Session goal: all tests green",
+      description: "Goal",
+      metadata: { source: "buff-goal", summary: "All tests green" },
+      time: { created: 1 },
+    },
+  ]
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
+    if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
+    if (url.pathname === `/api/session/${session.id}/message`) return json({ data: messages.toReversed(), cursor: {} })
+    if (url.pathname === `/api/session/${session.id}/inbox`) return json({ data: [] })
+    if (url.pathname === `/api/session/${session.id}/permission`) return json({ data: [] })
+    return undefined
+  }, createEventStream())
+  const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
+  const { run } = await import("../src/app")
+  const task = Effect.runPromise(
+    run({
+      app: { name: "test", version: "test", channel: "test" },
+      server: { endpoint: { url: server.url.toString() } },
+      config: {
+        get: async () => ({ animations: false, tabs: { enabled: false } }),
+        update: async () => ({}),
+      },
+      packages: { prepare: async () => ({ directory: "" }) },
+      args: { sessionID: session.id },
+      terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
+      log: () => {},
+    }).pipe(Effect.provide(Global.layerWith({ state: state.path })), Effect.provide(FileSystem.layerNoop({}))),
+  )
+  try {
+    await setup.waitForFrame((frame) => frame.includes("All tests green"))
+    expect(setup.captureCharFrame()).toContain("Goal · All tests green")
+  } finally {
+    setup.renderer.destroy()
+    await task
+    await server.stop()
+  }
+})

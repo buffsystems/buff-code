@@ -19,8 +19,8 @@ export interface Deps {
     readonly put: (session: string, goal: BuffGoal.Goal) => Promise<void>
     readonly remove: (session: string) => Promise<void>
   }
-  /** Указание модели в сессии — будит её. */
-  readonly prompt: (session: string, text: string) => Promise<void>
+  /** Указание модели в сессии — будит её; `summary` — что видит человек рядом с «Цель» (#711). */
+  readonly prompt: (session: string, text: string, summary: string) => Promise<void>
   /** Ответ модели по контексту сессии, без записи в историю. */
   readonly generate: (session: string, prompt: string) => Promise<string>
   /** Отметка в сессии, не будит модель. */
@@ -71,8 +71,13 @@ export function make(deps: Deps) {
       reason: goal.reason ?? "",
       directory: deps.directory(session),
     }
-    if (action === "start") return deps.prompt(session, render(startText, values))
-    if (action === "continue") return deps.prompt(session, render(continueText, values))
+    if (action === "start") return deps.prompt(session, render(startText, values), goal.text)
+    if (action === "continue")
+      return deps.prompt(
+        session,
+        render(continueText, values),
+        BuffLocale.t("Iteration {iteration}: {reason}", { iteration: values.iteration, reason: values.reason }),
+      )
     if (action === "done") return deps.announce(session, BuffLocale.t("Goal reached: {reason}", { reason: values.reason }))
     // Нечитаемый ответ бывает сбоем формата: спросить ещё раз; снова нечитаемый — пауза с ответом.
     const check = render(checkText, values)

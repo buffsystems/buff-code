@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://github.com/buffsystems/buff-code/releases"><img alt="Release" src="https://img.shields.io/github/v/release/buffsystems/buff-code?label=release&color=2563eb"></a>
   <a href="LICENSE"><img alt="Licence" src="https://img.shields.io/badge/licence-MIT-64748b"></a>
-  <a href="https://buff.systems/docs/buff-code"><img alt="Docs" src="https://img.shields.io/badge/docs-buff.systems-0b0d12"></a>
+  <a href="https://buff.systems/en/docs/buff-code"><img alt="Docs" src="https://img.shields.io/badge/docs-buff.systems-0b0d12"></a>
 </p>
 
 <p align="center">
@@ -21,13 +21,13 @@
   <a href="#what-it-does">What it does</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#building-from-source">Build</a> ·
-  <a href="https://buff.systems/docs/buff-code">Documentation</a> ·
+  <a href="https://buff.systems/en/docs/buff-code">Documentation</a> ·
   <a href="README.md">Русский</a>
 </p>
 
 ---
 
-**Buff Code** is an agent in your project folder: the `buff` console and an app for Linux, macOS and Windows. It is the second way to work with [Buff](https://buff.systems): in the web app the platform drives a task — writes the code, checks it and brings it for acceptance; in Buff Code the engineer writes the code, and the model helps in their folder and terminal — with the same knowledge of the company.
+**Buff Code** is an agent in your project folder: the `buff` console and an app for Linux, macOS and Windows. It is the second way to work with [Buff](https://buff.systems/en): in the web app the platform drives a task — writes the code, checks it and brings it for acceptance; in Buff Code the engineer writes the code, and the model helps in their folder and terminal — with the same knowledge of the company.
 
 Buff Code reaches models through the company connector, through LiteLLM or directly — any OpenAI-compatible endpoint works. Through the connector it also gets the rest of what the organisation has: knowledge, repositories, connections and a record of every turn in the dashboard.
 
@@ -44,9 +44,9 @@ The console, in one command:
 curl -fsSL https://github.com/buffsystems/buff-code/releases/latest/download/install | bash
 ```
 
-The script takes the console from this repository's [releases](https://github.com/buffsystems/buff-code/releases) and checks its checksum; if GitHub is unreachable it falls back to the mirror [buff.systems/downloads](https://buff.systems/downloads) (`BUFF_SOURCE=mirror` goes to the mirror directly).
+The script takes the console from this repository's [releases](https://github.com/buffsystems/buff-code/releases) and checks its checksum; if GitHub is unreachable it falls back to the mirror [buff.systems/en/downloads](https://buff.systems/en/downloads) (`BUFF_SOURCE=mirror` goes to the mirror directly).
 
-The app for Linux, macOS and Windows is in the releases too. The `SHA256SUMS` list is signed with cosign, and the public key [`cosign.pub`](cosign.pub) is in the repository: `cosign verify-blob --key cosign.pub --signature SHA256SUMS.sig SHA256SUMS`. On first start Buff Code asks for your company connector's address and a code from the dashboard — or offers to connect your own model. Details: [Install](https://buff.systems/docs/buff-code/install) and [Sign-in](https://buff.systems/docs/buff-code/sign-in).
+The app for Linux, macOS and Windows is in the releases too. The `SHA256SUMS` list is signed with cosign, and the public key [`cosign.pub`](cosign.pub) is in the repository: `cosign verify-blob --key cosign.pub --signature SHA256SUMS.sig SHA256SUMS`. On first start Buff Code asks for your company connector's address and a code from the dashboard — or offers to connect your own model. Details: [Install](https://buff.systems/en/docs/buff-code/install) and [Sign-in](https://buff.systems/en/docs/buff-code/sign-in).
 
 ## What it does
 

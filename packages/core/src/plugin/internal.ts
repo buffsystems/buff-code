@@ -111,8 +111,11 @@ import { BuffTrust } from "../buff/trust.js"
 import { BuffAutomationPlugin } from "../buff/automation.js"
 import { BuffAutomationService } from "../buff/automation-service.js"
 import { BuffTodoPlugin } from "../buff/todo.js"
+import { BuffSendFilePlugin } from "../buff/send-file.js"
 import { BuffPlanPlugin } from "../buff/plan.js"
 import { BuffGoalPlugin } from "../buff/goal.js"
+import { BuffMobilePlugin } from "../buff/mobile.js"
+import { BuffMobileService } from "../buff/mobile-service.js"
 import { BuffSidePlugin } from "../buff/side.js"
 import { BuffGoalService } from "../buff/goal-service.js"
 import { BuffWorkflowPlugin } from "../buff/workflow.js"
@@ -140,6 +143,8 @@ const services = [
   BuffWorkflowService.Service,
   // Buff (#463): цели сессий — служба процесса.
   BuffGoalService.Service,
+  // Buff (#639): телефон — служба процесса.
+  BuffMobileService.Service,
   Agent.Service,
   AppProcess.Service,
   Provider.Service,
@@ -197,6 +202,7 @@ export const requirements = LayerNode.group([
   BuffAutomationService.node,
   BuffWorkflowService.node,
   BuffGoalService.node,
+  BuffMobileService.node,
   Agent.node,
   AppProcess.node,
   Provider.node,
@@ -325,8 +331,10 @@ const post = [
   BuffAutomationPlugin.Plugin,
   BuffWorkflowPlugin.Plugin,
   BuffTodoPlugin.Plugin,
+  BuffSendFilePlugin.Plugin,
   BuffPlanPlugin.Plugin,
   BuffGoalPlugin.Plugin,
+  BuffMobilePlugin.Plugin,
   BuffSidePlugin.Plugin,
 ] as const satisfies readonly InternalPlugin[]
 

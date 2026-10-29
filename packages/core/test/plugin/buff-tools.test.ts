@@ -91,11 +91,16 @@ describe("BuffTools (#368)", () => {
   it.effect("the connector's MCP is the gateway's /v1/mcp with the developer's token", () =>
     Effect.sync(() => {
       expect(BuffTools.serverConfig(undefined)).toBeUndefined()
-      expect(BuffTools.serverConfig({ connector: "https://c.local:8767", token: "T" })).toEqual({
+      expect(BuffTools.serverConfig({ connector: "https://c.local:8767", token: "T" }, "ru")).toEqual({
         type: "remote",
         url: "https://c.local:8767/v1/mcp",
-        headers: { Authorization: "Bearer T" },
+        headers: { Authorization: "Bearer T", "X-Buff-Lang": "ru" },
         oauth: false,
+      })
+      // The person's language goes with every request (#565): the connector words the tools in it.
+      expect(BuffTools.serverConfig({ connector: "https://c.local:8767", token: "T" }, "en")?.headers).toEqual({
+        Authorization: "Bearer T",
+        "X-Buff-Lang": "en",
       })
     }),
   )

@@ -2,6 +2,7 @@
 // when it failed — the Solid ToolDisplay and ToolRegistry.
 
 import { BuffPlan } from "@opencode/schema/buff-plan"
+import { BuffSendFile } from "@opencode/schema/buff-send-file"
 import { BuffTodo } from "@opencode/schema/buff-todo"
 import { formAbortNote } from "@opencode/session-ui/timeline/buff-form-abort"
 import type { ComponentType } from "react"
@@ -21,6 +22,7 @@ import {
   PlanTool,
   QuestionTool,
   ReadTool,
+  SendFileTool,
   SkillTool,
   TodoTool,
   WebfetchTool,
@@ -44,6 +46,7 @@ const registry: Record<string, ComponentType<ToolProps>> = {
   question: QuestionTool,
   skill: SkillTool,
   [BuffTodo.TOOL]: TodoTool,
+  [BuffSendFile.TOOL]: SendFileTool,
   [BuffPlan.TOOL]: PlanTool,
 }
 

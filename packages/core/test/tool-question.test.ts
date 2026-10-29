@@ -26,6 +26,7 @@ const questionInput = {
       question: "Continue?",
       header: "Continue",
       options: [{ label: "Yes", description: "Continue" }],
+      multiple: false,
     },
   ],
 }
@@ -101,6 +102,37 @@ describe("QuestionTool", () => {
     }),
   )
 
+  // Buff (#707): необязательное multiple слабая модель пропускает — и вопрос «выберите несколько»
+  // приходит человеку с выбором одного. Поле обязательно: модель решает явно каждый раз.
+  it.effect("requires the model to say whether each question takes several answers", () =>
+    Effect.gen(function* () {
+      captured = undefined
+      const registry = yield* Tool.Service
+      const definition = (yield* toolDefinitions(registry)).find((tool) => tool.name === QuestionTool.name)
+
+      expect(definition?.inputSchema).toHaveProperty("properties.questions.items.required", [
+        "question",
+        "header",
+        "options",
+        "multiple",
+      ])
+      expect(QuestionTool.description).toContain("`multiple`")
+      const result = yield* executeTool(registry, {
+        sessionID,
+        ...toolIdentity,
+        call: {
+          type: "tool-call",
+          id: "call-question-no-multiple",
+          name: QuestionTool.name,
+          input: { questions: [{ question: "Which?", header: "Which", options: [] }] },
+        },
+      })
+      expect(result).toMatchObject({ status: "error", error: { type: "tool.execution" } })
+      expect(JSON.stringify(result)).toContain("multiple")
+      expect(capturedInput()).toBeUndefined()
+    }),
+  )
+
   it.effect("omits a catalog-denied question and enforces its leaf permission", () =>
     Effect.gen(function* () {
       captured = undefined
@@ -142,6 +174,7 @@ describe("QuestionTool", () => {
           question: "What should happen?",
           header: "Action",
           options: [{ label: "Build", description: "Build it" }],
+          multiple: false,
         },
         {
           question: "Which environment?",
@@ -153,6 +186,7 @@ describe("QuestionTool", () => {
           question: "Anything else?",
           header: "Optional",
           options: [],
+          multiple: false,
         },
       ]
 
@@ -225,7 +259,7 @@ describe("QuestionTool", () => {
           name: "question",
           input: {
             questions: [
-              { question: "How?", header: "How", options: [{ label: "Не трогать (Recommended)", description: "" }] },
+              { question: "How?", header: "How", options: [{ label: "Не трогать (Recommended)", description: "" }], multiple: false },
             ],
           },
         },

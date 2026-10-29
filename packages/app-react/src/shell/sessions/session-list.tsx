@@ -15,16 +15,19 @@ import {
 import { loadHomeSessionIndex, mergeHomeSessionIndex } from "@opencode/app/react-reuse/home-session-index"
 import { sessionFormRequest, sessionPermissionRequest } from "@opencode/app/react-reuse/session-request-tree"
 import { sessionLabel } from "@opencode/app/react-reuse/session-title"
+import { BuffMobile } from "@opencode/schema/buff-mobile"
 import { BuffSessionMarks } from "@opencode/schema/buff-session-marks"
 import type { SessionInfo } from "@opencode/client/promise"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { TranscriptSearchResult, useOpenTranscriptResult, useTranscriptSearch } from "./transcript-search"
-import { useMemo, useState } from "react"
+import { ChevronDown, ChevronRight, Smartphone } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import type { DataState } from "../../core/data/state"
 import { serverKey, type Server } from "../../core/servers"
 import { useDialog } from "../../dialog/dialogs"
 import { useSessionMarks } from "../../home/marks"
 import { useI18n } from "../../i18n/provider"
+import { usePlatform } from "../../platform/context"
 import { useConnection, useServerData, useServers } from "../../react/core"
 import { shallowEqual } from "../../react/use-store"
 import { ContextMenu } from "../menu/context-menu"
@@ -37,6 +40,7 @@ import { tabServer } from "../tabs/tabs"
 type Row = { id: string; title: string; updated: number; session: SessionInfo }
 
 const folder = (session: SessionInfo) => session.location.directory.split("/").filter(Boolean).pop() ?? ""
+const projectOf = (row: Row) => row.session.location.directory
 
 /** The server the sessions column shows: the current tab's, else the first one. */
 export function useSessionsServer() {
@@ -87,7 +91,9 @@ function ServerSessionList(props: { server: Server; current?: string }) {
       ),
     [index.data, live, i18n],
   )
-  const sections = BuffSessionMarks.sections(rows, marks, Date.now(), query)
+  // #709: outside the pinned and the groups — by project, each folding.
+  const sections = BuffSessionMarks.sections(rows, marks, Date.now(), query, projectOf)
+  const [folded, fold] = useFolded(props.server.key)
   // #453: the same query searches the conversations' text too.
   const search = useTranscriptSearch(props.server, query)
   const openResult = useOpenTranscriptResult(props.server)
@@ -108,8 +114,16 @@ function ServerSessionList(props: { server: Server; current?: string }) {
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pe-1">
         {sections.map((section) => (
           <div key={section.key} data-section={section.key} className="flex flex-col gap-0.5">
-            <SectionTitle section={section} server={props.server} />
-            {section.items.length === 0 ? (
+            {section.kind === "project" ? (
+              <ProjectTitle
+                section={section}
+                folded={folded.has(section.key) && !query}
+                onToggle={() => fold(section.key)}
+              />
+            ) : (
+              <SectionTitle section={section} server={props.server} />
+            )}
+            {section.kind === "project" && folded.has(section.key) && !query ? null : section.items.length === 0 ? (
               <span className="ui-note px-1.5 text-xs">{i18n.buff.t("Empty — add a session from its menu.")}</span>
             ) : (
               section.items.map((row) => (
@@ -119,6 +133,7 @@ function ServerSessionList(props: { server: Server; current?: string }) {
                   server={props.server}
                   marks={marks}
                   current={row.id === props.current}
+                  inProject={section.kind === "project"}
                 />
               ))
             )}
@@ -187,6 +202,8 @@ function SessionRow(props: {
   marks: BuffSessionMarks.State
   current: boolean
   archived?: boolean
+  /** Under its project's heading (#709): the folder is not repeated. */
+  inProject?: boolean
 }) {
   const i18n = useI18n()
   const tabs = useTabs()
@@ -199,6 +216,8 @@ function SessionRow(props: {
     (state) => (props.archived ? undefined : rowStatus(state, id, autoApprove)),
     shallowEqual,
   )
+  // Buff (#640): a session started on a phone is marked with it.
+  const phone = BuffMobile.phoneOrigin(props.row.session.metadata)
   const pinned = props.marks.pinned.includes(id)
   const group = props.marks.membership[id]
   const open = () => {
@@ -299,15 +318,28 @@ function SessionRow(props: {
           onClick={open}
         >
           <span className="w-full truncate text-[13px] leading-4">{props.row.title}</span>
-          <span className="w-full truncate text-xs text-muted-foreground">
-            {status ? (
-              <span data-kind={status.kind} className={status.kind === "failed" ? "text-destructive" : "text-primary"}>
-                {i18n.buff.t(status.label)}
-              </span>
-            ) : (
-              folder(props.row.session)
-            )}
-          </span>
+          {(status || phone || !props.inProject) && (
+            <span className="w-full truncate text-xs text-muted-foreground">
+              {status ? (
+                <span
+                  data-kind={status.kind}
+                  className={status.kind === "failed" ? "text-destructive" : "text-primary"}
+                >
+                  {i18n.buff.t(status.label)}
+                </span>
+              ) : (
+                <>
+                  {phone && (
+                    <span data-origin="phone" title={i18n.buff.t("Started on the phone")}>
+                      <Smartphone size={11} aria-hidden className="inline align-[-1px]" /> {phone.device ?? ""}
+                      {" · "}
+                    </span>
+                  )}
+                  {!props.inProject && folder(props.row.session)}
+                </>
+              )}
+            </span>
+          )}
         </button>
       )}
     </ContextMenu>
@@ -325,6 +357,52 @@ function rowStatus(state: DataState, sessionID: string, autoApprove: boolean) {
     question: !!sessionFormRequest(family, state.session.form, sessionID),
     running: [sessionID, ...family.map((item) => item.id)].some((id) => state.session.active[id] === "running"),
   })
+}
+
+/** A project's heading (#709): its folder, how many sessions, and a fold. */
+function ProjectTitle(props: { section: BuffSessionMarks.Section<Row>; folded: boolean; onToggle: () => void }) {
+  const Chevron = props.folded ? ChevronRight : ChevronDown
+  return (
+    <button
+      type="button"
+      data-action="buff-sessions-project-toggle"
+      aria-expanded={!props.folded}
+      title={props.section.key.slice("project:".length)}
+      className="ui-eyebrow flex items-center gap-1 px-1.5 text-start hover:text-foreground"
+      onClick={props.onToggle}
+    >
+      <Chevron aria-hidden className="size-3 shrink-0" />
+      <span className="min-w-0 truncate">{props.section.title}</span>
+      <span className="ms-auto shrink-0 tabular-nums">{props.section.items.length}</span>
+    </button>
+  )
+}
+
+/** Which projects are folded, kept per server across restarts. */
+function useFolded(server: string): [ReadonlySet<string>, (key: string) => void] {
+  const platform = usePlatform()
+  const store = useMemo(() => platform.storage("buff.sidebar"), [platform])
+  const key = `folded:${server}`
+  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set())
+  useEffect(() => {
+    let live = true
+    void Promise.resolve(store.getItem(key))
+      .then((raw) => {
+        if (live && raw) setFolded(new Set(JSON.parse(raw) as string[]))
+      })
+      .catch(() => undefined)
+    return () => {
+      live = false
+    }
+  }, [store, key])
+  const toggle = (section: string) =>
+    setFolded((current) => {
+      const next = new Set(current)
+      if (!next.delete(section)) next.add(section)
+      void Promise.resolve(store.setItem(key, JSON.stringify([...next]))).catch(() => undefined)
+      return next
+    })
+  return [folded, toggle]
 }
 
 function SectionTitle(props: { section: BuffSessionMarks.Section<Row>; server: Server }) {

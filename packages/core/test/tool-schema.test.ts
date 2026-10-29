@@ -395,7 +395,7 @@ test("raw JSON schemas pass input through when they cannot be imported", async (
   })
 })
 
-test("missing external input schemas fall back to an empty schema", () => {
+test("missing external input schemas fall back to an empty object schema", () => {
   const tool = {
     name: "external",
     description: "External tool",
@@ -407,6 +407,19 @@ test("missing external input schemas fall back to an empty schema", () => {
     type: "tool",
     name: "external",
     description: "External tool",
-    inputSchema: {},
+    inputSchema: { type: "object", properties: {} },
   })
+})
+
+// DeepSeek rejects a tool whose schema root is not `type: "object"` (workflow_guide, a tool
+// without parameters, came out as `anyOf: [object, array]`).
+test("a tool without parameters gets an object schema", () => {
+  const tool: Info = {
+    name: "bare",
+    description: "Bare",
+    input: Schema.Struct({}),
+    execute: () => Effect.succeed({ content: "unused" }),
+  }
+
+  expect(definition(tool).inputSchema).toEqual({ type: "object", properties: {} })
 })

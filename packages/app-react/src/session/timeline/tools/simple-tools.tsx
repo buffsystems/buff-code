@@ -4,13 +4,17 @@
 import { Button } from "@buff/ui/react"
 import { BuffPlan } from "@opencode/schema/buff-plan"
 import { BuffQuestion } from "@opencode/schema/buff-question"
+import { BuffSendFile } from "@opencode/schema/buff-send-file"
 import { BuffTodo } from "@opencode/schema/buff-todo"
 import { getFilename } from "@opencode/util/path"
 import { Check, Circle, CircleDot, SquareArrowOutUpRight } from "lucide-react"
 import { useEffect, useRef, useState, type MouseEvent } from "react"
 import { createMarkdownImages } from "../markdown/images"
 import { previewImages, usePreviewImage, useReadImage } from "../markdown/image-preview"
+import { isLocalServer } from "../../../core/servers"
 import { useI18n } from "../../../i18n/provider"
+import { usePlatform } from "../../../platform/context"
+import { useTimeline } from "../context"
 import { Markdown } from "../markdown/markdown"
 import { BasicTool, Shimmer } from "../parts/basic-tool"
 import { writeClipboard } from "../parts/text"
@@ -411,6 +415,46 @@ export function TodoTool(props: ToolProps) {
       }}
     >
       <TodoList items={items} />
+    </BasicTool>
+  )
+}
+
+/** Buff (#708): a file the agent handed over — its name and size; on this computer, Open and Show in folder. */
+export function SendFileTool(props: ToolProps) {
+  const i18n = useI18n()
+  const platform = usePlatform()
+  const timeline = useTimeline()
+  const directory = useSessionDirectory()
+  const sent = BuffSendFile.sentOf(props.metadata)
+  const local = platform.platform === "desktop" && isLocalServer(timeline.server.conn)
+  const full = sent ? `${directory.replace(/[\\/]+$/, "")}/${sent.file}` : ""
+  return (
+    <BasicTool
+      {...passThrough(props)}
+      defaultOpen
+      hasContent={!!sent}
+      trigger={{
+        title: i18n.buff.t("File for you"),
+        subtitle: sent ? `${sent.name} · ${BuffSendFile.sizeOf(sent.bytes, i18n.buff.t)}` : String(props.input.path ?? ""),
+      }}
+    >
+      {sent && (
+        <div data-component="buff-send-file" className="tool-send-file">
+          <span className="tool-send-file__path">{sent.note ? `${sent.note} — ${sent.file}` : sent.file}</span>
+          {local && (
+            <div className="tool-plan__actions">
+              <Button size="sm" variant="ghost" data-action="buff-file-open" onClick={() => void platform.openPath?.(full)}>
+                {i18n.buff.t("Open")}
+              </Button>
+              {platform.revealPath && (
+                <Button size="sm" variant="ghost" data-action="buff-file-reveal" onClick={() => void platform.revealPath?.(full)}>
+                  {i18n.buff.t("Show in folder")}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </BasicTool>
   )
 }

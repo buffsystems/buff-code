@@ -27,6 +27,8 @@ export function OwnProviderForm(props: {
   const [baseURL, setBaseURL] = useState(start.baseURL)
   const [key, setKey] = useState("")
   const [found, setFound] = useState<readonly string[]>([])
+  // What the server's list says each model reads and writes (#27): a chosen model starts with it.
+  const [said, setSaid] = useState<Readonly<Record<string, BuffProvider.Modalities>>>({})
   const [models, setModels] = useState<readonly BuffProvider.Model[]>(props.entry?.models ?? [])
   const [typed, setTyped] = useState("")
   const [loading, setLoading] = useState(false)
@@ -36,8 +38,12 @@ export function OwnProviderForm(props: {
   const rpc = props.server.api().rpc(BuffProvider.Rpc)
 
   const chosen = new Set(models.map((model) => model.id))
+  const fresh = (model: string): BuffProvider.Model => ({ id: model, ...said[model] })
   const toggle = (model: string, on: boolean) =>
-    setModels(on ? [...models, { id: model }] : models.filter((item) => item.id !== model))
+    setModels(on ? [...models, fresh(model)] : models.filter((item) => item.id !== model))
+  /** The person's mark on a chosen model: it sees pictures, or answers with them (#27). */
+  const mark = (model: string, flag: "images" | "draws", on: boolean) =>
+    setModels(models.map((item) => (item.id === model ? { ...item, [flag]: on } : item)))
 
   const discover = async () => {
     setLoading(true)
@@ -55,14 +61,19 @@ export function OwnProviderForm(props: {
     setLoading(false)
     if ("error" in result) return setProblem(turnFailure(result.error, providerID, t, name || providerID).text)
     setFound(result.models)
-    // The first read picks every model; later ones keep the choice.
-    if (models.length === 0) setModels(result.models.map((model) => ({ id: model })))
+    const listed = result.modalities ?? {}
+    setSaid(listed)
+    // The first read picks every model, with what the list says it reads; later ones keep the
+    // choice and only fill in a model the person has not marked.
+    if (models.length === 0) setModels(result.models.map((model) => ({ id: model, ...listed[model] })))
+    else
+      setModels(models.map((item) => (item.images === undefined && listed[item.id] ? { ...item, ...listed[item.id] } : item)))
     if (result.models.length === 0) setProblem(t("The server lists no models — add them by hand."))
   }
 
   const add = () => {
     const model = typed.trim()
-    if (model && !chosen.has(model)) setModels([...models, { id: model }])
+    if (model && !chosen.has(model)) setModels([...models, fresh(model)])
     setTyped("")
   }
 
@@ -134,14 +145,32 @@ export function OwnProviderForm(props: {
         </div>
         {shown.length > 0 && (
           <div className="flex max-h-48 flex-col gap-1 overflow-y-auto" data-slot="own-provider-models">
-            {shown.map((model) => (
-              <Checkbox
-                key={model}
-                label={model}
-                checked={chosen.has(model)}
-                onChange={(event) => toggle(model, event.currentTarget.checked)}
-              />
-            ))}
+            {shown.map((model) => {
+              const item = models.find((m) => m.id === model)
+              return (
+                <div key={model} className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <Checkbox
+                    label={model}
+                    checked={chosen.has(model)}
+                    onChange={(event) => toggle(model, event.currentTarget.checked)}
+                  />
+                  {item && (
+                    <span className="flex items-center gap-3" data-slot="own-provider-model-modalities">
+                      <Checkbox
+                        label={t("Sees pictures")}
+                        checked={item.images === true}
+                        onChange={(event) => mark(model, "images", event.currentTarget.checked)}
+                      />
+                      <Checkbox
+                        label={t("Draws")}
+                        checked={item.draws === true}
+                        onChange={(event) => mark(model, "draws", event.currentTarget.checked)}
+                      />
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
         <div className="flex items-center gap-2">

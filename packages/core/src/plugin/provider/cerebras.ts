@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { define } from "@opencode/plugin/effect/plugin"
+import { BuffBrand } from "../../buff/brand.js"
 
 export const CerebrasPlugin = define({
   id: "opencode.provider.cerebras",
@@ -8,7 +9,7 @@ export const CerebrasPlugin = define({
       for (const item of evt.list()) {
         if (item.provider.package !== "@opencode/ai/providers/cerebras") continue
         evt.update(item.provider.id, (provider) => {
-          provider.headers = { ...provider.headers, "X-Cerebras-3rd-Party-Integration": "opencode" }
+          provider.headers = { ...provider.headers, "X-Cerebras-3rd-Party-Integration": BuffBrand.ATTRIBUTION.source }
         })
       }
     })

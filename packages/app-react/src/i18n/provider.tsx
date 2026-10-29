@@ -1,3 +1,4 @@
+import { LocaleProvider } from "@buff/ui/react"
 import { createContext, use, useEffect, useMemo, useState, type ReactNode } from "react"
 import { createPersisted } from "../core/persisted"
 import type { PlatformStorage } from "../platform/platform"
@@ -54,7 +55,12 @@ export function I18nProvider(props: { storage: PlatformStorage; initial?: Loaded
     }),
     [loaded, language],
   )
-  return <I18nContext value={value}>{props.children}</I18nContext>
+  // @buff/ui's own words (close, copy, cancel…) speak the window's language too (#713).
+  return (
+    <I18nContext value={value}>
+      <LocaleProvider locale={loaded.locale}>{props.children}</LocaleProvider>
+    </I18nContext>
+  )
 }
 
 type Loaded = { locale: Locale; dictionary: Dictionary }

@@ -13,9 +13,10 @@ import {
   Puzzle,
   Server,
   SlidersHorizontal,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react"
-import type { TranslationKey } from "../i18n/i18n"
+import type { TranslationKey, Translator } from "../i18n/i18n"
 import type { SettingsRootTab } from "./surface"
 
 export const pageIcons: Record<SettingsRootTab, LucideIcon> = {
@@ -28,6 +29,7 @@ export const pageIcons: Record<SettingsRootTab, LucideIcon> = {
   providers: Plug,
   models: Cpu,
   extensions: Puzzle,
+  phone: Smartphone,
   servers: Server,
   experimental: FlaskConical,
   about: Info,
@@ -43,7 +45,14 @@ export const pageLabels = {
   providers: "settings.providers.title",
   models: "settings.models.title",
   extensions: "settings.tab.extensions",
+  phone: { buff: "Phone" },
   servers: "settings.section.server",
   experimental: "settings.tab.experimental",
   about: "settings.tab.about",
-} as const satisfies Record<SettingsRootTab, TranslationKey>
+} as const satisfies Record<SettingsRootTab, PageLabel>
+
+/** A page of the upstream window is named by its dictionary; Buff's own (#640) by Buff's catalog. */
+export type PageLabel = TranslationKey | { readonly buff: string }
+
+export const pageLabel = (label: PageLabel, t: Translator["t"], buff: Translator["buff"]["t"]): string =>
+  typeof label === "string" ? t(label) : buff(label.buff)

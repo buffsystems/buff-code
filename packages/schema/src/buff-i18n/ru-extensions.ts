@@ -23,6 +23,19 @@ export const extensions = {
   "LiteLLM or any OpenAI-compatible server: its address, key and models.":
     "LiteLLM или любой OpenAI-совместимый сервер: адрес, ключ и модели.",
   "Load from the server": "Загрузить с сервера",
+  // #27: what one's own model reads and writes — the server's list says it, or the person.
+  "Sees pictures": "Видит картинки",
+  Draws: "Рисует",
+  // #27: draw_image — a picture by the organisation's painter model.
+  "The picture was not drawn.": "Картинка не нарисована.",
+  "A Buff organisation draws: sign in and choose it.": "Рисует организация Buff: войдите и выберите её.",
+  "The connector did not answer: {cause}": "Коннектор не ответил: {cause}",
+  "The file name must be plain, without a path.": "Имя файла должно быть простым, без пути.",
+  "Picture saved: {file}": "Картинка сохранена: {file}",
+  // #708: send_file — a file of the working folder handed to the person.
+  "Only a file inside the working folder can be sent.": "Отдать можно только файл из рабочей папки.",
+  "No such file: {file}": "Файла нет: {file}",
+  "Only a file can be sent, not a folder.": "Отдать можно файл, а не папку.",
   "Model ID, e.g. gpt-4o": "Идентификатор модели, например gpt-4o",
   Models: "Модели",
   "No key": "Без ключа",

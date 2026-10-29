@@ -493,6 +493,8 @@ describe("LocationServiceMap", () => {
             "plan_exit",
             "question",
             "read",
+            // Buff (#708): отдать файл человеку.
+            "send_file",
             "shell",
             "skill",
             "subagent",
@@ -530,6 +532,8 @@ describe("LocationServiceMap", () => {
             "plan_exit",
             "question",
             "read",
+            // Buff (#708): отдать файл человеку.
+            "send_file",
             "shell",
             "skill",
             "subagent",

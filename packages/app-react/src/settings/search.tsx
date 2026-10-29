@@ -94,6 +94,7 @@ export function SettingsSearch() {
         dev: import.meta.env.VITE_OPENCODE_CHANNEL !== "prod",
         mobile,
         translate: i18n.t,
+        buff: i18n.buff.t,
       }),
     [snapshots, platform.platform, mobile, i18n],
   )

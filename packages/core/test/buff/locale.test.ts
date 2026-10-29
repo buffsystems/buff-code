@@ -18,13 +18,36 @@ const run = <A>(effect: Effect.Effect<A, never, never>) => Effect.runPromise(eff
 const open = (store: ReturnType<typeof storage>, changed: Effect.Effect<void> = Effect.void) =>
   run(Scope.make().pipe(Effect.flatMap((scope) => Scope.provide(BuffLocale.open(store.api, changed), scope))))
 
-test("until a language is chosen it is Russian, and core strings follow it", async () => {
-  BuffShared.forget(BuffLocale.KEY)
-  const locale = await open(storage())
-  expect(locale.get()).toBe("ru")
-  expect(BuffLocale.current()).toBe("ru")
-  expect(BuffLocale.t("Name the group.")).toBe("Назовите группу.")
-})
+const LANG_KEYS = ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"] as const
+async function withLanguage<A>(lang: string | undefined, body: () => Promise<A>) {
+  const saved = LANG_KEYS.map((key) => [key, process.env[key]] as const)
+  for (const key of LANG_KEYS) delete process.env[key]
+  if (lang) process.env.LANG = lang
+  try {
+    return await body()
+  } finally {
+    for (const [key, value] of saved)
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+  }
+}
+
+test("until a language is chosen it is the system's, Russian when it is neither", () =>
+  withLanguage("de_DE.UTF-8", async () => {
+    BuffShared.forget(BuffLocale.KEY)
+    const locale = await open(storage())
+    expect(locale.get()).toBe("ru")
+    expect(BuffLocale.current()).toBe("ru")
+    expect(BuffLocale.t("Name the group.")).toBe("Назовите группу.")
+  }))
+
+test("an English system speaks English until a language is chosen (#713)", () =>
+  withLanguage("en_US.UTF-8", async () => {
+    BuffShared.forget(BuffLocale.KEY)
+    expect((await open(storage())).get()).toBe("en")
+    expect(BuffLocale.current()).toBe("en")
+    expect(BuffLocale.t("Name the group.")).toBe("Name the group.")
+  }))
 
 test("a chosen language is seen everywhere at once and survives a restart", async () => {
   BuffShared.forget(BuffLocale.KEY)

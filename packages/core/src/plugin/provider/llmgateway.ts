@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Integration } from "../../integration.js"
 import { Provider } from "../../provider.js"
+import { BuffBrand } from "../../buff/brand.js"
 
 export const LLMGatewayPlugin = define({
   id: "opencode.provider.llmgateway",
@@ -17,9 +18,9 @@ export const LLMGatewayPlugin = define({
         evt.update(item.provider.id, (provider) => {
           provider.headers = {
             ...provider.headers,
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
-            "X-Source": "opencode",
+            "HTTP-Referer": BuffBrand.ATTRIBUTION.referer,
+            "X-Title": BuffBrand.ATTRIBUTION.title,
+            "X-Source": BuffBrand.ATTRIBUTION.source,
           }
         })
       }

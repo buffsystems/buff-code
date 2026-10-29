@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { deriveSideTabs, fileBrowserVisible, type SideTabsInput } from "./side-tabs"
+import { SESSION_OPEN_FILE_TAB } from "@opencode/app/react-reuse/session-tabs"
+import { deriveSideTabs, fileBrowserVisible, fileTreeToggles, type SideTabsInput } from "./side-tabs"
 
 const pathFromTab = (tab: string) => (tab.startsWith("file://") ? tab.slice("file://".length) : undefined)
 const input = (tabs: SideTabsInput["tabs"], patch: Partial<SideTabsInput> = {}): SideTabsInput => ({
@@ -56,4 +57,11 @@ test("the file browser hides behind review, context, browsers and side conversat
   expect(fileBrowserVisible("side:ses_1")).toBe(false)
   expect(fileBrowserVisible("open-file")).toBe(true)
   expect(fileBrowserVisible("file://a.ts")).toBe(true)
+})
+
+// Seen live (#705): on Context the file-tree toggle hung there and did nothing — no tree on that tab.
+test("the file-tree toggle belongs to Review and file tabs only", () => {
+  expect(fileTreeToggles("review")).toBe(true)
+  expect(fileTreeToggles("file://src/a.ts")).toBe(true)
+  for (const tab of ["context", "empty", SESSION_OPEN_FILE_TAB]) expect(fileTreeToggles(tab)).toBe(false)
 })

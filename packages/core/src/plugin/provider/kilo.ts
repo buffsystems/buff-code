@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { define } from "@opencode/plugin/effect/plugin"
+import { BuffBrand } from "../../buff/brand.js"
 
 export const KiloPlugin = define({
   id: "opencode.provider.kilo",
@@ -9,7 +10,11 @@ export const KiloPlugin = define({
         if (item.provider.package !== "@opencode/ai/providers/openai-compatible") continue
         if (item.provider.settings?.baseURL !== "https://api.kilo.ai/api/gateway") continue
         evt.update(item.provider.id, (provider) => {
-          provider.headers = { ...provider.headers, "HTTP-Referer": "https://opencode.ai/", "X-Title": "opencode" }
+          provider.headers = {
+            ...provider.headers,
+            "HTTP-Referer": BuffBrand.ATTRIBUTION.referer,
+            "X-Title": BuffBrand.ATTRIBUTION.title,
+          }
         })
       }
     })

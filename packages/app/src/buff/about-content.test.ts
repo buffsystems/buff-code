@@ -26,6 +26,14 @@ test("every link is ours", () => {
   expect(text).not.toContain("github.com")
 })
 
+test("in English the site's pages are the English ones (#720)", () => {
+  expect(aboutContent(undefined, BuffI18n.english, "en").links.map((link) => link.href)).toEqual([
+    "https://buff.systems/en",
+    "https://buff.systems/en/docs/buff-code",
+    BuffLinks.support,
+  ])
+})
+
 test("the origin is credited: the project, its licence, its owner and its trademark", () => {
   const origin = about.origin.join(" ")
   expect(origin).toContain("OpenCode")

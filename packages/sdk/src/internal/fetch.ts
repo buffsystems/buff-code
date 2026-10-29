@@ -3,8 +3,17 @@ export * as OwnedFetch from "./fetch"
 export function make(handler: (request: Request) => Promise<Response>, dispose: () => Promise<void>) {
   const requests = new Set<Promise<void>>()
   const shutdown = new AbortController()
-  const closed = new Error("OpenCode host is closed")
+  const closed = new Error("Buff Code host is closed")
   let closePromise: Promise<void> | undefined
+  // Shutdown surfaces to the caller only once close() has settled. Cancelling the server side
+  // stays immediate (close waits on it), but rejecting the caller's pending reads mid-close
+  // would make their delivery depend on how long the runtime takes to dispose: a caller that
+  // attaches its handler after `await close()` would see an unhandled rejection whenever
+  // disposal happens to cross an event-loop turn.
+  const surface = (reason: unknown, fail: () => void) => {
+    if (reason === closed && closePromise) void closePromise.then(fail, fail)
+    else fail()
+  }
   const fetch = Object.assign(
     (input: RequestInfo | URL, init?: RequestInit) => {
       if (closePromise) return Promise.reject(closed)
@@ -18,13 +27,8 @@ export function make(handler: (request: Request) => Promise<Response>, dispose: 
       }
       requests.add(lifetime.promise)
 
-      const handled = handler(request)
-      return rejectOnAbort(handled, request.signal).then(
-        (response) => trackResponse(response, request.signal, finish),
-        (cause) => {
-          void handled.then(finish, finish)
-          throw cause
-        },
+      return rejectOnAbort(handler(request), request.signal, finish, surface).then((response) =>
+        trackResponse(response, request.signal, finish, surface),
       )
     },
     { preconnect: () => undefined },
@@ -41,25 +45,40 @@ export function make(handler: (request: Request) => Promise<Response>, dispose: 
   return { fetch, close }
 }
 
-function rejectOnAbort<A>(promise: Promise<A>, signal: AbortSignal): Promise<A> {
-  if (signal.aborted) return Promise.reject(signal.reason)
+type Surface = (reason: unknown, fail: () => void) => void
+
+// Settles with the handler's response, or rejects on abort or handler failure. A request
+// without a response ends its lifetime (`finish`) when the handler settles — at once, not
+// when the rejection surfaces, since close() waits on that lifetime.
+function rejectOnAbort<A>(promise: Promise<A>, signal: AbortSignal, finish: () => void, surface: Surface): Promise<A> {
+  if (signal.aborted) {
+    void promise.then(finish, finish)
+    return Promise.reject(signal.reason)
+  }
   return new Promise((resolve, reject) => {
-    const abort = () => reject(signal.reason)
+    const fail = (cause: unknown) => surface(cause, () => reject(cause))
+    const abort = () => {
+      void promise.then(finish, finish)
+      fail(signal.reason)
+    }
     signal.addEventListener("abort", abort, { once: true })
     promise.then(
       (value) => {
+        if (signal.aborted) return
         signal.removeEventListener("abort", abort)
         resolve(value)
       },
       (cause) => {
+        if (signal.aborted) return
         signal.removeEventListener("abort", abort)
-        reject(cause)
+        finish()
+        fail(cause)
       },
     )
   })
 }
 
-function trackResponse(response: Response, signal: AbortSignal, finish: () => void): Response {
+function trackResponse(response: Response, signal: AbortSignal, finish: () => void, surface: Surface): Response {
   if (!response.body) {
     finish()
     return response
@@ -78,8 +97,8 @@ function trackResponse(response: Response, signal: AbortSignal, finish: () => vo
     start(controller) {
       abort = () => {
         if (!complete()) return
-        controller.error(signal.reason)
         void reader.cancel(signal.reason).then(finish, finish)
+        surface(signal.reason, () => controller.error(signal.reason))
       }
       if (signal.aborted) abort()
       else signal.addEventListener("abort", abort, { once: true })

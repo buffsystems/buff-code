@@ -25,6 +25,25 @@ export function locale(value: string | undefined): Locale {
   return value === "en" || value === "ru" ? value : DEFAULT_LOCALE
 }
 
+/**
+ * Язык системы (#713), правило всех клиентов Buff: первый русский или английский из
+ * предпочитаемых языков (теги BCP 47 или `ru_RU.UTF-8`); любой другой или никакого — русский.
+ */
+export function systemLocale(languages: readonly (string | undefined)[]): Locale {
+  for (const tag of languages) {
+    const base = tag?.toLowerCase().split(/[-_.@]/)[0]
+    if (base === "ru" || base === "en") return base
+  }
+  return DEFAULT_LOCALE
+}
+
+/** Предпочитаемые языки консоли — в порядке, в каком их читает gettext. */
+export function envLanguages(env: Readonly<Record<string, string | undefined>>): string[] {
+  return [...(env.LANGUAGE ?? "").split(":"), env.LC_ALL, env.LC_MESSAGES, env.LANG].filter(
+    (tag): tag is string => !!tag,
+  )
+}
+
 function fill(text: string, params?: Params): string {
   if (!params) return text
   return text.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match))

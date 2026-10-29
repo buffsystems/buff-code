@@ -30,6 +30,19 @@ const billing = {
   cabinetUrl: "",
 }
 
+// The phone (#640): the service runs and one phone is paired. An offer waits for a phone (a spec
+// routes `buff.mobile/view` itself to have one claim it); a confirmed one is paired.
+const phone = { device: "phone-1", display: "Pixel 8", paired: 1_700_000_000, online: true, seen: 1_700_000_100 }
+const offer = (kind: "qr" | "code") => ({
+  offerId: `offer-${kind}`,
+  state: "offered",
+  kind,
+  link: "https://buff.systems/pair/e2e",
+  ...(kind === "code" ? { code: "ABCD-EFGH" } : {}),
+  expiresAt: Math.floor(Date.now() / 1000) + 300,
+})
+const kindOf = (input: unknown) => ((input as { offerId?: string })?.offerId === "offer-code" ? "code" : "qr")
+
 const outputs: Record<string, (input: unknown) => unknown> = {
   "buff.session-marks/get": () => marks,
   "buff.session-marks/change": () => marks,
@@ -57,6 +70,22 @@ const outputs: Record<string, (input: unknown) => unknown> = {
   "buff.workflow/list": () => ({ saved: [], invalid: [] }),
   "buff.search/sessions": () => [],
   "buff.turn/preview": () => ({ snapshots: true, files: [] }),
+  "buff.mobile/status": () => ({
+    gateway: "buff.systems",
+    connected: true,
+    problem: null,
+    phones: 1,
+    running: true,
+    home: null,
+  }),
+  "buff.mobile/phones": () => [phone],
+  "buff.mobile/offer": (input) => offer((input as { kind: "qr" | "code" }).kind),
+  "buff.mobile/view": (input) => offer(kindOf(input)),
+  "buff.mobile/offers": () => [],
+  "buff.mobile/confirm": (input) => ({ ...offer(kindOf(input)), state: "paired", phone: phone.display }),
+  "buff.mobile/cancel": () => ({}),
+  "buff.mobile/revoke": () => ({}),
+  "buff.mobile/rename": () => ({}),
 }
 
 export type BuffRpcResult = { output: unknown } | { error: { type: string; message: string } }

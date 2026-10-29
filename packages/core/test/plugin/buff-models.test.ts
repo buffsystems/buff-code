@@ -113,7 +113,7 @@ describe("BuffModels (#370)", () => {
   it.effect("the model list is read off an OpenAI-shaped answer, and nothing else", () =>
     Effect.sync(() => {
       expect(BuffModels.listedModels({ data: [{ id: "a" }, { id: "" }, { name: "b" }, null] })).toEqual([
-        { id: "a", name: "a" },
+        { id: "a", name: "a", input: ["text"], output: ["text"] },
       ])
       expect(BuffModels.listedModels({ error: "нет" })).toEqual([])
     }),
@@ -124,8 +124,24 @@ describe("BuffModels (#370)", () => {
       expect(
         BuffModels.listedModels({ data: [{ id: "buff", name: "OpenRouter (Сбалансированные модели)" }, { id: "x", name: "" }] }),
       ).toEqual([
-        { id: "buff", name: "OpenRouter (Сбалансированные модели)" },
-        { id: "x", name: "x" },
+        { id: "buff", name: "OpenRouter (Сбалансированные модели)", input: ["text"], output: ["text"] },
+        { id: "x", name: "x", input: ["text"], output: ["text"] },
+      ])
+    }),
+  )
+
+  it.effect("a model reads what the backend says it reads — pictures only where it sees (#27)", () =>
+    Effect.sync(() => {
+      expect(
+        BuffModels.listedModels({
+          data: [
+            { id: "sees", input_modalities: ["text", "image"], output_modalities: ["text"] },
+            { id: "junk", input_modalities: "image", output_modalities: [1, "", "image"] },
+          ],
+        }),
+      ).toEqual([
+        { id: "sees", name: "sees", input: ["text", "image"], output: ["text"] },
+        { id: "junk", name: "junk", input: ["text"], output: ["text", "image"] },
       ])
     }),
   )

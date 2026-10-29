@@ -29,7 +29,8 @@ import { BuffProviderFile } from "./provider-file.js"
  */
 
 const { refuse } = BuffConfigFiles
-const ModelList = Schema.Struct({ data: Schema.Array(Schema.Struct({ id: Schema.String })) })
+// The rest of an item rides along (StructWithRest-like): what it says about modalities (#27).
+const ModelList = Schema.Struct({ data: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) })
 const PROMPT = "Reply with one word: OK"
 const MAX_TOKENS = 1024
 
@@ -73,6 +74,7 @@ export const register = Effect.fn("BuffProvider.register")(function* (ctx: Conte
   const integration = yield* Integration.Service
   const store = yield* Credential.Service
   const resolver = yield* ModelResolver.Service
+  const catalog = yield* Model.Service
   const llm = yield* LLMClient.Service
   const http = yield* HttpClient.HttpClient
   const { scopeOf, text, files, fileFor, rewrite } = BuffConfigFiles.make({
@@ -128,9 +130,19 @@ export const register = Effect.fn("BuffProvider.register")(function* (ctx: Conte
             )
           : HttpClientResponse.schemaBodyJson(ModelList)(response).pipe(
               Effect.map(
-                (body): BuffProvider.Discovered => ({
-                  models: [...new Set(body.data.map((model) => model.id))].toSorted((a, b) => a.localeCompare(b)),
-                }),
+                (body): BuffProvider.Discovered => {
+                  const items = body.data.filter((item): item is { id: string } => typeof item.id === "string" && item.id !== "")
+                  const modalities = Object.fromEntries(
+                    items.flatMap((item) => {
+                      const said = BuffProviderFile.listedModalities(item)
+                      return said ? [[item.id, said]] : []
+                    }),
+                  )
+                  return {
+                    models: [...new Set(items.map((item) => item.id))].toSorted((a, b) => a.localeCompare(b)),
+                    ...(Object.keys(modalities).length ? { modalities } : {}),
+                  }
+                },
               ),
               Effect.orElseSucceed(
                 (): BuffProvider.Discovered => ({
@@ -180,10 +192,16 @@ export const register = Effect.fn("BuffProvider.register")(function* (ctx: Conte
   const test = Effect.fnUntraced(function* (input: { providerID: string; modelID: string }) {
     const started = Date.now()
     return yield* Effect.gen(function* () {
-      const resolved = yield* resolver.resolve({
-        providerID: Provider.ID.make(input.providerID),
-        id: Model.ID.make(input.modelID),
-      })
+      const providerID = Provider.ID.make(input.providerID)
+      const id = Model.ID.make(input.modelID)
+      // A model typed by hand (#27): the catalogue may not list it yet — the provider decides,
+      // reached with the settings of any model the catalogue has for it.
+      const sibling = (yield* catalog.all()).find((model) => model.providerID === providerID)
+      const resolved =
+        (yield* resolver.resolve({ providerID, id })) ??
+        (sibling
+          ? yield* resolver.resolveModel({ ...sibling, id, modelID: id, name: input.modelID, variants: [] })
+          : undefined)
       if (!resolved)
         return {
           error: {

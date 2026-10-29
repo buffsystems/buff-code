@@ -10,9 +10,12 @@ import { BackgroundService } from "./service/background-service"
 import { DesktopCli } from "./service/desktop-cli"
 import { UpdaterLive } from "./updater/live"
 import { marks } from "./lifecycle/marks"
+import { adoptSystemLanguages } from "./native/translations"
 
 // Everything above has been loaded and evaluated by now; the layers start below.
 marks.bundle = Date.now()
+// Dialogs before the window reports its language speak the OS's (#713).
+adoptSystemLanguages(app.getPreferredSystemLanguages())
 
 const runIpc = Effect.fn("Desktop.runIpc")(function* () {
   const lifecycle = yield* ApplicationLifecycle.Service

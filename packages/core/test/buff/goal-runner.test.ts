@@ -5,7 +5,7 @@ import { GoalRunner } from "../../src/buff/goal/runner"
 
 function world(verdicts: string[] = [], failure?: Error) {
   const goals = new Map<string, BuffGoal.Goal>()
-  const prompts: { session: string; text: string }[] = []
+  const prompts: { session: string; text: string; summary: string }[] = []
   const notes: { session: string; text: string }[] = []
   const checks: string[] = []
   const changes: (BuffGoal.Goal | undefined)[] = []
@@ -16,7 +16,7 @@ function world(verdicts: string[] = [], failure?: Error) {
       put: async (session, goal) => void goals.set(session, goal),
       remove: async (session) => void goals.delete(session),
     },
-    prompt: async (session, text) => void prompts.push({ session, text }),
+    prompt: async (session, text, summary) => void prompts.push({ session, text, summary }),
     generate: async (_, prompt) => {
       checks.push(prompt)
       if (failure) throw failure
@@ -37,6 +37,8 @@ describe("a goal", () => {
     expect(await w.runner.set("s", "Все тесты зелёные")).toEqual({})
     expect(w.goals.get("s")).toMatchObject({ text: "Все тесты зелёные", status: "active", iteration: 1 })
     expect(w.prompts[0]!.text).toContain("Все тесты зелёные")
+    // #711: the person sees the goal itself beside «Goal», not the model's instruction.
+    expect(w.prompts[0]!.summary).toBe("Все тесты зелёные")
     expect(w.changes.length).toBe(1)
   })
   test("an empty text is refused", async () => {
@@ -51,6 +53,7 @@ describe("a goal", () => {
     expect(w.checks[0]).toContain("Все тесты зелёные")
     expect(w.goals.get("s")).toMatchObject({ status: "active", iteration: 2, reason: "2 теста красные" })
     expect(w.prompts[1]!.text).toContain("2 теста красные")
+    expect(w.prompts[1]!.summary).toBe("Итерация 2: 2 теста красные")
   })
   test("reached: done and announced, no more prompts", async () => {
     const w = world(['```json\n{"complete": true, "reason": "всё зелёное"}\n```'])

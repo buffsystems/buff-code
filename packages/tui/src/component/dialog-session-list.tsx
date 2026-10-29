@@ -20,6 +20,7 @@ import { Spinner } from "./spinner"
 import { errorMessage } from "../util/error"
 import { n, t } from "../feature-plugins/buff/locale"
 import { localeTag } from "../feature-plugins/buff/locale-state"
+import { phoneNote } from "../feature-plugins/buff/phone-note"
 import { sessionLabel } from "../feature-plugins/buff/session-label"
 import { useSessionTabs } from "../context/session-tabs"
 import { useStorage } from "../context/storage"
@@ -197,6 +198,8 @@ export function DialogSessionList() {
           : sessionLabel(withTimestampedFallback(session)),
         value: session.id,
         category,
+        // Buff (#640): a session started on a phone says from which.
+        description: phoneNote(session),
         footer,
         bg: deleting ? theme.background.action.destructive.focused : undefined,
         fg: deleting ? theme.text.action.destructive.focused : undefined,

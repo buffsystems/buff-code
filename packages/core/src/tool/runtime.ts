@@ -153,9 +153,23 @@ const validateStandard = (
   )
 
 const inputJsonSchema = (schema: Tool.ValueSchema<any>): JsonSchema.JsonSchema => {
-  if (schema === undefined || schema === null) return {}
+  if (schema === undefined || schema === null) return noParameters()
   if (isStandardSchema(schema)) return standardJsonSchema(schema, "input")
-  return Schema.isSchema(schema) ? toJsonSchema(schema) : schema
+  return Schema.isSchema(schema) ? objectRoot(toJsonSchema(schema)) : schema
+}
+
+// Providers (DeepSeek, OpenAI strict) require a tool's parameters to be `type: "object"`. An empty
+// Effect struct accepts any object or array, so it emits `anyOf: [object, array]` — a tool without
+// parameters is sent as an empty object instead.
+const noParameters = (): JsonSchema.JsonSchema => ({ type: "object", properties: {} })
+
+const objectRoot = (schema: JsonSchema.JsonSchema): JsonSchema.JsonSchema => {
+  const options = schema.anyOf
+  const bare = Object.keys(schema).length === 1 && Array.isArray(options)
+  const anyContainer =
+    bare &&
+    options.every((o) => isRecord(o) && Object.keys(o).length === 1 && (o.type === "object" || o.type === "array"))
+  return anyContainer ? noParameters() : schema
 }
 
 const outputJsonSchema = (schema: Tool.ValueSchema<any>): JsonSchema.JsonSchema => {

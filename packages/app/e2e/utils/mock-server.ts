@@ -670,6 +670,7 @@ export function currentSession(session: { id: string } & Record<string, unknown>
     },
     subpath: session.subpath ?? session.path,
     revert: session.revert,
+    ...(record(session.metadata) ? { metadata: session.metadata } : {}),
   }
 }
 

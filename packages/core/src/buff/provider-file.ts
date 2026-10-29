@@ -23,6 +23,32 @@ function document(text: string): Raw {
   return parsed
 }
 
+/** Что модель читает и пишет, по `capabilities` в файле (#27): картинки на входе и на выходе. */
+function flags(config: Raw): Pick<BuffProvider.Model, "images" | "draws"> {
+  const caps = record(config.capabilities) ? config.capabilities : undefined
+  if (!caps) return {}
+  const has = (list: unknown) => Array.isArray(list) && list.includes("image")
+  return { images: has(caps.input), draws: has(caps.output) }
+}
+
+/** What a server's model list says a model reads and writes (#27): OpenRouter's
+ *  `architecture.input_modalities`/`output_modalities` (or the same at the top level), LiteLLM's
+ *  `supports_vision`. null — the list says nothing, the person decides. */
+export function listedModalities(item: unknown): BuffProvider.Modalities | null {
+  if (!record(item)) return null
+  const arch = record(item.architecture) ? item.architecture : item
+  const input = arch.input_modalities
+  const output = arch.output_modalities
+  if (Array.isArray(input) || Array.isArray(output))
+    return {
+      images: Array.isArray(input) && input.includes("image"),
+      draws: Array.isArray(output) && output.includes("image"),
+    }
+  const info = record(item.model_info) ? item.model_info : item
+  if (typeof info.supports_vision === "boolean") return { images: info.supports_vision, draws: false }
+  return null
+}
+
 /** Свои провайдеры файла: записи `providers` с адресом сервера. */
 export function providers(text: string): Omit<BuffProvider.Entry, "hasKey">[] {
   const section = document(text).providers
@@ -36,7 +62,9 @@ export function providers(text: string): Omit<BuffProvider.Entry, "hasKey">[] {
         name: typeof raw.name === "string" ? raw.name : id,
         baseURL: raw.settings.baseURL,
         models: Object.entries(models).map(([model, config]) =>
-          record(config) && typeof config.name === "string" ? { id: model, name: config.name } : { id: model },
+          record(config)
+            ? { id: model, ...(typeof config.name === "string" ? { name: config.name } : {}), ...flags(config) }
+            : { id: model },
         ),
       },
     ]
@@ -67,9 +95,23 @@ export function withProvider(
         .map((model) => {
           const kept = (record(before?.models) && record(before.models[model.id]) ? before.models[model.id] : {}) as Raw
           const name = model.name?.trim()
+          // Что модель читает и пишет (#27), когда это сказано: картинка уйдёт только видящей.
+          const capabilities =
+            model.images === undefined && model.draws === undefined
+              ? {}
+              : {
+                  capabilities: {
+                    tools: true,
+                    input: ["text", ...(model.images ? ["image"] : [])],
+                    output: ["text", ...(model.draws ? ["image"] : [])],
+                  },
+                }
           // Свой сервер не обязан знать `store` (LiteLLM перед Anthropic отказывает на нём);
           // совместимость, заданную руками, не трогаем.
-          return [model.id.trim(), { compatibility: { supportsStore: false }, ...kept, ...(name ? { name } : {}) }]
+          return [
+            model.id.trim(),
+            { compatibility: { supportsStore: false }, ...kept, ...(name ? { name } : {}), ...capabilities },
+          ]
         }),
     ),
   }
