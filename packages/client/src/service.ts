@@ -1,3 +1,11 @@
+/**
+ * Basic-auth username every service release accepts. Services before #628 know only this name, so
+ * the lifecycle probes a registered (possibly older) service with it. Kept here rather than imported
+ * from `@opencode/schema/buff-server-auth` because the promise entrypoint stays dependency-free; a
+ * test pins both to the same value.
+ */
+export const LEGACY_USERNAME = "opencode"
+
 /** Connection details for a local OpenCode service. */
 export type Endpoint = {
   /** Base URL of the service. */

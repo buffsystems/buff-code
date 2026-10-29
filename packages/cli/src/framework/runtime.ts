@@ -1,7 +1,11 @@
-import { Effect, FileSystem, Scope } from "effect"
-import { Command } from "effect/unstable/cli"
+import { Console, Effect, FileSystem, Runtime, Scope } from "effect"
+import { CliConfig, CliError, CliOutput, Command, GlobalFlag } from "effect/unstable/cli"
 import { PrintLogs } from "../commands/commands"
 import { Spec } from "./spec"
+import type { BuffI18n } from "@opencode/schema/buff-i18n"
+import { Output } from "./output"
+import { Wizard } from "./wizard"
+import { n, t } from "../buff/locale"
 import { Global } from "@opencode/util/global"
 import { Updater } from "../services/updater"
 import { Config } from "../config"
@@ -81,12 +85,43 @@ export function handlers<const Root extends Spec.Any>(root: Root, handlers: Hand
   return result
 }
 
+/** Дерево команд с обработчиками и общими флагами — то, что разбирает и показывает в справке effect/cli. */
+export function command(commands: Spec.Any, handlers: ReadonlyArray<LazyHandler>) {
+  return provide(commands, handlers).pipe(Command.withGlobalFlags([PrintLogs]))
+}
+
 export function run(commands: Spec.Any, handlers: ReadonlyArray<LazyHandler>, options: { readonly version: string }) {
-  return Command.run(provide(commands, handlers).pipe(Command.withGlobalFlags([PrintLogs])), options) as Effect.Effect<
-    void,
-    unknown,
-    Command.Environment
-  >
+  // Справка и ошибки разбора — на языке системы (#713), как и остальной вывод разовых команд.
+  return Command.run(command(commands, handlers), options).pipe(
+    Effect.tapError(reportUnrendered),
+    Effect.provide(CliOutput.layer(Output.formatter(t, n))),
+    Effect.provide(CliConfig.layer({ builtIns: builtIns(commands, t, () => process.argv.slice(2)) })),
+  ) as Effect.Effect<void, unknown, Command.Environment>
+}
+
+/** Встроенные общие флаги effect/cli; `--wizard` — свой, мастер на языке человека. */
+export function builtIns(commands: Spec.Any, translate: BuffI18n.T, args: () => ReadonlyArray<string>) {
+  return [
+    GlobalFlag.Help,
+    GlobalFlag.Version,
+    Wizard.flag(commands, translate, args),
+    GlobalFlag.Completions,
+    GlobalFlag.LogLevel,
+  ] as unknown as ReadonlyArray<GlobalFlag.BuiltIn>
+}
+
+/**
+ * Ошибку значения общего флага (`--log-level`, `--completions`) effect/cli не показывает сам —
+ * она доходила до среды запуска и печаталась по-английски со стеком. Показать её, как прочие
+ * ошибки разбора; справку (ShowHelp) и ошибки команд (UserError) effect/cli уже показал.
+ */
+function reportUnrendered(error: unknown) {
+  if (!CliError.isCliError(error) || error._tag === "ShowHelp" || error._tag === "UserError") return Effect.void
+  return Effect.gen(function* () {
+    const formatter = yield* CliOutput.Formatter
+    yield* Console.error(formatter.formatErrors([error]))
+    Object.assign(error, { [Runtime.errorReported]: false })
+  })
 }
 
 function provide(node: Spec.Any, handlers: ReadonlyArray<LazyHandler>): ProvidedCommand {

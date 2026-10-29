@@ -15,6 +15,7 @@ import { lookupHome, type SignedIn } from "./mobile/home.js"
 import { machineNotice, noticeKindOf, type NoticeKind } from "./mobile/notify.js"
 import { fileStore } from "./mobile/store.js"
 import { BuffLocale } from "./locale.js"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
 /**
  * Телефон для Buff Code (#639) — одна служба на машину: машина становится пиром ретранслятора
@@ -31,9 +32,13 @@ const log: PeerLog = {
   error: (message, fields) => Effect.runFork(Effect.logError(message, fields ?? {})),
 }
 
+/** Вход на свой сервер по петле: он того же выпуска и знает имя Buff. */
+const basic = (password: string) =>
+  `Basic ${Buffer.from(`${BuffServerAuth.USERNAME}:${password}`).toString("base64")}`
+
 /** Запрос к своему серверу по петле — тот же API, что у окна и консоли. */
 function loopback(url: string, password: string): Call {
-  const auth = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
+  const auth = basic(password)
   return async (method, route, options) => {
     const target = new URL(route, url)
     for (const [k, v] of Object.entries(options?.query ?? {})) if (v !== undefined) target.searchParams.set(k, String(v))
@@ -55,7 +60,7 @@ function loopback(url: string, password: string): Call {
 
 /** Сырые байты файла с сервера по петле — для `files.read`. */
 function loopbackBytes(url: string, password: string): Fetch {
-  const auth = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
+  const auth = basic(password)
   return async (route, query) => {
     const target = new URL(route, url)
     for (const [k, v] of Object.entries(query)) target.searchParams.set(k, v)
@@ -90,7 +95,7 @@ function terminals(server: { url: string; password: string }, call: Call, push: 
       const pty =
         list.find((p) => p.status === "running")?.id ??
         ((await call("POST", "/api/pty", { query: where, body: { title: BuffLocale.t("Phone") } })) as { data: { id: string } }).data.id
-      const auth = `Basic ${Buffer.from(`opencode:${server.password}`).toString("base64")}`
+      const auth = basic(server.password)
       const ticket = await fetch(new URL(`/api/pty/${pty}/connect-token?location%5Bdirectory%5D=${encodeURIComponent(directory)}`, server.url), {
         method: "POST",
         headers: { authorization: auth, "x-opencode-ticket": "1" },

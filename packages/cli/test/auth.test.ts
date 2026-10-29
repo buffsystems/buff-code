@@ -10,10 +10,10 @@ const consoleForm = [
 describe("auth command", () => {
   test("registers authentication commands", async () => {
     const [auth, list, login, logout] = await Promise.all([
-      cli(["auth", "--help"]),
-      cli(["auth", "list", "--help"]),
-      cli(["auth", "login", "--help"]),
-      cli(["auth", "logout", "--help"]),
+      cli(["auth", "--help"], "en_US.UTF-8"),
+      cli(["auth", "list", "--help"], "en_US.UTF-8"),
+      cli(["auth", "login", "--help"], "en_US.UTF-8"),
+      cli(["auth", "logout", "--help"], "en_US.UTF-8"),
     ])
 
     expect(auth.exitCode).toBe(0)
@@ -281,14 +281,14 @@ describe("auth command", () => {
 
     const result = await cli(["auth", "logout", "anthropic", "cred_test", "--server", server.url.toString()])
     expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({ exitCode: 0, stderr: "" })
-    expect(result.stdout).toContain("Removed account from Anthropic")
+    expect(result.stdout).toContain("Учётная запись Anthropic удалена")
     expect(removed).toEqual(["cred_test"])
   })
 
   test("requires a target outside an interactive terminal", async () => {
     const result = await cli(["auth", "login"])
     expect(result.exitCode).toBe(1)
-    expect(result.stdout).toContain("Pass an integration ID or name")
+    expect(result.stdout).toContain("Без интерактивного терминала укажите ID или имя интеграции")
     expect(result.stdout).not.toContain("Background service failed to start")
   })
 
@@ -297,8 +297,54 @@ describe("auth command", () => {
     const result = await cli(["auth", "list", "--server", server.url.toString()])
     expect(result.exitCode).toBe(1)
     expect(result.stdout).toBe("")
-    expect(result.stderr).toContain("did not provide a compatible V2 health response")
+    expect(result.stderr).toContain("не ответил совместимой проверкой состояния V2")
     expect(result.stderr).not.toContain("\n    at ")
+  })
+})
+
+// Вход без терминала, когда форме нужен ответ человека (#628): вся рамка — на языке системы.
+describe("auth login speaks the system language", () => {
+  const formServer = () =>
+    authServer((_request, url) => {
+      if (url.pathname === "/api/integration")
+        return Response.json(
+          located([
+            {
+              id: "company",
+              name: "Company",
+              methods: [
+                {
+                  id: "browser",
+                  type: "oauth",
+                  label: "Browser",
+                  form: [{ type: "string", key: "tenant", required: true }],
+                },
+              ],
+              connections: [],
+            },
+          ]),
+        )
+      return new Response("Not found", { status: 404 })
+    })
+
+  test("English system — no Russian anywhere", async () => {
+    using server = formServer()
+    const result = await cli(["auth", "login", "company", "--server", server.url.toString()], "en_US.UTF-8")
+    expect(result.exitCode).toBe(1)
+    expect(result.stdout).toContain("Connect an integration")
+    expect(result.stdout).toContain("Authentication form input requires an interactive terminal")
+    expect(result.stdout).toContain("Command failed")
+    expect(result.stdout + result.stderr).not.toMatch(/[А-Яа-яЁё]/)
+  })
+
+  test("Russian system — Russian", async () => {
+    using server = formServer()
+    const result = await cli(["auth", "login", "company", "--server", server.url.toString()], "ru_RU.UTF-8")
+    expect(result.exitCode).toBe(1)
+    expect(result.stdout).toContain("Подключить интеграцию")
+    expect(result.stdout).toContain("Для заполнения формы входа нужен интерактивный терминал")
+    expect(result.stdout).toContain("Не удалось")
+    expect(result.stdout).not.toContain("interactive terminal")
   })
 })
 
@@ -329,9 +375,12 @@ function located<T>(data: T) {
   }
 }
 
-async function cli(args: string[]) {
+// Язык команды — язык системы (#713), поэтому окружение задано явно: по умолчанию — как у сьюта
+// (C.UTF-8 — не русский и не английский, значит русский), а тест языка подставляет свой LANG.
+async function cli(args: string[], lang = "C.UTF-8") {
   const child = Bun.spawn([process.execPath, "run", "src/index.ts", ...args], {
     cwd: path.join(import.meta.dir, ".."),
+    env: { ...process.env, LANGUAGE: "", LC_ALL: "", LC_MESSAGES: "", LANG: lang },
     stdout: "pipe",
     stderr: "pipe",
   })

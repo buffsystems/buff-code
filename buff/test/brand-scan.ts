@@ -62,3 +62,41 @@ export function brandStrings(): { path: string; line: number; text: string }[] {
     return found
   })
 }
+
+/**
+ * Имя входа на сервер, набранное строкой «opencode» (#628): `username: "opencode"`,
+ * `username ?? "opencode"`, `Schema.Literal("opencode")` у поля username, Basic-строка
+ * `opencode:${пароль}`. Своё имя и прежнее живут константами в `schema/src/buff-server-auth.ts`
+ * (USERNAME — то, что видит человек; LEGACY_USERNAME — для серверов прежних выпусков), так что
+ * строка «opencode» в роли имени — это имя апстрима, которое увидят в `buff pair`, ссылке или коде
+ * сопряжения.
+ */
+export function legacyUsernames(): { path: string; line: number; text: string }[] {
+  return PRODUCT.flatMap((dir) => files(join(root, "packages", dir))).flatMap((file) => {
+    const source = readFileSync(file, "utf8")
+    if (!/username|opencode:/.test(source)) return []
+    const path = relative(root, file)
+    const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+    const found: { path: string; line: number; text: string }[] = []
+    const hit = (node: ts.Node) =>
+      found.push({ path, line: tree.getLineAndCharacterOfPosition(node.getStart()).line + 1, text: node.getText().replace(/\s+/g, " ") })
+    const named = (node: ts.Node): boolean =>
+      ts.isStringLiteral(node) ? node.text === "opencode" : ts.forEachChild(node, (child) => named(child) || undefined) === true
+    // Basic-строка «имя:пароль» кодируется сразу: btoa(`…`) или Buffer.from(`…`).
+    const basic = (node: ts.Node) => ts.isCallExpression(node) && /^(btoa|Buffer\.from)$/.test(node.expression.getText())
+    const visit = (node: ts.Node) => {
+      if (ts.isPropertyAssignment(node) && /^username$/i.test(node.name.getText()) && named(node.initializer)) hit(node)
+      else if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
+        /username/i.test(node.left.getText()) &&
+        named(node.right)
+      )
+        hit(node)
+      else if (ts.isTemplateExpression(node) && /^opencode:$/.test(node.head.text) && basic(node.parent)) hit(node)
+      else ts.forEachChild(node, visit)
+    }
+    visit(tree)
+    return found
+  })
+}

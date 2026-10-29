@@ -5,6 +5,7 @@ import { Deferred, Effect, Schema, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { randomBytes } from "node:crypto"
 import { selfCommand } from "../util/process"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
 const Ready = Schema.Struct({ url: Schema.String })
 const decodeReady = Schema.decodeUnknownPromise(Schema.fromJsonString(Ready))
@@ -51,7 +52,7 @@ const makeEndpoint = Effect.fn("cli.standalone.endpoint")(
     const ready = yield* Effect.tryPromise(() => decodeReady(output))
     return {
       url: ready.url,
-      auth: { type: "basic" as const, username: "opencode", password },
+      auth: { type: "basic" as const, username: BuffServerAuth.USERNAME, password },
       pid: proc.pid,
     } satisfies Endpoint & { readonly pid: number }
   },

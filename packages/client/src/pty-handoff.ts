@@ -2,7 +2,7 @@ export * as PtyHandoff from "./pty-handoff.js"
 
 import type { PersistentPty } from "@opencode/schema/persistent-pty"
 import { readFile, rename, rm, writeFile } from "node:fs/promises"
-import type { Info } from "./service.js"
+import { LEGACY_USERNAME, type Info } from "./service.js"
 
 type Sidecar = {
   readonly source: Pick<Info, "id" | "pid" | "url">
@@ -20,7 +20,9 @@ export async function prepare(file: string, info: Info, timeout: number) {
     headers:
       info.password === undefined
         ? undefined
-        : { authorization: "Basic " + Buffer.from(`opencode:${info.password}`).toString("base64") },
+        : {
+            authorization: "Basic " + Buffer.from(`${LEGACY_USERNAME}:${info.password}`).toString("base64"),
+          },
   })
   const missing = (error: unknown) =>
     error instanceof ClientError &&

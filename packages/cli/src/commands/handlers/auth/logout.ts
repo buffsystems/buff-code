@@ -3,6 +3,7 @@ import { Effect, Option } from "effect"
 import { Commands } from "../../commands"
 import { Runtime } from "../../../framework/runtime"
 import { handlePromptErrors, requireInteractive } from "../../../ui/prompt"
+import { t } from "../../../buff/locale"
 import { createClient, loadIntegrations, request } from "./shared"
 import { chooseCredential, chooseIntegration } from "./account"
 
@@ -25,19 +26,19 @@ const logout = Effect.fn("cli.auth.logout.run")(function* (input: {
   standalone: boolean
 }) {
   if (!input.target)
-    yield* requireInteractive("Pass an integration ID or name when running without an interactive terminal")
+    yield* requireInteractive(t("Pass an integration ID or name when running without an interactive terminal"))
   if (!input.credential)
-    yield* requireInteractive("Pass a credential ID or label when running without an interactive terminal")
-  intro("Log out of an account")
+    yield* requireInteractive(t("Pass a credential ID or label when running without an interactive terminal"))
+  intro(t("Log out of an account"))
   const client = yield* createClient({ server: input.server, standalone: input.standalone })
   const integrations = yield* loadIntegrations(client)
   const integration = yield* chooseIntegration(integrations, input.target)
   const credentialID = yield* chooseCredential(integration, "log out", input.credential)
   const progress = spinner()
-  progress.start("Removing credential...")
+  progress.start(t("Removing credential…"))
   yield* request((signal) => client.credential.remove({ credentialID }, { signal })).pipe(
-    Effect.tap(() => Effect.sync(() => progress.stop(`Removed account from ${integration.name}`))),
-    Effect.tapCause(() => Effect.sync(() => progress.stop("Failed to remove credential", 1))),
+    Effect.tap(() => Effect.sync(() => progress.stop(t("Removed account from {name}", { name: integration.name })))),
+    Effect.tapCause(() => Effect.sync(() => progress.stop(t("Failed to remove credential"), 1))),
   )
-  outro("Done")
+  outro(t("Done"))
 })

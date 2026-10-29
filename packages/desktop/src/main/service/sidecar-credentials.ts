@@ -1,6 +1,7 @@
 export * as SidecarCredentials from "./sidecar-credentials"
 
 import type { ServerReadyData } from "../../shared/ipc-contract"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
 export type Data = ServerReadyData & { password: string | null }
 
@@ -26,5 +27,6 @@ export function ready(data: Data): ServerReadyData {
 export function authorization(sidecar: Data | undefined, url: string) {
   if (!sidecar?.password || !URL.canParse(url)) return
   if (new URL(url).origin !== sidecar.url) return
-  return `Basic ${Buffer.from(`opencode:${sidecar.password}`).toString("base64")}`
+  // Служба могла остаться от прежнего выпуска: прежнее имя понимают все.
+  return `Basic ${Buffer.from(`${BuffServerAuth.LEGACY_USERNAME}:${sidecar.password}`).toString("base64")}`
 }

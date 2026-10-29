@@ -408,14 +408,11 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                                                 directories={pluginDirectories}
                                                                               >
                                                                                 <App
-                                                                                  pair={
-                                                                                    input.server.endpoint.auth
-                                                                                      ? input.server.endpoint.auth
-                                                                                      : {
-                                                                                          username: "opencode",
-                                                                                          password: "",
-                                                                                        }
-                                                                                  }
+                                                                                  pair={{
+                                                                                    password:
+                                                                                      input.server.endpoint.auth
+                                                                                        ?.password ?? "",
+                                                                                  }}
                                                                                 />
                                                                               </PluginProvider>
                                                                             </PanelProvider>

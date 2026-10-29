@@ -60,13 +60,13 @@ test("preserves empty strings and equals signs in supplied text", async () => {
 })
 
 const invalidAnswers: { fields: FormFields | undefined; supplied: string[]; error: string }[] = [
-  { fields: undefined, supplied: ["missing-separator"], error: "Expected --answer key=value" },
-  { fields: undefined, supplied: ["=missing-key"], error: "Expected --answer key=value" },
-  { fields: undefined, supplied: ["unknown=value"], error: "Unknown form field: unknown" },
+  { fields: undefined, supplied: ["missing-separator"], error: "Ожидается --answer ключ=значение" },
+  { fields: undefined, supplied: ["=missing-key"], error: "Ожидается --answer ключ=значение" },
+  { fields: undefined, supplied: ["unknown=value"], error: "Неизвестное поле формы: unknown" },
   {
     fields: [{ type: "string", key: "known" }],
     supplied: ["unknown=value"],
-    error: "Unknown form field: unknown",
+    error: "Неизвестное поле формы: unknown",
   },
   {
     fields: [
@@ -74,10 +74,14 @@ const invalidAnswers: { fields: FormFields | undefined; supplied: string[]; erro
       { type: "string", key: "host", when: [{ key: "enabled", op: "eq", value: true }] },
     ],
     supplied: ["host=example.com"],
-    error: "Form field is not active: host",
+    error: "Поле формы сейчас не используется: host",
   },
   { fields: [{ type: "integer", key: "count" }], supplied: ["count=1.5"], error: "Нужно целое число" },
-  { fields: [{ type: "boolean", key: "enabled" }], supplied: ["enabled=yes"], error: "Expected a JSON value" },
+  {
+    fields: [{ type: "boolean", key: "enabled" }],
+    supplied: ["enabled=yes"],
+    error: "Для поля формы нужно значение JSON",
+  },
   {
     fields: [{ type: "string", key: "server", format: "uri", hidden: true }],
     supplied: ["server=not a URL"],
@@ -96,7 +100,7 @@ const invalidAnswers: { fields: FormFields | undefined; supplied: string[]; erro
   {
     fields: [{ type: "external", key: "approve", url: "https://example.com" }],
     supplied: ["approve=true"],
-    error: "requires interactive confirmation",
+    error: "нужно подтвердить в интерактивном терминале",
   },
 ]
 

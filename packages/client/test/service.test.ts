@@ -302,3 +302,11 @@ function run<A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem>) {
 async function status(url: string) {
   return fetch(new URL("/api/info", url), { signal: AbortSignal.timeout(1_000) }).then((response) => response.json())
 }
+
+// Без зависимостей промис-сервис держит своё прежнее имя (#628) — оно то же, что принимает сервер.
+test("the lifecycle probes services with the legacy username every server accepts", async () => {
+  const { LEGACY_USERNAME } = await import("../src/service")
+  const { BuffServerAuth } = await import("@opencode/schema/buff-server-auth")
+  expect(LEGACY_USERNAME).toBe(BuffServerAuth.LEGACY_USERNAME)
+  expect(BuffServerAuth.USERNAMES).toContain(LEGACY_USERNAME)
+})

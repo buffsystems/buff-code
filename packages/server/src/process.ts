@@ -8,6 +8,7 @@ import { BuffWorkflowService } from "@opencode/core/buff/workflow-service"
 import { BuffGoalService } from "@opencode/core/buff/goal-service"
 import { BuffMobileService } from "@opencode/core/buff/mobile-service"
 import { InstallationEvent } from "@opencode/schema/installation-event"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { hasPtyConnectTicketURL } from "@opencode/protocol/groups/pty"
 import { hasPersistentPtyConnectTicketURL } from "@opencode/protocol/groups/persistent-pty"
 import { Global } from "@opencode/util/global"
@@ -207,7 +208,7 @@ function dispatch(
   urls: () => ReadonlyArray<string>,
   tmp: string,
 ): App {
-  const auth = ServerAuth.Config.of({ password: Option.some(password), username: "opencode" })
+  const auth = ServerAuth.Config.of({ password: Option.some(password), username: BuffServerAuth.USERNAME })
   return Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest
     const url = new URL(request.url, "http://localhost")

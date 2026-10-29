@@ -2,6 +2,7 @@
 // feed every upload chip, as in the Solid composer's uploads.tsx.
 
 import { createStore } from "../../../core/store"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
 export type Upload = {
   id: string
@@ -53,7 +54,8 @@ export function uploadFile(input: {
     xhr.open("POST", input.url)
     xhr.responseType = "json"
     xhr.setRequestHeader("content-type", "application/octet-stream")
-    if (input.password) xhr.setRequestHeader("authorization", `Basic ${btoa(`opencode:${input.password}`)}`)
+    if (input.password)
+      xhr.setRequestHeader("authorization", `Basic ${btoa(`${BuffServerAuth.LEGACY_USERNAME}:${input.password}`)}`)
     xhr.upload.addEventListener("progress", (event) => input.report(event.loaded))
     xhr.addEventListener("load", () => {
       if (xhr.status !== 200) return reject(new Error(`Upload failed with status ${xhr.status}`))

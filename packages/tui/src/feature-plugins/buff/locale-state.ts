@@ -3,10 +3,12 @@ import { createSignal } from "solid-js"
 
 /**
  * Язык процесса (#472): один на консоль, режим mini и разовые команды cli. Пока служба его не
- * сообщила — русский. Строки пишутся по-английски и идут через `t`/`n`, русский — из каталога.
+ * сообщила — язык системы (#713: LANGUAGE, LC_*, LANG; не русский и не английский — русский),
+ * как у ядра: разовая команда, которая службу не спрашивает, говорит на языке системы целиком.
+ * Строки пишутся по-английски и идут через `t`/`n`, русский — из каталога.
  */
 
-const [locale, setLocale] = createSignal<BuffI18n.Locale>(BuffI18n.DEFAULT_LOCALE)
+const [locale, setLocale] = createSignal<BuffI18n.Locale>(BuffI18n.systemLocale(BuffI18n.envLanguages(process.env)))
 
 export const t = (text: string, params?: BuffI18n.Params) => BuffI18n.t(locale(), text, params)
 export const n = (count: number, forms: string, params?: BuffI18n.Params) => BuffI18n.n(locale(), count, forms, params)

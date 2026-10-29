@@ -13,6 +13,7 @@ import { createBrowserNetwork, type BrowserNetwork } from "./browser/network"
 import { destinationOrigin } from "./browser/policy"
 import { emitIpcEvent } from "./ipc-events"
 import { SidecarCredentials } from "./service/sidecar-credentials"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { createBrowserRestoreStore } from "./browser/restore"
 import type { StateStore } from "./storage/state"
 
@@ -101,7 +102,7 @@ export function createBrowserPane(storage: StateStore) {
             // The renderer never holds the managed sidecar's password; Node requests bypass
             // the webRequest header injection, so resolve the credential here in main.
             const authorization = target.endpoint.password
-              ? `Basic ${Buffer.from(`${target.endpoint.username ?? "opencode"}:${target.endpoint.password}`).toString("base64")}`
+              ? `Basic ${Buffer.from(`${target.endpoint.username ?? BuffServerAuth.LEGACY_USERNAME}:${target.endpoint.password}`).toString("base64")}`
               : SidecarCredentials.authorization(SidecarCredentials.get(), target.endpoint.url)
             const client = yield* OpenCode.make({ baseUrl: target.endpoint.url }).pipe(
               Effect.provideService(

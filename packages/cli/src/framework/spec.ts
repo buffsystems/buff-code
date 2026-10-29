@@ -16,6 +16,8 @@ export interface Node<
   readonly spec: Spec
   readonly commands: Commands
   readonly aliases: ReadonlyArray<Any>
+  /** Аргументы и флаги команды — по ним мастер (`--wizard`) спрашивает значения. */
+  readonly params: Command.Command.Config
 }
 
 export type Any = Node<string, Command.Command<any, any, any, any, any>, Children>
@@ -41,13 +43,14 @@ export function make<
     const aliasSpec = options.description
       ? aliasCommand.pipe(Command.withDescription(options.description))
       : aliasCommand
-    return { name: alias, spec: aliasSpec, commands, aliases: [] }
+    return { name: alias, spec: aliasSpec, commands, aliases: [], params }
   })
   return {
     name,
     spec,
     commands,
     aliases: extra,
+    params: params as Command.Command.Config,
   }
 }
 

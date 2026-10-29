@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { OpenCode, type IntegrationInfo, type IntegrationMethod, type OpenCodeClient } from "@opencode/client"
 import { Service } from "@opencode/client/effect/service"
 import { ServerConnection } from "../../../services/server-connection"
+import { t } from "../../../buff/locale"
 
 export const location = { directory: process.cwd() }
 
@@ -36,11 +37,14 @@ export const resolveIntegration = Effect.fn("cli.auth.resolve-integration")(func
   if (matches.length > 1) {
     return yield* Effect.fail(
       new Error(
-        `Integration name "${target}" is ambiguous: ${matches.map((integration) => integration.id).join(", ")}`,
+        t("Integration name “{target}” is ambiguous: {ids}", {
+          target,
+          ids: matches.map((integration) => integration.id).join(", "),
+        }),
       ),
     )
   }
-  return yield* Effect.fail(new Error(`Integration not found: ${target}`))
+  return yield* Effect.fail(new Error(t("Integration not found: {target}", { target })))
 })
 
 export type ConnectMethod = Exclude<IntegrationMethod, { type: "env" }>
@@ -58,9 +62,14 @@ export const resolveMethod = Effect.fn("cli.auth.resolve-method")(function* (met
     return method.id === target || method.label.toLowerCase() === normalized
   })
   if (matches.length === 1) return matches[0]
-  if (matches.length > 1) return yield* Effect.fail(new Error(`Authentication method "${target}" is ambiguous`))
+  if (matches.length > 1)
+    return yield* Effect.fail(new Error(t("Authentication method “{target}” is ambiguous", { target })))
   const available = methods.map((method) => (method.type === "key" ? "key" : method.id)).join(", ")
   return yield* Effect.fail(
-    new Error(`Authentication method not found: ${target}${available ? `. Available: ${available}` : ""}`),
+    new Error(
+      available
+        ? t("Authentication method not found: {target}. Available: {available}", { target, available })
+        : t("Authentication method not found: {target}", { target }),
+    ),
   )
 })

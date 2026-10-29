@@ -6,8 +6,9 @@ import { createMiniConnection, mergeInput as mergeInteractiveInput, resolveMiniT
 import { mergeInput as mergeNonInteractiveInput, parseRunModel } from "../src/run/run"
 import { parseSessionTargetModel } from "../src/session-target"
 
-async function cli(args: string[]) {
+async function cli(args: string[], env: Record<string, string> = {}) {
   const child = Bun.spawn([process.execPath, "run", "src/index.ts", ...args], {
+    env: { ...process.env, ...env },
     cwd: path.join(import.meta.dir, ".."),
     stdout: "pipe",
     stderr: "pipe",
@@ -124,7 +125,7 @@ describe("mini command", () => {
   })
 
   test("is registered in the preview CLI", async () => {
-    const result = await cli(["--help"])
+    const result = await cli(["--help"], { LANGUAGE: "en" })
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toMatch(/^  mini[ \t]+Start the minimal interactive interface\r?$/m)
@@ -132,7 +133,7 @@ describe("mini command", () => {
   })
 
   test("exposes run without legacy interactive, attach, or command modes", async () => {
-    const result = await cli(["run", "--help"])
+    const result = await cli(["run", "--help"], { LANGUAGE: "en" })
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain("--server string")
@@ -229,7 +230,7 @@ describe("mini command", () => {
   })
 
   test("uses the shared V2 server option instead of an attach command", async () => {
-    const result = await cli(["mini", "--help"])
+    const result = await cli(["mini", "--help"], { LANGUAGE: "en" })
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain("--server string")

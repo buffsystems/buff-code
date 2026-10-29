@@ -6,7 +6,10 @@ import path from "node:path"
 
 describe("debug paths command", () => {
   test("is included in troubleshooting help", async () => {
-    const [debug, paths] = await Promise.all([cli(["debug", "--help"]), cli(["debug", "paths", "--help"])])
+    const [debug, paths] = await Promise.all([
+      cli(["debug", "--help"], { LANGUAGE: "en" }),
+      cli(["debug", "paths", "--help"], { LANGUAGE: "en" }),
+    ])
 
     expect(debug.exitCode).toBe(0)
     expect(debug.stdout).toContain("paths")

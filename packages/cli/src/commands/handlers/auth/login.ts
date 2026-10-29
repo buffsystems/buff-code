@@ -36,14 +36,14 @@ export default Runtime.handler(
     Effect.gen(function* () {
       const target = Option.getOrUndefined(input.target)
       if (!target)
-        yield* requireInteractive("Pass an integration ID or name when running without an interactive terminal")
-      intro("Connect an integration")
+        yield* requireInteractive(t("Pass an integration ID or name when running without an interactive terminal"))
+      intro(t("Connect an integration"))
       const client = yield* createClient({
         server: Option.getOrUndefined(input.server),
         standalone: input.standalone,
       })
       yield* connectIntegration(client, target, { method: Option.getOrUndefined(input.method), answer: input.answer })
-      outro("Done")
+      outro(t("Done"))
     }).pipe(handlePromptErrors),
   ),
 )
@@ -59,7 +59,8 @@ export const connectIntegration = Effect.fn("cli.auth.connect")(function* (
 ) {
   const integration = yield* findIntegration(client, target)
   const methods = connectMethods(integration)
-  if (methods.length === 0) yield* Effect.fail(new Error(`${integration.name} has no interactive login methods`))
+  if (methods.length === 0)
+    yield* Effect.fail(new Error(t("{name} has no interactive login methods", { name: integration.name })))
   const method = yield* chooseMethod(methods, given.method)
   const form = method.type === "command" ? undefined : method.form
   // Buff (#458): начало входа отклонено (адрес с опечаткой, коннектор недоступен) — причина
@@ -92,10 +93,10 @@ const findIntegration = Effect.fn("cli.auth.login.integration")(function* (clien
     const protocol = new URL(target).protocol
     if (protocol === "http:" || protocol === "https:") {
       const progress = spinner()
-      progress.start("Discovering authentication provider...")
+      progress.start(t("Discovering authentication provider…"))
       yield* request((signal) => client.integration.wellknown.add({ url: target, location }, { signal })).pipe(
-        Effect.tap(() => Effect.sync(() => progress.stop("Authentication provider discovered"))),
-        Effect.tapCause(() => Effect.sync(() => progress.stop("Discovery failed", 1))),
+        Effect.tap(() => Effect.sync(() => progress.stop(t("Authentication provider discovered")))),
+        Effect.tapCause(() => Effect.sync(() => progress.stop(t("Discovery failed"), 1))),
       )
     }
   }
@@ -111,14 +112,14 @@ const findIntegration = Effect.fn("cli.auth.login.integration")(function* (clien
         a.name.localeCompare(b.name) ||
         a.id.localeCompare(b.id),
     )
-  if (available.length === 0) return yield* Effect.fail(new Error("No authentication integrations are available"))
+  if (available.length === 0) return yield* Effect.fail(new Error(t("No authentication integrations are available")))
   const id = yield* prompt<string>(() =>
     autocomplete({
-      message: "Select integration",
+      message: t("Select integration"),
       maxItems: 8,
       options: available.map((integration) => {
         const option = { value: integration.id, label: integration.name, hint: integration.id }
-        if (integration.connections.length > 0) return { ...option, hint: "connected" }
+        if (integration.connections.length > 0) return { ...option, hint: t("connected") }
         return option
       }),
     }),
@@ -129,12 +130,12 @@ const findIntegration = Effect.fn("cli.auth.login.integration")(function* (clien
 const chooseMethod = Effect.fn("cli.auth.login.method")(function* (methods: ConnectMethod[], target?: string) {
   if (target) return yield* resolveMethod(methods, target)
   if (methods.length === 1) return methods[0]
-  yield* requireInteractive("Pass --method when running without an interactive terminal")
+  yield* requireInteractive(t("Pass --method when running without an interactive terminal"))
   const id = yield* prompt<string>(() =>
     select({
-      message: "Select login method",
+      message: t("Select login method"),
       options: methods.map((method) => {
-        if (method.type === "key") return { value: "key", label: method.label ?? "API key" }
+        if (method.type === "key") return { value: "key", label: method.label ?? t("API key") }
         return { value: method.id, label: method.label }
       }),
     }),
@@ -159,9 +160,9 @@ const keyLogin = Effect.fn("cli.auth.login.key")(function* (
   method: Extract<ConnectMethod, { type: "key" }>,
   answer?: FormAnswer,
 ) {
-  const key = yield* secret(method.label ?? `Enter your ${integration.name} API key`)
+  const key = yield* secret(method.label ?? t("Enter your {name} API key", { name: integration.name }))
   const progress = spinner()
-  progress.start("Saving credential...")
+  progress.start(t("Saving credential…"))
   yield* request((signal) =>
     client.integration.connect.key({ integrationID: integration.id, key, answer, location }, { signal }),
   ).pipe(
@@ -204,12 +205,15 @@ const oauthLogin = Effect.fn("cli.auth.login.oauth")(function* (
   if (process.stdin.isTTY && process.stdout.isTTY) yield* openUrl(attempt.url)
 
   if (attempt.mode === "code") {
-    yield* requireInteractive("This login requires an interactive terminal to enter the authorization code")
+    yield* requireInteractive(t("This login requires an interactive terminal to enter the authorization code"))
     const code = yield* prompt<string>(() =>
-      text({ message: "Paste the authorization code", validate: (value) => (!value ? "Required" : undefined) }),
+      text({
+        message: t("Paste the authorization code"),
+        validate: (value) => (!value ? t("Answer required") : undefined),
+      }),
     )
     const completing = spinner()
-    completing.start("Completing authorization...")
+    completing.start(t("Completing authorization…"))
     yield* request((signal) =>
       client.integration.oauth.complete(
         { integrationID: integration.id, attemptID: attempt.attemptID, code, location },
@@ -233,7 +237,7 @@ const oauthLogin = Effect.fn("cli.auth.login.oauth")(function* (
   }
   waiting.stop(t("Sign-in failed"), 1)
   if (status.status === "failed") yield* Effect.fail(new Error(status.message))
-  yield* Effect.fail(new Error("Authorization expired"))
+  yield* Effect.fail(new Error(t("Authorization expired")))
 })
 
 const commandLogin = Effect.fn("cli.auth.login.command")(function* (
@@ -242,7 +246,7 @@ const commandLogin = Effect.fn("cli.auth.login.command")(function* (
   method: Extract<ConnectMethod, { type: "command" }>,
 ) {
   const progress = spinner()
-  progress.start("Starting authentication command...")
+  progress.start(t("Starting authentication command…"))
   const started = yield* request((signal) =>
     client.integration.command.connect({ integrationID: integration.id, methodID: method.id, location }, { signal }),
   ).pipe(Effect.tapCause(() => Effect.sync(() => progress.stop(t("Sign-in failed"), 1))))
@@ -259,7 +263,7 @@ const commandLogin = Effect.fn("cli.auth.login.command")(function* (
     ).pipe(Effect.ignore),
   )
   const status = yield* waitForCommand(client, integration.id, started.data.attemptID, (message) =>
-    progress.message(message.trim() || "Waiting for authentication command..."),
+    progress.message(message.trim() || t("Waiting for authentication command…")),
   ).pipe(Effect.tapCause(() => Effect.sync(() => progress.stop(t("Sign-in failed"), 1))))
   if (status.status === "complete") {
     progress.stop(t("Signed in: {name}", { name: integration.name }))
@@ -267,7 +271,7 @@ const commandLogin = Effect.fn("cli.auth.login.command")(function* (
   }
   progress.stop(t("Sign-in failed"), 1)
   if (status.status === "failed") yield* Effect.fail(new Error(status.message))
-  yield* Effect.fail(new Error("Authentication expired"))
+  yield* Effect.fail(new Error(t("Authentication expired")))
 })
 
 const waitForOAuth = Effect.fn("cli.auth.login.oauth.wait")(function* (

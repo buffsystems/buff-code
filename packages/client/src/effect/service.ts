@@ -11,6 +11,7 @@ import {
 import { defaultEnsureTiming, ensureTiming, type EnsureTiming } from "../service-timing.js"
 import { matchesVersion } from "../service-version.js"
 import { PtyHandoff } from "../pty-handoff.js"
+import { LEGACY_USERNAME } from "../service.js"
 
 export * from "../service.js"
 /** Contents of the local service registration file. */
@@ -214,10 +215,11 @@ const probeResult = Effect.fnUntraced(function* (
 ) {
   const endpoint = {
     url: info.url,
+    // Служба до обновления знает только прежнее имя — проба должна её узнать, чтобы заменить.
     auth:
       info.password === undefined
         ? undefined
-        : { type: "basic" as const, username: "opencode", password: info.password },
+        : { type: "basic" as const, username: LEGACY_USERNAME, password: info.password },
   } satisfies Endpoint
   const signal = AbortSignal.timeout(timeout)
   const result = yield* Effect.promise(() =>

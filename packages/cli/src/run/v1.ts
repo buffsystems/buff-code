@@ -2,6 +2,7 @@ import type { Endpoint } from "@opencode/client/effect/service"
 import { Effect } from "effect"
 import path from "node:path"
 import { Standalone } from "../services/standalone"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { reportRunError, runNonInteractiveWithOptions, type RunCommandInput } from "./run"
 
 export type V1RunCommandInput = {
@@ -79,7 +80,7 @@ function explicitEndpoint(input: V1RunCommandInput): Endpoint {
   return {
     url,
     auth: input.password
-      ? { type: "basic", username: input.username ?? "opencode", password: input.password }
+      ? { type: "basic", username: input.username ?? BuffServerAuth.LEGACY_USERNAME, password: input.password }
       : undefined,
   }
 }

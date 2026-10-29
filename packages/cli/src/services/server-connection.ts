@@ -2,9 +2,11 @@ import { Service, type Endpoint, type EnsureOptions } from "@opencode/client/eff
 import { ClientError, isUnauthorizedError, OpenCode } from "@opencode/client/promise"
 import { OPENCODE_VERSION } from "../version"
 import { Effect, Redacted } from "effect"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { Env } from "../env"
 import { ServiceConfig } from "./service-config"
 import { Standalone } from "./standalone"
+import { t } from "../buff/locale"
 
 export type Args = {
   readonly server?: string
@@ -20,12 +22,15 @@ export type Resolved = {
 
 export const resolve = Effect.fn("cli.server-connection.resolve")(function* (args: Args) {
   if (args.server !== undefined && args.standalone)
-    return yield* Effect.fail(new Error("--server and --standalone cannot be combined"))
+    return yield* Effect.fail(new Error(t("--server and --standalone cannot be combined")))
   if (args.server !== undefined) {
     const password = yield* Env.password
     const endpoint = {
       url: args.server,
-      auth: password ? { type: "basic" as const, username: "opencode", password: Redacted.value(password) } : undefined,
+      // Сервер по адресу может быть прежнего выпуска — ему понятно только прежнее имя.
+      auth: password
+        ? { type: "basic" as const, username: BuffServerAuth.LEGACY_USERNAME, password: Redacted.value(password) }
+        : undefined,
     } satisfies Endpoint
     const client = OpenCode.make({ baseUrl: endpoint.url, headers: Service.headers(endpoint) })
     const health = yield* Effect.tryPromise({
@@ -34,7 +39,11 @@ export const resolve = Effect.fn("cli.server-connection.resolve")(function* (arg
     })
     if (health.version !== OPENCODE_VERSION)
       process.stderr.write(
-        `Warning: Server at ${endpoint.url} has version ${health.version}; this client is ${OPENCODE_VERSION}. Continuing anyway.\n`,
+        t("Warning: Server at {url} has version {server}; this client is {client}. Continuing anyway.", {
+          url: endpoint.url,
+          server: health.version,
+          client: OPENCODE_VERSION,
+        }) + "\n",
       )
     return { endpoint } satisfies Resolved
   }
@@ -79,7 +88,7 @@ const resolveManaged = Effect.fnUntraced(function* (options: EnsureOptions, mism
   if (compatible !== undefined) return compatible
   const existing = yield* Service.discover({ ...options, version: undefined })
   if (existing !== undefined)
-    return yield* Effect.fail(new Error("Background server version does not match this client"))
+    return yield* Effect.fail(new Error(t("Background server version does not match this client")))
   return yield* Service.ensure(options)
 })
 
@@ -87,14 +96,16 @@ function connectError(endpoint: Endpoint, cause: unknown) {
   if (isUnauthorizedError(cause)) {
     return new Error(
       endpoint.auth === undefined
-        ? `Server at ${endpoint.url} requires a password; set OPENCODE_PASSWORD`
-        : `Server at ${endpoint.url} rejected the password`,
+        ? t("Server at {url} requires a password; set OPENCODE_PASSWORD", { url: endpoint.url })
+        : t("Server at {url} rejected the password", { url: endpoint.url }),
       { cause },
     )
   }
   if (cause instanceof ClientError && cause.reason === "Transport")
-    return new Error(`Could not reach server at ${endpoint.url}`, { cause })
-  return new Error(`Server at ${endpoint.url} did not provide a compatible V2 health response`, { cause })
+    return new Error(t("Could not reach server at {url}", { url: endpoint.url }), { cause })
+  return new Error(t("Server at {url} did not provide a compatible V2 health response", { url: endpoint.url }), {
+    cause,
+  })
 }
 
 export * as ServerConnection from "./server-connection"

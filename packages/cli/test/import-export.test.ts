@@ -3,8 +3,10 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 
+// Ошибки и справка — на языке системы (#713); здесь проверяется английский текст.
 function run(args: string[]) {
   const child = Bun.spawn([process.execPath, "run", "src/index.ts", ...args], {
+    env: { ...process.env, LANGUAGE: "en" },
     cwd: path.join(import.meta.dir, ".."),
     stdout: "pipe",
     stderr: "pipe",

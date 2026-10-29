@@ -1,7 +1,10 @@
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
+
 export async function checkHealth(url: string, password?: string | null): Promise<boolean> {
   const headers = new Headers()
   if (password) {
-    const auth = Buffer.from(`opencode:${password}`).toString("base64")
+    // Служба могла остаться от прежнего выпуска: прежнее имя понимают все.
+    const auth = Buffer.from(`${BuffServerAuth.LEGACY_USERNAME}:${password}`).toString("base64")
     headers.set("authorization", `Basic ${auth}`)
   }
 

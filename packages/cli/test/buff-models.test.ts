@@ -40,8 +40,9 @@ function service(opts: { choice: Choice | null; models: string[]; optionsError?:
   return { server, calls, [Symbol.dispose]: () => server.stop(true) }
 }
 
-async function cli(args: string[]) {
+async function cli(args: string[], env: Record<string, string> = {}) {
   const child = Bun.spawn([process.execPath, "run", "src/index.ts", ...args], {
+    env: { ...process.env, ...env },
     cwd: path.join(import.meta.dir, ".."),
     stdout: "pipe",
     stderr: "pipe",
@@ -63,7 +64,7 @@ describe("no separate setup commands (#401)", () => {
     expect(help.exitCode).toBe(0)
     for (const gone of ["Buff: выбрать организацию", "Buff: выбрать проект", "Buff: выбрать пространства"])
       expect(help.stdout).not.toContain(gone)
-    const auth = await cli(["auth", "--help"])
+    const auth = await cli(["auth", "--help"], { LANGUAGE: "en" })
     expect(auth.stdout).toContain("log in to a provider")
   })
 })
@@ -79,7 +80,7 @@ describe("buff models (#399, #401)", () => {
 
   test("not set up and no terminal to ask in: a short error that points to buff itself", async () => {
     using s = service({ choice: null, models: [] })
-    const r = await cli(["models", "--server", s.server.url.origin])
+    const r = await cli(["models", "--server", s.server.url.origin], { LANGUAGE: "ru" })
     expect(r.exitCode).not.toBe(0)
     expect(r.all).toContain("запустите buff")
     expect(r.all).not.toContain("buff org")
@@ -91,7 +92,7 @@ describe("buff models (#399, #401)", () => {
       models: [],
       optionsError: { type: "signed_out", message: "Вход в Buff не выполнен." },
     })
-    const r = await cli(["models", "--server", s.server.url.origin])
+    const r = await cli(["models", "--server", s.server.url.origin], { LANGUAGE: "ru" })
     expect(r.exitCode).not.toBe(0)
     expect(r.all).toContain("запустите buff")
     expect(r.all).toContain("buff auth login")

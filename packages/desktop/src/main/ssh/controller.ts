@@ -20,6 +20,7 @@ import type { SshConfig, SshHttp, SshItem, SshStart, SshState } from "@opencode/
 import { createAskpass } from "./askpass"
 import { bootstrap } from "./bootstrap"
 import { parseTarget, quote, runSsh, sshArgs, sshExecutable, tunnelArgs, SshFailure } from "./command"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
 type Connection = {
   owner?: number
@@ -355,7 +356,9 @@ const checkHealth = Effect.fn("Ssh.checkHealth")(function* (http: SshHttp) {
   const client = yield* HttpClient.HttpClient
   return yield* client
     .get(`${http.url}/api/info`, {
-      headers: { authorization: `Basic ${Buffer.from(`opencode:${http.password}`).toString("base64")}` },
+      headers: {
+        authorization: `Basic ${Buffer.from(`${BuffServerAuth.LEGACY_USERNAME}:${http.password}`).toString("base64")}`,
+      },
     })
     .pipe(
       Effect.timeout(2000),

@@ -4,6 +4,7 @@ import { Commands } from "../../commands"
 import { Runtime } from "../../../framework/runtime"
 import { createClient, loadIntegrations } from "./shared"
 import { errorMessage } from "../../../util/error"
+import { t } from "../../../buff/locale"
 
 export default Runtime.handler(Commands.commands.auth.commands.list, (input) =>
   list(input).pipe(
@@ -37,11 +38,11 @@ const list = Effect.fn("cli.auth.list")(function* (input) {
     integration.connections.map((connection) => ({
       integration: integration.name,
       source: connection.type === "credential" ? connection.label : connection.name,
-      type: connection.type === "credential" ? "stored" : "environment",
+      type: connection.type === "credential" ? t("stored") : t("environment"),
     })),
   )
   if (rows.length === 0) {
-    process.stdout.write("No authenticated integrations" + EOL)
+    process.stdout.write(t("No authenticated integrations") + EOL)
     return
   }
   const width = Math.max(...rows.map((row) => row.integration.length)) + 2

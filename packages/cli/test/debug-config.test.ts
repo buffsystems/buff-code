@@ -7,7 +7,10 @@ import { OPENCODE_VERSION } from "../src/version"
 
 describe("debug config command", () => {
   test("is included in troubleshooting help", async () => {
-    const [debug, config] = await Promise.all([cli(["debug", "--help"]), cli(["debug", "config", "--help"])])
+    const [debug, config] = await Promise.all([
+      cli(["debug", "--help"], undefined, { LANGUAGE: "en" }),
+      cli(["debug", "config", "--help"], undefined, { LANGUAGE: "en" }),
+    ])
 
     expect(debug.exitCode).toBe(0)
     expect(debug.stdout).toContain("config")

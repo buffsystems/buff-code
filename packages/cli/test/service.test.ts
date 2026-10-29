@@ -152,6 +152,36 @@ test("preview registration migration never moves stable discovery", async () => 
   }
 })
 
+// Имя для входа (#628): своё — buff, его отдаёт `buff pair`; прежнее opencode служба принимает
+// и дальше — с ним ходят уже сопряжённые клиенты и клиенты прежних выпусков.
+test("the service takes the buff username, keeps the legacy one, and pair gives out buff", async () => {
+  const service = await startManagedService("buff-service-username-")
+  try {
+    const status = (username: string) =>
+      fetch(new URL("/api/info", service.info.url), {
+        headers: { authorization: "Basic " + btoa(`${username}:${service.info.password}`) },
+      }).then((response) => response.status)
+    // Пока служба поднимается, она отвечает 503 — ждём готовности.
+    for (let attempt = 0; attempt < 400 && (await status("buff")) === 503; attempt++) await Bun.sleep(50)
+    expect(await status("buff")).toBe(200)
+    expect(await status("opencode")).toBe(200)
+    expect(await status("custom")).toBe(401)
+
+    const pair = Bun.spawn([process.execPath, path.join(import.meta.dir, "../src/index.ts"), "pair"], {
+      env: { ...serviceEnv(service.root), LANGUAGE: "", LC_ALL: "", LC_MESSAGES: "", LANG: "en_US.UTF-8" },
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    const [stdout, stderr] = await Promise.all([new Response(pair.stdout).text(), new Response(pair.stderr).text()])
+    expect(await pair.exited, stderr).toBe(0)
+    expect(stdout).toMatch(/^ {2}Username +buff$/m)
+    expect(stdout).toContain(`Password  ${service.info.password}`)
+    expect(stdout).not.toContain("opencode")
+  } finally {
+    await stopManagedService(service)
+  }
+}, 60_000)
+
 test("deleting a managed service registration stops its owner", async () => {
   const service = await startManagedService("opencode-service-delete-")
   try {

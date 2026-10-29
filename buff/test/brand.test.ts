@@ -258,3 +258,11 @@ test("пользователь не читает «OpenCode» как имя на
   const stale = allowed.filter((rule) => !found.some((hit) => rule.path.test(hit.path) && rule.text.test(hit.text)))
   expect(stale.map((rule) => rule.reason)).toEqual([])
 })
+
+test("имя для входа на сервер — buff, а не «opencode» (#628)", async () => {
+  // `buff pair`, окно сопряжения в консоли и код сопряжения отдают своё имя. Прежнее «opencode»
+  // сервер принимает и клиенты шлют его серверам прежних выпусков — но только через константу
+  // LEGACY_USERNAME (схема и клиент), а не строкой, которая однажды окажется на экране.
+  const { legacyUsernames } = await import("./brand-scan")
+  expect(legacyUsernames().map((hit) => `${hit.path}:${hit.line}: ${hit.text}`)).toEqual([])
+})

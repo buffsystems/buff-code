@@ -3,12 +3,14 @@
 // code's addresses, and an http:// server a https:// page cannot reach.
 
 import { Option, Schema } from "effect"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { normalizeServerUrl } from "../registry/registry"
 
 const pairing = Schema.fromJsonString(
   Schema.Struct({
     urls: Schema.Array(Schema.String),
-    username: Schema.Literal("opencode"),
+    // Код сопряжения новых выпусков несёт имя Buff, прежних — `opencode`.
+    username: Schema.Literals(BuffServerAuth.USERNAMES),
     password: Schema.String,
   }),
 )

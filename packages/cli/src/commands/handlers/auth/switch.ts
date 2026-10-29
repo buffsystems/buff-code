@@ -3,6 +3,7 @@ import { Effect, Option } from "effect"
 import { Commands } from "../../commands"
 import { Runtime } from "../../../framework/runtime"
 import { handlePromptErrors, requireInteractive } from "../../../ui/prompt"
+import { t } from "../../../buff/locale"
 import { createClient, loadIntegrations, request } from "./shared"
 import { chooseCredential, chooseIntegration } from "./account"
 
@@ -25,19 +26,19 @@ const switchAccount = Effect.fn("cli.auth.switch.run")(function* (input: {
   standalone: boolean
 }) {
   if (!input.target)
-    yield* requireInteractive("Pass an integration ID or name when running without an interactive terminal")
+    yield* requireInteractive(t("Pass an integration ID or name when running without an interactive terminal"))
   if (!input.credential)
-    yield* requireInteractive("Pass a credential ID or label when running without an interactive terminal")
-  intro("Switch account")
+    yield* requireInteractive(t("Pass a credential ID or label when running without an interactive terminal"))
+  intro(t("Switch account"))
   const client = yield* createClient({ server: input.server, standalone: input.standalone })
   const integrations = yield* loadIntegrations(client)
   const integration = yield* chooseIntegration(integrations, input.target)
   const credentialID = yield* chooseCredential(integration, "switch to", input.credential)
   const progress = spinner()
-  progress.start("Switching account...")
+  progress.start(t("Switching account…"))
   yield* request((signal) => client.credential.activate({ credentialID }, { signal })).pipe(
-    Effect.tap(() => Effect.sync(() => progress.stop(`Switched account for ${integration.name}`))),
-    Effect.tapCause(() => Effect.sync(() => progress.stop("Failed to switch account", 1))),
+    Effect.tap(() => Effect.sync(() => progress.stop(t("Switched account for {name}", { name: integration.name })))),
+    Effect.tapCause(() => Effect.sync(() => progress.stop(t("Failed to switch account"), 1))),
   )
-  outro("Done")
+  outro(t("Done"))
 })

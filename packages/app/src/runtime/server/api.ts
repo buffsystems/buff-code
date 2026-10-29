@@ -1,9 +1,11 @@
 import { OpenCode, type OpenCodeClient } from "@opencode/client/promise"
 import type { ServerConnection } from "@/runtime/server/registry"
 import { decode64 } from "@/runtime/persistence/base64"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
+// Окно ходит и на серверы прежних выпусков (удалённые, WSL) — им понятно только прежнее имя.
 export function authTokenFromCredentials(input: { password: string }) {
-  return btoa(`opencode:${input.password}`)
+  return btoa(`${BuffServerAuth.LEGACY_USERNAME}:${input.password}`)
 }
 
 export function authFromToken(token: string | null) {

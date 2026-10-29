@@ -2,6 +2,7 @@ import { TextAttributes } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
 import { createMemo, createResource, createSignal, For, Show } from "solid-js"
 import { renderUnicodeCompact } from "uqr"
+import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { useClient } from "../context/client"
 import { useTheme } from "../context/theme"
 import { useDialog } from "../ui/dialog"
@@ -9,8 +10,8 @@ import { Link } from "../ui/link"
 import { errorMessage } from "../util/error"
 import { t } from "../feature-plugins/buff/locale"
 
+/** Что отдаёт окно сопряжения: пароль службы; имя — всегда своё, Buff (#628). */
 export type DialogPairCredentials = {
-  readonly username: string
   readonly password: string
 }
 
@@ -37,7 +38,7 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
     if (!current) return
     return {
       urls: current.urls,
-      username: props.credentials?.username ?? "opencode",
+      username: BuffServerAuth.USERNAME,
       password: props.credentials?.password ?? "",
     }
   })

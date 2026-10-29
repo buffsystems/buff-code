@@ -6,6 +6,7 @@ import { Effect, FileSystem, Option, Schema } from "effect"
 import { randomBytes } from "crypto"
 import path from "path"
 import { selfCommand } from "../util/process"
+import { t } from "../buff/locale"
 
 // The CLI's service configuration file, plus the Service.EnsureOptions binding that
 // points the client package's service operations at this CLI: which
@@ -79,7 +80,7 @@ export const migrateConfig = Effect.fnUntraced(function* (legacy: string, file: 
 
 function configKey(key: string): Key {
   if (key === "hostname" || key === "port" || key === "password" || key === "cors" || key === "env") return key
-  throw new Error(`Unknown service config key: ${key}`)
+  throw new Error(t("Unknown service config key: {key}", { key }))
 }
 
 const paths = Effect.gen(function* () {
@@ -149,7 +150,8 @@ export const get = Effect.fn("cli.service-config.get")(function* (key?: string, 
     return JSON.stringify(safe, null, 2)
   }
   const selected = configKey(key)
-  if (selected !== "env" && name !== undefined) throw new Error(`Usage: buff service get ${selected}`)
+  if (selected !== "env" && name !== undefined)
+    throw new Error(t("Usage: {command}", { command: `buff service get ${selected}` }))
   switch (selected) {
     case "hostname": {
       return (yield* read()).hostname ?? ""
@@ -169,13 +171,13 @@ export const get = Effect.fn("cli.service-config.get")(function* (key?: string, 
       return name === undefined ? JSON.stringify(env, null, 2) : (env[name] ?? "")
     }
   }
-  throw new Error(`Unknown service config key: ${key}`)
+  throw new Error(t("Unknown service config key: {key}", { key }))
 })
 
 export const set = Effect.fn("cli.service-config.set")(function* (key: string, value: string, nestedValue?: string) {
   const selected = configKey(key)
   if (selected !== "env" && nestedValue !== undefined)
-    throw new Error(`Usage: buff service set ${selected} <value>`)
+    throw new Error(t("Usage: {command}", { command: `buff service set ${selected} <value>` }))
   switch (selected) {
     case "hostname": {
       yield* Service.stop(yield* options())
@@ -184,7 +186,7 @@ export const set = Effect.fn("cli.service-config.set")(function* (key: string, v
     }
     case "port": {
       const port = Number(value)
-      if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("Port must be between 1 and 65535")
+      if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error(t("Port must be between 1 and 65535"))
       yield* Service.stop(yield* options())
       yield* write({ ...(yield* read()), port })
       return
@@ -195,7 +197,8 @@ export const set = Effect.fn("cli.service-config.set")(function* (key: string, v
       return
     }
     case "env": {
-      if (nestedValue === undefined) throw new Error("Usage: buff service set env <key> <value>")
+      if (nestedValue === undefined)
+        throw new Error(t("Usage: {command}", { command: "buff service set env <key> <value>" }))
       yield* Service.stop(yield* options())
       const existing = yield* read()
       yield* write({ ...existing, env: { ...existing.env, [value]: nestedValue } })
@@ -209,7 +212,7 @@ export const set = Effect.fn("cli.service-config.set")(function* (key: string, v
           return !url || (url.protocol !== "http:" && url.protocol !== "https:") || url.origin !== origin
         })
       )
-        throw new Error("CORS must be a comma-separated list of HTTP(S) origins without paths or trailing slashes")
+        throw new Error(t("CORS must be a comma-separated list of HTTP(S) origins without paths or trailing slashes"))
       yield* Service.stop(yield* options())
       yield* write({ ...(yield* read()), cors })
       return
@@ -219,7 +222,8 @@ export const set = Effect.fn("cli.service-config.set")(function* (key: string, v
 
 export const unset = Effect.fn("cli.service-config.unset")(function* (key: string, name?: string) {
   const selected = configKey(key)
-  if (selected !== "env" && name !== undefined) throw new Error(`Usage: buff service unset ${selected}`)
+  if (selected !== "env" && name !== undefined)
+    throw new Error(t("Usage: {command}", { command: `buff service unset ${selected}` }))
   switch (selected) {
     case "hostname": {
       yield* Service.stop(yield* options())
@@ -240,7 +244,7 @@ export const unset = Effect.fn("cli.service-config.unset")(function* (key: strin
       return
     }
     case "env": {
-      if (name === undefined) throw new Error("Usage: buff service unset env <key>")
+      if (name === undefined) throw new Error(t("Usage: {command}", { command: "buff service unset env <key>" }))
       yield* Service.stop(yield* options())
       const existing = yield* read()
       const { [name]: _removed, ...env } = existing.env ?? {}

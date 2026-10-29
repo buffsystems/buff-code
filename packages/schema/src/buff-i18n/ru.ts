@@ -2,6 +2,9 @@ import type { Catalog } from "../buff-i18n.js"
 import { account } from "./ru-account.js"
 import { automations } from "./ru-automations.js"
 import { cli } from "./ru-cli.js"
+import { cliErrors } from "./ru-cli-errors.js"
+import { cliHelp } from "./ru-cli-help.js"
+import { cliWizard } from "./ru-cli-wizard.js"
 import { consoleApp } from "./ru-console-app.js"
 import { consolePrompt } from "./ru-console-prompt.js"
 import { consoleConfig } from "./ru-console-config.js"
@@ -23,6 +26,9 @@ export const AREAS: Readonly<Record<string, Catalog>> = {
   session,
   account,
   cli,
+  cliHelp,
+  cliErrors,
+  cliWizard,
   consoleApp,
   consolePrompt,
   consoleConfig,
