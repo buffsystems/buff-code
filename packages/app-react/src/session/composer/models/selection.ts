@@ -241,3 +241,19 @@ export function sameSelection(a: SelectionState, b: SelectionState) {
     (a.variant ?? "default") === (b.variant ?? "default")
   )
 }
+
+/**
+ * The service moved the session to another agent on its own — an approved plan hands the work
+ * back to the main agent: the kept pick's agent gives way, so the composer shows (and the next
+ * send keeps) the agent the session is in. The models chosen per agent stay. A pick this
+ * composer just sent and still waits to see confirmed is left to that confirmation.
+ */
+export function followServerAgent(
+  kept: SelectionState | undefined,
+  server: string | undefined,
+  expected: SelectionState | undefined,
+): SelectionState | undefined {
+  if (!kept?.agent || !server || kept.agent === server || expected?.agent === server) return kept
+  const { agent: _replaced, ...rest } = kept
+  return rest
+}

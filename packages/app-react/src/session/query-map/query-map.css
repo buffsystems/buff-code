@@ -1,0 +1,72 @@
+/* The request map left of the timeline (#465), as in the Solid window's buff/query-map.css. */
+.buff-query-map {
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: 4px;
+  z-index: 20;
+  display: flex;
+  width: 12px;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.buff-query-map[data-hidden] {
+  display: none;
+}
+
+/* A tick with a band around it, to be easy to hit. */
+.buff-query-map-tick {
+  box-sizing: content-box;
+  width: 10px;
+  min-width: 10px;
+  height: 4px;
+  min-height: 4px;
+  flex: 0 0 auto;
+  padding: 3px 0;
+  border-radius: 2px;
+  background-color: var(--muted-foreground);
+  background-clip: content-box;
+  opacity: 0.55;
+}
+.buff-query-map-tick:hover {
+  opacity: 0.85;
+}
+.buff-query-map-tick[data-active] {
+  width: 12px;
+  min-width: 12px;
+  background-color: var(--foreground);
+  opacity: 1;
+}
+.buff-query-map-tick[data-running] {
+  background-color: var(--primary);
+  opacity: 1;
+}
+
+.buff-query-map-preview {
+  display: flex;
+  max-width: 320px;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.buff-query-map-title {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.buff-query-map-query {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  font-weight: 600;
+}
+.buff-query-map-answer {
+  white-space: pre-line;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  opacity: 0.85;
+}

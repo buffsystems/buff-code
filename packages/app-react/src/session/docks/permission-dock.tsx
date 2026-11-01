@@ -6,12 +6,13 @@ import { Badge, Button, Input } from "@buff/ui/react"
 import { BuffAutomation } from "@opencode/schema/buff-automation"
 import { BuffPermissionMode } from "@opencode/schema/buff-permission-mode"
 import { BuffWorkflow } from "@opencode/schema/buff-workflow"
-import { permissionDiffs } from "@opencode/app/react-reuse/permission-preview"
 import type { PermissionRequest } from "@opencode/client/promise"
 import { TriangleAlert } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useI18n } from "../../i18n/provider"
+import { DiffView } from "../timeline/tools/code-view"
 import { DockPrompt } from "./dock"
+import { permissionFileDiffs } from "./permission-diffs"
 
 export function PermissionDock(props: {
   request: PermissionRequest
@@ -23,7 +24,7 @@ export function PermissionDock(props: {
   const [feedback, setFeedback] = useState("")
   const request = props.request
   const alwaysNote = BuffPermissionMode.alwaysNote(request, i18n.buff.t)
-  const diffs = permissionDiffs(request.metadata)
+  const diffs = useMemo(() => permissionFileDiffs(request.metadata), [request.metadata])
   const description = () => {
     if (request.action === BuffAutomation.PERMISSION_ACTION) return i18n.buff.t(BuffAutomation.PERMISSION_HINT)
     if (request.action === BuffWorkflow.PERMISSION_ACTION) return BuffWorkflow.permissionView(request.metadata, i18n.buff.t).hint
@@ -73,9 +74,9 @@ export function PermissionDock(props: {
         </div>
       )}
       {diffs.map((diff) => (
-        <pre key={diff.file} className="ui-code-block dock-prompt__diff" data-component="buff-permission-diff" data-file={diff.file}>
-          {diff.file}
-        </pre>
+        <div key={diff.file} className="dock-prompt__diff" data-component="buff-permission-diff" data-file={diff.file}>
+          <DiffView fileDiff={diff.fileDiff} />
+        </div>
       ))}
       {alwaysNote && (
         <div data-slot="permission-hint" data-buff="always-note" className="dock-prompt__hint">

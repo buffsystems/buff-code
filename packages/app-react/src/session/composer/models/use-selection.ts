@@ -20,6 +20,7 @@ import {
   chooseModel,
   chooseVariant,
   cycleAgent,
+  followServerAgent,
   nextVariant,
   resolveSelection,
   sameSelection,
@@ -192,9 +193,21 @@ export function useModelSelection(input: {
       if (!stored || !sameSelection(stored, expected)) return
       saved.set((state) => ({ ...state, session: { ...state.session, [sessionID]: undefined } }))
     }
+    // An agent the service chose itself (an approved plan goes back to work) replaces the kept one.
+    const follow = (sessionID: string) => {
+      const kept = saved.store.get().session[sessionID]
+      const agent = input.server.data.state.get().session.info[sessionID]?.agent
+      const next = followServerAgent(kept, agent, pending.current.get(sessionID))
+      if (next !== kept) saved.set((state) => ({ ...state, session: { ...state.session, [sessionID]: next } }))
+    }
     const stops = [
       input.server.event.on("session.model.selected", (event) => queueMicrotask(() => reconcile(event.data.sessionID))),
-      input.server.event.on("session.agent.selected", (event) => queueMicrotask(() => reconcile(event.data.sessionID))),
+      input.server.event.on("session.agent.selected", (event) =>
+        queueMicrotask(() => {
+          reconcile(event.data.sessionID)
+          follow(event.data.sessionID)
+        }),
+      ),
       input.server.event.on("session.deleted", (event) => {
         pending.current.delete(event.data.sessionID)
         saved.set((state) => ({ ...state, session: { ...state.session, [event.data.sessionID]: undefined } }))

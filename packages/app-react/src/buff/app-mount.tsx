@@ -1,5 +1,5 @@
 // Buff's window-wide pieces: getting to know Buff Code (#457) on the first launch and by its
-// command, and the window's language told to the Buff service (#472).
+// command, the window's language told to the Buff service (#472) and given to the diff viewer.
 
 import { BuffLocale } from "@opencode/schema/buff-locale"
 import { useEffect, useRef } from "react"
@@ -10,6 +10,7 @@ import { useI18n } from "../i18n/provider"
 import { usePlatform } from "../platform/context"
 import { useConnection } from "../react/core"
 import type { AppMount } from "../shell/mounts"
+import { DiffsText } from "./diffs/diffs-text"
 import { OnboardingDialog } from "./onboarding/dialog"
 import { ONBOARDING_COMMAND } from "./onboarding/settings-row"
 import { firstLaunchDecision, markOnboardingDone, onboardingDone, onboardingPending } from "./onboarding/state"
@@ -88,4 +89,6 @@ export default [
     id: "buff-locale-sync",
     component: () => <WithFirstServer>{(server) => <LocaleSync server={server} />}</WithFirstServer>,
   },
+  // The diff viewer's own words in the window's language (#470).
+  { id: "buff-diffs-text", component: DiffsText },
 ] satisfies AppMount[]

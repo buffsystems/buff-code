@@ -225,9 +225,6 @@
     flex-direction: column;
     gap: 0.75rem;
   }
-  .mcp-form__message {
-    white-space: pre-wrap;
-  }
   .mcp-form__switch {
     display: flex;
     align-items: center;

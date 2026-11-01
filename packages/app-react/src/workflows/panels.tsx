@@ -6,6 +6,7 @@ import { Badge, Panel, StatGrid, StatTile, Table } from "@buff/ui/react"
 import type { BuffWorkflow } from "@opencode/schema/buff-workflow"
 import { BuffWorkflowPanels } from "@opencode/schema/buff-workflow-panels"
 import { useI18n } from "../i18n/provider"
+import { Markdown } from "../session/timeline/markdown/markdown"
 
 type Items = readonly { readonly value: unknown; readonly artifact?: string }[]
 
@@ -37,7 +38,8 @@ function ArtifactBody(props: { artifact: BuffWorkflow.Artifact; items: Items }) 
   const artifact = props.artifact
   // The spec's shape follows the artifact's kind, as the Solid panels read it.
   const spec = <Spec,>() => artifact.spec as Spec
-  if (artifact.kind === "markdown") return <div className="ui-prose buff-wf-markdown">{artifact.content ?? ""}</div>
+  if (artifact.kind === "markdown")
+    return <Markdown className="buff-wf-markdown" text={artifact.content ?? ""} cacheKey={`buff-wf:${artifact.id}:${artifact.version}`} />
   if (artifact.kind === "file") return <code className="ui-code">{artifact.path}</code>
   if (artifact.kind === "table")
     return <ArtifactTable table={BuffWorkflowPanels.table(spec<BuffWorkflowPanels.TableSpec>(), props.items, t)} />

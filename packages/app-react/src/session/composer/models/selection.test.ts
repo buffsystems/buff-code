@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { ModelInfo, ProviderInfo } from "@opencode/client/promise"
 import { normalizeProviderList } from "../../../providers/models/catalog"
-import { chooseAgent, chooseModel, resolveSelection, type SelectionInput } from "./selection"
+import { chooseAgent, chooseModel, followServerAgent, resolveSelection, type SelectionInput } from "./selection"
 
 const provider = (id: string) => ({ id, name: id }) as ProviderInfo
 const model = (providerID: string, id: string, variants: string[] = [], cost = 1) =>
@@ -96,5 +96,24 @@ describe("model selection", () => {
     const next = chooseAgent(selection, undefined, "plan")
     expect(next?.agent).toBe("plan")
     expect(next?.choices?.build?.model).toEqual({ providerID: "opencode", modelID: "free" })
+  })
+
+  test("an agent the service switched to on its own (an approved plan) replaces the kept one", () => {
+    const agent = (name: string) => ({ name, mode: "primary" as const, permission: [], options: {} })
+    const kept = { agent: "plan", choices: { build: { model: { providerID: "opencode", modelID: "free" }, variant: null } } }
+    const followed = followServerAgent(kept, "build", undefined)
+    expect(followed).toEqual({ choices: kept.choices })
+    const selection = resolveSelection(
+      input({ agents: [agent("build"), agent("plan")], showCustomAgents: true, scope: followed, session: { agent: "build" } }),
+    )
+    expect(selection.agent?.name).toBe("build")
+  })
+
+  test("the composer's own pick stays: the same agent, or a send still waiting for its confirmation", () => {
+    const kept = { agent: "plan" }
+    expect(followServerAgent(kept, "plan", undefined)).toBe(kept)
+    expect(followServerAgent(kept, "build", { agent: "build" })).toBe(kept)
+    expect(followServerAgent(undefined, "build", undefined)).toBeUndefined()
+    expect(followServerAgent(kept, undefined, undefined)).toBe(kept)
   })
 })

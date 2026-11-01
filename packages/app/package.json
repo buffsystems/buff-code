@@ -22,6 +22,7 @@
     "./react-reuse/home-session-index": "./src/home/sessions/index.ts",
     "./react-reuse/brand": "./src/buff/brand.ts",
     "./react-reuse/locales": "./src/buff/locales.ts",
+    "./react-reuse/diffs-text": "./src/buff/diffs-text.ts",
     "./react-reuse/ru-upstream": "./src/buff/i18n/ru-upstream.ts",
     "./react-reuse/namespace-storage": "./src/runtime/persistence/namespace.ts",
     "./react-reuse/session-title": "./src/session/title.ts",

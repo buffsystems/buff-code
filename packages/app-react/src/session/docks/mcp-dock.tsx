@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useI18n } from "../../i18n/provider"
 import { useCore, useServerData } from "../../react/core"
 import { useSession } from "../context"
+import { Markdown } from "../timeline/markdown/markdown"
 import { DockPrompt } from "./dock"
 
 export function McpDock() {
@@ -24,6 +25,11 @@ export function McpDock() {
   const form = ref ? mcpForm(forms?.filter((item) => item.location?.directory === ref.directory)) : undefined
   if (!form || !ref) return null
   return <McpForm key={form.id} request={form} location={ref} />
+}
+
+/** What the server says, as markdown (the knowledge entry's body is markdown): bold, lists, headings. */
+export function McpMessage(props: { message: string }) {
+  return <Markdown text={BuffMcp.messageMarkdown(props.message)} className="mcp-form__message" />
 }
 
 function McpForm(props: { request: FormInfo; location: { directory: string } }) {
@@ -83,7 +89,7 @@ function McpForm(props: { request: FormInfo; location: { directory: string } }) 
       }
     >
       <div className="mcp-form" data-component="buff-mcp-form" data-server={name}>
-        {message && <div className="ui-prose mcp-form__message">{BuffMcp.messageMarkdown(message)}</div>}
+        {message && <McpMessage message={message} />}
         {fields
           .filter((field) => !hiddenField(field))
           .map((field) => {
