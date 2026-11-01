@@ -48,6 +48,10 @@ interface AgentInfo {
 
 const data = <T>(reply: unknown): T => (reply as { data: T }).data
 
+/** Сколько ждать, пока сервер откроет каталог и плагины осядут (#739), и шаг переспроса. */
+const SETTLE_MS = 5000
+const SETTLE_STEP_MS = 250
+
 const str = (args: Record<string, unknown>, key: string): string => {
   const v = args[key]
   if (typeof v !== "string" || !v.trim()) throw new RefusalError(BuffLocale.t("The field {key} is required", { key }))
@@ -160,13 +164,26 @@ export function mobileApi(call: Call, watches?: Watches, extra?: { fetch?: Fetch
       ...(page.cursor?.next ? { cursor: page.cursor.next } : {}),
     }
   }
-  const models = async (directory: string) =>
-    data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? []
+  // Первый запрос к каталогу, который сервер ещё не открывал, застаёт снимок до того, как плагины
+  // осели: моделей (и агентов) «нет», хотя у окна они есть (#739). Окно ждёт событие, телефон
+  // спрашивает один раз — поэтому пустой список переспрашивается, пока не осядет, до SETTLE_MS.
+  const settled = async <T>(read: () => Promise<T[]>): Promise<T[]> => {
+    const until = Date.now() + SETTLE_MS
+    for (;;) {
+      const list = await read()
+      if (list.length || Date.now() >= until) return list
+      await new Promise((r) => setTimeout(r, SETTLE_STEP_MS))
+    }
+  }
+  const models = (directory: string) =>
+    settled(async () => data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? [])
   const modelKey = (m: { providerID: string; modelID?: string; id: string }) => `${m.providerID}/${m.modelID ?? m.id}`
   // Агенты, которых человек выбирает сам: без сабагентов и скрытых; plan — это отметка «План».
-  const agents = async (directory: string) =>
-    (data<AgentInfo[]>(await call("GET", "/api/agent", { query: { "location[directory]": directory } })) ?? []).filter(
-      (a) => a.mode !== "subagent" && !a.hidden && a.id !== "plan",
+  const agents = (directory: string) =>
+    settled(async () =>
+      (data<AgentInfo[]>(await call("GET", "/api/agent", { query: { "location[directory]": directory } })) ?? []).filter(
+        (a) => a.mode !== "subagent" && !a.hidden && a.id !== "plan",
+      ),
     )
   // Последняя сессия проекта (как в списке: не сабагент, не архив) — с неё новая сессия продолжает
   // модель и агента (#706).

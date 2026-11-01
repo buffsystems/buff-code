@@ -113,7 +113,7 @@
       "name": "@opencode/app-react",
       "version": "2.0.11",
       "dependencies": {
-        "@buff/ui": "git+https://github.com/buffsystems/buff-ui.git#v0.2.1",
+        "@buff/ui": "git+https://github.com/buffsystems/buff-ui.git#v0.2.4",
         "@dnd-kit/abstract": "0.5.0",
         "@dnd-kit/dom": "0.5.0",
         "@dnd-kit/helpers": "0.5.0",
@@ -391,7 +391,7 @@
         "@ai-sdk/provider": "3.0.8",
         "@ai-sdk/provider-utils": "4.0.23",
         "@ai-sdk/vercel": "2.0.39",
-        "@buff/mobile-protocol": "./vendor/buff-mobile-protocol-0.4.1.tgz",
+        "@buff/mobile-protocol": "./vendor/buff-mobile-protocol-0.5.0.tgz",
         "@ff-labs/fff-bun": "0.10.5",
         "@ff-labs/fff-node": "0.10.5",
         "@lydell/node-pty": "catalog:",
@@ -1669,9 +1669,9 @@
 
     "@bufbuild/protoplugin": ["@bufbuild/protoplugin@2.14.0", "", { "dependencies": { "@bufbuild/protobuf": "2.14.0", "@typescript/vfs": "^1.6.2", "typescript": "5.4.5" } }, "sha512-S0TvZhVtTEkZQRj2JsXBCXiib/b0+bLQtJCcn+hj9O/usgbcgxHn4D+ii22Ao3qj0/kKxVYeo7BtAI2dMk+iig=="],
 
-    "@buff/mobile-protocol": ["@buff/mobile-protocol@./vendor/buff-mobile-protocol-0.4.1.tgz", { "dependencies": { "@noble/ciphers": "2.4.0", "@noble/curves": "2.4.0", "@noble/hashes": "2.4.0" } }, "sha512-n0qxo1Dw/9caeHh6A/GXmuzaVZNk7kmnw7/IcVte8EeFoF8jKZk05EO94cMrKE2LLwQJedxbrCB7bZUuIdgQig=="],
+    "@buff/mobile-protocol": ["@buff/mobile-protocol@./vendor/buff-mobile-protocol-0.5.0.tgz", { "dependencies": { "@noble/ciphers": "2.4.0", "@noble/curves": "2.4.0", "@noble/hashes": "2.4.0" } }, "sha512-Wd2SGW+GufcsiZjw57AQOVJloy3Hd5SvME3Lzmc2rt0QOcwEKWrsmA86kNzu3rzu3WT0GABH1+NaH/fxMYKg/w=="],
 
-    "@buff/ui": ["@buff/ui@github:buffsystems/buff-ui#289653f", { "dependencies": { "@radix-ui/react-accordion": "^1.3.1", "@radix-ui/react-avatar": "^1.3.1", "@radix-ui/react-collapsible": "^1.2.1", "@radix-ui/react-context-menu": "^2.4.1", "@radix-ui/react-dialog": "^1.3.1", "@radix-ui/react-dropdown-menu": "^2.2.1", "@radix-ui/react-popover": "^1.3.1", "@radix-ui/react-radio-group": "^1.5.1", "@radix-ui/react-scroll-area": "^1.4.0", "@radix-ui/react-select": "^2.4.1", "@radix-ui/react-slot": "^1.5.0", "@radix-ui/react-switch": "^1.4.1", "@radix-ui/react-tabs": "^1.2.1", "@radix-ui/react-tooltip": "^1.4.1", "lucide-react": "^1.58.0", "qrcode-generator": "^2.0.4" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "buffsystems-buff-ui-289653f", "sha512-/sSvfWkLfRoyrQvolCbD0MieQUjxhrcD2TIdSt6cxrjIFX0AbTLuIYK0cW3QETfmo3ICU1KL8TsXDLs8KO3eVg=="],
+    "@buff/ui": ["@buff/ui@github:buffsystems/buff-ui#a943ba2", { "dependencies": { "@radix-ui/react-accordion": "^1.3.1", "@radix-ui/react-avatar": "^1.3.1", "@radix-ui/react-collapsible": "^1.2.1", "@radix-ui/react-context-menu": "^2.4.1", "@radix-ui/react-dialog": "^1.3.1", "@radix-ui/react-dropdown-menu": "^2.2.1", "@radix-ui/react-popover": "^1.3.1", "@radix-ui/react-radio-group": "^1.5.1", "@radix-ui/react-scroll-area": "^1.4.0", "@radix-ui/react-select": "^2.4.1", "@radix-ui/react-slot": "^1.5.0", "@radix-ui/react-switch": "^1.4.1", "@radix-ui/react-tabs": "^1.2.1", "@radix-ui/react-tooltip": "^1.4.1", "lucide-react": "^1.58.0", "qrcode-generator": "^2.0.4" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" } }, "buffsystems-buff-ui-a943ba2", "sha512-lxS2tLS/5V2lGtkVy8f458jHk4Rj77piTLzeux/VF8lZsdkzCb7HJQIb5kYQSwinZEbksDxkJ33LnqpUoonXbg=="],
 
     "@capsizecss/unpack": ["@capsizecss/unpack@4.0.1", "", { "dependencies": { "fontkitten": "^1.0.3" } }, "sha512-CuNiSqg7+e1cO/GjffyMOm5Tt2jUF9CWHHnvQ/UkqvtkGfHdgwEC0wpmq7fkN3gxwpRnrAN0WzO3vREKmNolMQ=="],
 

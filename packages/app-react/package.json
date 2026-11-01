@@ -18,7 +18,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@buff/ui": "git+https://github.com/buffsystems/buff-ui.git#v0.2.1",
+    "@buff/ui": "git+https://github.com/buffsystems/buff-ui.git#v0.2.4",
     "@dnd-kit/abstract": "0.5.0",
     "@dnd-kit/dom": "0.5.0",
     "@dnd-kit/helpers": "0.5.0",

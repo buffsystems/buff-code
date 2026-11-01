@@ -100,6 +100,25 @@ describe("api", () => {
     })
   })
 
+  test("an empty first snapshot of a fresh directory is asked again until it settles (#739)", async () => {
+    let asked = { model: 0, agent: 0 }
+    const api = mobileApi(async (method, route) => {
+      if (route === "/api/project") return [{ id: "p1", canonical: "/work/shop", time: { updated: 2 } }]
+      if (route === "/api/model") return { data: ++asked.model < 3 ? [] : [{ id: "m", modelID: "sonnet", providerID: "anthropic", name: "Sonnet" }] }
+      if (route === "/api/model/default") return { data: undefined }
+      if (route === "/api/agent") return { data: ++asked.agent < 2 ? [] : [{ id: "build", name: "build", mode: "primary", hidden: false }] }
+      if (route === "/api/session") return { data: [] }
+      return { data: null }
+    })
+    const record = { peer: "m", device: "phone", dh: "d", display: "Pixel", pairId: "p", created: 1, login: "u", org: null }
+    expect((await api.run(record, "models.list", { project: "p1" })).models).toEqual([
+      { id: "anthropic/sonnet", name: "Sonnet", provider: "anthropic" },
+    ])
+    expect(asked.model).toBe(3)
+    expect((await api.run(record, "agents.list", { project: "p1" })).agents).toEqual([{ id: "build" }])
+    expect(asked.agent).toBe(2)
+  })
+
   describe("a new session starts where the last one left off (#706)", () => {
     const pick = (last: Record<string, unknown> | undefined) =>
       mobileApi(async (method, route) => {
