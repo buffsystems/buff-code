@@ -99,6 +99,7 @@ import { BuffMcpPlugin } from "../buff/mcp.js"
 import { BuffProviderPlugin } from "../buff/provider.js"
 import { BuffSkillPlugin } from "../buff/skill.js"
 import { BuffCustomPlugin } from "../buff/custom.js"
+import { BuffModelPrefsPlugin } from "../buff/model-prefs.js"
 import { BuffMemoryPlugin } from "../buff/memory.js"
 import { BuffHookPlugin } from "../buff/hook.js"
 import { BuffTurnPlugin } from "../buff/turn.js"
@@ -316,6 +317,7 @@ const post = [
   // Buff (#445): последним — выключенный навык убирается из реестра после того, как его добавили.
   BuffSkillPlugin.Plugin,
   BuffCustomPlugin.Plugin,
+  BuffModelPrefsPlugin.Plugin,
   BuffMemoryPlugin.Plugin,
   BuffHookPlugin.Plugin,
   BuffTurnPlugin.Plugin,

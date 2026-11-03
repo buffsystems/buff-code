@@ -27,7 +27,7 @@ import { serverKey, type Server } from "../../core/servers"
 import { useDialog } from "../../dialog/dialogs"
 import { useSessionMarks } from "../../home/marks"
 import { useI18n } from "../../i18n/provider"
-import { usePlatform } from "../../platform/context"
+import { useFolded } from "../folded"
 import { useConnection, useServerData, useServers } from "../../react/core"
 import { shallowEqual } from "../../react/use-store"
 import { ContextMenu } from "../menu/context-menu"
@@ -93,7 +93,7 @@ function ServerSessionList(props: { server: Server; current?: string }) {
   )
   // #709: outside the pinned and the groups — by project, each folding.
   const sections = BuffSessionMarks.sections(rows, marks, Date.now(), query, projectOf)
-  const [folded, fold] = useFolded(props.server.key)
+  const [folded, fold] = useFolded(`folded:${props.server.key}`)
   // #453: the same query searches the conversations' text too.
   const search = useTranscriptSearch(props.server, query)
   const openResult = useOpenTranscriptResult(props.server)
@@ -376,33 +376,6 @@ function ProjectTitle(props: { section: BuffSessionMarks.Section<Row>; folded: b
       <span className="ms-auto shrink-0 tabular-nums">{props.section.items.length}</span>
     </button>
   )
-}
-
-/** Which projects are folded, kept per server across restarts. */
-function useFolded(server: string): [ReadonlySet<string>, (key: string) => void] {
-  const platform = usePlatform()
-  const store = useMemo(() => platform.storage("buff.sidebar"), [platform])
-  const key = `folded:${server}`
-  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set())
-  useEffect(() => {
-    let live = true
-    void Promise.resolve(store.getItem(key))
-      .then((raw) => {
-        if (live && raw) setFolded(new Set(JSON.parse(raw) as string[]))
-      })
-      .catch(() => undefined)
-    return () => {
-      live = false
-    }
-  }, [store, key])
-  const toggle = (section: string) =>
-    setFolded((current) => {
-      const next = new Set(current)
-      if (!next.delete(section)) next.add(section)
-      void Promise.resolve(store.setItem(key, JSON.stringify([...next]))).catch(() => undefined)
-      return next
-    })
-  return [folded, toggle]
 }
 
 function SectionTitle(props: { section: BuffSessionMarks.Section<Row>; server: Server }) {

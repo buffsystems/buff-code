@@ -13,7 +13,7 @@ import { arrayMove } from "@dnd-kit/helpers"
 import { DragDropProvider } from "@dnd-kit/react"
 import { isSortable, useSortable } from "@dnd-kit/react/sortable"
 import type { SessionInfo } from "@opencode/client/promise"
-import { PencilLine } from "lucide-react"
+import { ChevronDown, ChevronRight, PencilLine } from "lucide-react"
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from "react"
 import { useCommandRegistration } from "../../commands/provider"
 import { serverKey, type ServerConnection } from "../../core/servers"
@@ -26,6 +26,8 @@ import { useSessionUnseen } from "../notifications/provider"
 import { showToast } from "../notifications/toast"
 import { ProjectAvatar, SessionProgress } from "../project-avatar"
 import { displayName } from "../../home/model"
+import { useFolded } from "../folded"
+import { groupOf, groupTabs, shownOrder, type TabGroup } from "./groups"
 import { useCurrentTab, useTabList, useTabs } from "./provider"
 import { tabHref, tabKey, type DraftTab, type SessionTab, type Tab } from "./tabs"
 import { useSessionActivity } from "./activity"
@@ -53,8 +55,22 @@ export function WindowTabs(props: { orientation: TabOrientation; onNavigate?: (t
     const index = tabs.tabs().findIndex((item) => tabKey(item) === tabKey(tab))
     if (index !== -1) tabs.closeTab(index)
   }
-  const shown = list.filter((tab) => tab.type === "draft" || visibility[tabKey(tab)])
-  const order = shown.map(tabKey)
+  // Down the sidebar the tabs stand under their projects (#744); across the titlebar they are one row.
+  const info = useStore(tabs.info, (all) => all)
+  const groups: TabGroup[] = vertical
+    ? groupTabs(list, (tab) => info[tabKey(tab)]?.directory)
+    : [{ key: "all", server: "", directory: undefined, tabs: [...list] }]
+  const [folded, fold] = useFolded("tabs-folded")
+  const currentKey = current ? tabKey(current) : undefined
+  // Going to a tab inside a folded project opens the project.
+  useEffect(() => {
+    if (!currentKey) return
+    const group = groupOf(groups, currentKey)
+    if (group && folded.has(group.key)) fold(group.key)
+  }, [currentKey])
+  const isVisible = (tab: Tab) => tab.type === "draft" || !!visibility[tabKey(tab)]
+  const order = shownOrder(groups, folded, currentKey, isVisible)
+  const shown = order.flatMap((key) => list.filter((tab) => tabKey(tab) === key))
   const step = (offset: -1 | 1) => {
     const key = adjacentTabKey(order, current ? tabKey(current) : undefined, offset)
     const next = list.find((tab) => tabKey(tab) === key)
@@ -138,44 +154,66 @@ export function WindowTabs(props: { orientation: TabOrientation; onNavigate?: (t
           onDragEnd={(event) => {
             const source = event.operation.source
             if (event.canceled || !isSortable(source) || source.initialIndex === source.index) return
-            tabs.reorder(
-              mergeVisibleTabOrder(list.map(tabKey), order, arrayMove(order, source.initialIndex, source.index)),
-            )
+            if (!vertical) {
+              tabs.reorder(
+                mergeVisibleTabOrder(list.map(tabKey), order, arrayMove(order, source.initialIndex, source.index)),
+              )
+              return
+            }
+            // Within a project only (#744): the tab takes the place of the one it was dropped on.
+            const from = order[source.initialIndex]
+            const to = order[source.index]
+            if (!from || !to || groupOf(groups, from) !== groupOf(groups, to)) return
+            const keys = list.map(tabKey)
+            tabs.reorder(arrayMove(keys, keys.indexOf(from), keys.indexOf(to)))
           }}
         >
-          <TabStrip
-            ref={listRef}
-            orientation={props.orientation}
-            nav
-            data-titlebar-tab-list
-            className="w-full"
-          >
-            {list.map((tab, index) =>
-              tab.type === "session" ? (
-                <SessionTabEntry
-                  key={tabKey(tab)}
-                  index={index}
-                  sortIndex={order.indexOf(tabKey(tab))}
-                  tab={tab}
-                  active={!!current && tabKey(current) === tabKey(tab)}
-                  orientation={props.orientation}
-                  onNavigate={() => navigate(tab)}
-                  onClose={() => close(tab)}
-                  onVisibleChange={(visible) => visibleChange(tabKey(tab), visible)}
-                />
-              ) : (
-                <DraftTabEntry
-                  key={tabKey(tab)}
-                  index={index}
-                  sortIndex={order.indexOf(tabKey(tab))}
-                  tab={tab}
-                  active={!!current && tabKey(current) === tabKey(tab)}
-                  orientation={props.orientation}
-                  onNavigate={() => navigate(tab)}
-                  onClose={() => close(tab)}
-                />
-              ),
-            )}
+          <TabStrip ref={listRef} orientation={props.orientation} nav data-titlebar-tab-list className="w-full">
+            {groups.map((group) => {
+              const grouped = vertical && group.directory !== undefined
+              const closed = grouped && folded.has(group.key)
+              const entries = group.tabs.map((tab) => {
+                const shared = {
+                  index: list.indexOf(tab),
+                  sortIndex: order.indexOf(tabKey(tab)),
+                  tab,
+                  active: currentKey === tabKey(tab),
+                  orientation: props.orientation,
+                  grouped,
+                  onNavigate: () => navigate(tab),
+                  onClose: () => close(tab),
+                }
+                return tab.type === "session" ? (
+                  <SessionTabEntry
+                    key={tabKey(tab)}
+                    {...shared}
+                    tab={tab}
+                    onVisibleChange={(visible) => visibleChange(tabKey(tab), visible)}
+                  />
+                ) : (
+                  <DraftTabEntry key={tabKey(tab)} {...shared} tab={tab} />
+                )
+              })
+              if (!grouped) return entries
+              const count = group.tabs.length
+              return (
+                <div
+                  key={group.key}
+                  data-slot="vertical-tabs-group"
+                  data-directory={group.directory}
+                  className="flex flex-col"
+                >
+                  <TabGroupTitle
+                    server={group.server}
+                    directory={group.directory!}
+                    count={count}
+                    folded={closed}
+                    onToggle={() => fold(group.key)}
+                  />
+                  {!closed && entries}
+                </div>
+              )
+            })}
           </TabStrip>
         </DragDropProvider>
       </div>
@@ -190,8 +228,49 @@ type EntryProps<T extends Tab> = {
   sortIndex: number
   active: boolean
   orientation: TabOrientation
+  /** Under its project's heading (#744): the project is not repeated on the row. */
+  grouped?: boolean
   onNavigate: () => void
   onClose: () => void
+}
+
+/** A project's heading over its open tabs (#744): the folder's avatar and name, the count, the fold. */
+function TabGroupTitle(props: {
+  server: string
+  directory: string
+  count: number
+  folded: boolean
+  onToggle: () => void
+}) {
+  const conn = useServers().find((item) => serverKey(item) === props.server)
+  const Chevron = props.folded ? ChevronRight : ChevronDown
+  const name = conn ? (
+    <ConnectedGroupName conn={conn} directory={props.directory} />
+  ) : (
+    displayName({ worktree: props.directory })
+  )
+  return (
+    <button
+      type="button"
+      data-action="vertical-tabs-group-toggle"
+      aria-expanded={!props.folded}
+      title={props.directory}
+      className="ui-eyebrow flex items-center gap-1 px-1.5 py-1 text-start hover:text-foreground"
+      onClick={props.onToggle}
+    >
+      <Chevron aria-hidden className="size-3 shrink-0" />
+      <span className="min-w-0 truncate">{name}</span>
+      <span className="ms-auto shrink-0 tabular-nums">{props.count}</span>
+    </button>
+  )
+}
+
+function ConnectedGroupName(props: { conn: ServerConnection; directory: string }) {
+  const server = useCore().registry.ensure(props.conn)
+  return useServerData(server, (state) => {
+    const project = Object.values(state.project.info).find((item) => item.canonical === props.directory)
+    return displayName(project ? { name: project.name, worktree: project.canonical } : { worktree: props.directory })
+  })
 }
 
 type SessionEntryProps = EntryProps<SessionTab> & { onVisibleChange: (visible: boolean) => void }
@@ -438,7 +517,7 @@ function TabItem(
                   }}
                   onFinish={finish}
                 />
-                {vertical && showProjectName && props.projectName && !props.draft && (
+                {vertical && !props.grouped && showProjectName && props.projectName && !props.draft && (
                   <span
                     data-slot="tab-project"
                     dir="auto"

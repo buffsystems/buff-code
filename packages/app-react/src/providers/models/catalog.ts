@@ -3,6 +3,7 @@
 // Solid's store) and of useProviders / the models list. Shared by settings, dialogs and the composer.
 
 import type { AgentInfo, ModelInfo, ProviderInfo } from "@opencode/client/promise"
+import { BuffModelPrefs } from "@opencode/schema/buff-model-prefs"
 import { matchesModelSearch } from "@opencode/app/react-reuse/model-search"
 import { popularProviders } from "@opencode/app/react-reuse/provider-order"
 import type { Agent, Model, Provider, ProviderListResponse } from "@opencode/app/react-reuse/server-types"
@@ -134,20 +135,17 @@ export function modelKey(model: ModelKey) {
   return `${model.providerID}:${model.modelID}`
 }
 
-// luxon's diffNow().as("months") used an average month; the Solid window keeps the same window.
-const sixMonths = 6 * 30.436875 * 24 * 60 * 60 * 1000
+// The rule itself lives in the schema (#743): the service applies the same one for the phone.
+const candidate = (model: Pick<CatalogModel, "id" | "release_date" | "provider"> & { family?: string }) => ({
+  providerID: model.provider.id,
+  modelID: model.id,
+  family: model.family,
+  released: Date.parse(model.release_date),
+})
 
 /** The newest model of each family per provider, released within six months: shown by default. */
 export function latestModels(models: CatalogModel[], now = Date.now()) {
-  const families = new Map<string, CatalogModel>()
-  for (const model of models) {
-    const released = Date.parse(model.release_date)
-    if (!(Math.abs(now - released) < sixMonths)) continue
-    const key = `${model.provider.id}\u0000${model.family ?? ""}`
-    const current = families.get(key)
-    if (!current || model.release_date > current.release_date) families.set(key, model)
-  }
-  return new Set([...families.values()].map((model) => modelKey({ providerID: model.provider.id, modelID: model.id })))
+  return BuffModelPrefs.latest(models.map(candidate), now)
 }
 
 /**
@@ -159,10 +157,7 @@ export function modelVisible(
   choice: "show" | "hide" | undefined,
   latest: ReadonlySet<string>,
 ) {
-  if (choice === "hide") return false
-  if (choice === "show") return true
-  if (latest.has(modelKey({ providerID: model.provider.id, modelID: model.id }))) return true
-  return !Number.isFinite(Date.parse(model.release_date))
+  return BuffModelPrefs.visible(candidate(model), choice, latest)
 }
 
 export type ModelGroup = { provider: string; name: string; items: CatalogModel[] }

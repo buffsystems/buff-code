@@ -10,14 +10,17 @@ import { originGroups } from "@opencode/app/react-reuse/origin-groups"
 import { formatServerError } from "@opencode/app/react-reuse/server-errors"
 import { BuffCustom } from "@opencode/schema/buff-custom"
 import type { BuffI18n } from "@opencode/schema/buff-i18n"
-import { useQuery } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { Server } from "../../core/servers"
 import { confirm } from "../../dialog/confirm"
 import { useDialog } from "../../dialog/dialogs"
 import { useI18n } from "../../i18n/provider"
-import { useConnection } from "../../react/core"
+import { usePlatform } from "../../platform/context"
+import { useProviderCatalog } from "../../providers/catalog/use-catalog"
+import { latestModels, modelVisible } from "../../providers/models/catalog"
+import { modelPreferences } from "../../providers/models/preferences"
+import { useStore } from "../../react/use-store"
 import { showToast } from "../../shell/notifications/toast"
 import { Choice, FormDialog, Hint, Problem, ReviewDialog } from "./kit"
 import { at, useBuffList } from "./rpc"
@@ -81,7 +84,10 @@ function useCustomController(server: Server, kind: BuffCustom.Kind, directory: s
   }
 }
 
-/** The «Model» field: the server's models; one written by hand but not available stays listed. */
+/**
+ * The «Model» field: the models the composer's picker offers (#743) — the connected providers' by
+ * the person's visibility choices; one written by hand but not among them stays listed.
+ */
 function ModelField(props: {
   controller: Controller
   field: BuffCustom.Field
@@ -89,17 +95,22 @@ function ModelField(props: {
   onChange: (value: string) => void
 }) {
   const t = useI18n().buff.t
-  const server = props.controller.server
-  const connected = useConnection(server).status === "connected"
-  const location = props.controller.directory ? { directory: props.controller.directory } : undefined
-  const models = useQuery({
-    queryKey: ["buff-custom-models", server.key, props.controller.directory ?? ""],
-    enabled: connected,
-    queryFn: () => server.api().model.list({ location }),
-  })
-  const known = (models.data?.data ?? [])
-    .map((model) => ({ value: `${model.providerID}/${model.modelID}`, label: model.name }))
-    .toSorted((a, b) => a.label.localeCompare(b.label))
+  const catalog = useProviderCatalog(props.controller.server, props.controller.directory)
+  const prefs = modelPreferences(usePlatform().storage)
+  const choices = useStore(prefs.store, (state) => state.user)
+  const known = useMemo(() => {
+    const latest = latestModels(catalog.models)
+    return catalog.models
+      .filter((model) =>
+        modelVisible(
+          model,
+          choices.find((item) => item.providerID === model.provider.id && item.modelID === model.id)?.visibility,
+          latest,
+        ),
+      )
+      .map((model) => ({ value: `${model.provider.id}/${model.id}`, label: model.name }))
+      .toSorted((a, b) => a.label.localeCompare(b.label))
+  }, [catalog.models, choices])
   const missing = props.value && !known.some((option) => option.value === props.value)
   const options = [
     { value: SESSION_MODEL, label: t("Session model") },

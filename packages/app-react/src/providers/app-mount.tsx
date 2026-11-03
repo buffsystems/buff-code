@@ -11,6 +11,7 @@ import { serverKey } from "../core/servers"
 import { useCurrentTab } from "../shell/tabs/provider"
 import type { AppMount } from "../shell/mounts"
 import { openBuffSignIn, openConnectProvider } from "./connect/open"
+import { ModelPrefsSync } from "./models/prefs-sync"
 
 function ProviderCommands() {
   const i18n = useI18n()
@@ -55,4 +56,8 @@ function ProviderCommands() {
   return null
 }
 
-export default { id: "providers-commands", component: ProviderCommands } satisfies AppMount
+export default [
+  { id: "providers-commands", component: ProviderCommands },
+  // The model visibility choices reach the connected services (#743).
+  { id: "providers-model-prefs", component: ModelPrefsSync },
+] satisfies AppMount[]

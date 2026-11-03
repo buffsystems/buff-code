@@ -3,6 +3,7 @@
 // но только в известных проектах: новая сессия — проект и модель лишь из списков службы,
 // произвольный путь не открывается.
 import { RefusalError, type DeviceRecord, type Reply } from "@buff/mobile-protocol"
+import { BuffModelPrefs } from "@opencode/schema/buff-model-prefs"
 import { BuffPermissionMode } from "@opencode/schema/buff-permission-mode"
 import { BuffLocale } from "../locale.js"
 
@@ -36,6 +37,8 @@ interface ModelInfo {
   modelID: string
   providerID: string
   name: string
+  family?: string
+  time?: { released?: number }
   limit?: { context?: number }
 }
 
@@ -127,7 +130,16 @@ export const BuffMobileText = {
   },
 }
 
-export function mobileApi(call: Call, watches?: Watches, extra?: { fetch?: Fetch; terminals?: Terminals }): MobileApi {
+export function mobileApi(
+  call: Call,
+  watches?: Watches,
+  extra?: {
+    fetch?: Fetch
+    terminals?: Terminals
+    /** Отметки видимости моделей, присланные окном (#743); без них — правило по умолчанию. */
+    modelPrefs?: () => Promise<readonly BuffModelPrefs.Choice[]>
+  },
+): MobileApi {
   const projects = async () =>
     // /api/project отвечает массивом, без обёртки data.
     ((await call("GET", "/api/project")) as ProjectInfo[])
@@ -175,8 +187,17 @@ export function mobileApi(call: Call, watches?: Watches, extra?: { fetch?: Fetch
       await new Promise((r) => setTimeout(r, SETTLE_STEP_MS))
     }
   }
-  const models = (directory: string) =>
-    settled(async () => data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? [])
+  // Модели — как в композере окна (#743): по отметкам человека, иначе новейшие в семействе и без даты.
+  const models = async (directory: string) => {
+    const all = await settled(async () => data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? [])
+    const choices = (await extra?.modelPrefs?.().catch(() => [])) ?? []
+    // The window's choices name the catalogue id (`id`), not the API model (`modelID`): the
+    // «fast» variant of a model shares its API id and must be told apart.
+    return BuffModelPrefs.filter(
+      all.map((m) => ({ providerID: m.providerID, modelID: m.id, family: m.family, released: m.time?.released, model: m })),
+      choices,
+    ).map((c) => c.model)
+  }
   const modelKey = (m: { providerID: string; modelID?: string; id: string }) => `${m.providerID}/${m.modelID ?? m.id}`
   // Агенты, которых человек выбирает сам: без сабагентов и скрытых; plan — это отметка «План».
   const agents = (directory: string) =>

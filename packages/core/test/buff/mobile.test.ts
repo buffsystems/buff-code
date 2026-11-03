@@ -455,3 +455,75 @@ describe("agent", () => {
     await agent.stop()
   })
 })
+
+// Модели для телефона — как в композере окна (#743): отметки окна, иначе новейшие в семействе и без даты.
+describe("models as the window shows them (#743)", () => {
+  const now = Date.now()
+  const day = 24 * 60 * 60 * 1000
+  const list = [
+    { id: "sonnet-5", modelID: "sonnet-5", providerID: "anthropic", name: "Sonnet 5", family: "sonnet", time: { released: now - 10 * day } },
+    { id: "sonnet-4", modelID: "sonnet-4", providerID: "anthropic", name: "Sonnet 4", family: "sonnet", time: { released: now - 200 * day } },
+    { id: "mystery", modelID: "mystery", providerID: "openrouter", name: "Mystery" },
+  ]
+  const api = (prefs: { providerID: string; modelID: string; visibility: "show" | "hide" }[]) =>
+    mobileApi(
+      async (method, route) => {
+        if (route === "/api/project") return [{ id: "p1", canonical: "/work/shop", time: { updated: 2 } }]
+        if (route === "/api/model") return { data: list }
+        if (route === "/api/model/default") return { data: list[1] }
+        if (route === "/api/session") return { data: [] }
+        return { data: null }
+      },
+      undefined,
+      { modelPrefs: async () => prefs },
+    )
+
+  type Listed = { models: { id: string }[]; default?: string }
+  test("without choices the phone sees the newest of a family and the undated; the default is among them", async () => {
+    const got = (await api([]).run(record, "models.list", { project: "p1" })) as unknown as Listed
+    expect(got.models.map((m) => m.id)).toEqual(["anthropic/sonnet-5", "openrouter/mystery"])
+    expect(got.default).toBe("anthropic/sonnet-5")
+  })
+
+  test("choices name the catalogue id: the «fast» variant shares its API id yet is told apart", async () => {
+    const twin = [
+      ...list,
+      { id: "sonnet-5-fast", modelID: "sonnet-5", providerID: "anthropic", name: "Sonnet 5 Fast", family: "sonnet", time: { released: now - 10 * day } },
+    ]
+    const twinApi = (prefs: { providerID: string; modelID: string; visibility: "show" | "hide" }[]) =>
+      mobileApi(
+        async (method, route) => {
+          if (route === "/api/project") return [{ id: "p1", canonical: "/work/shop", time: { updated: 2 } }]
+          if (route === "/api/model") return { data: twin }
+          if (route === "/api/model/default") return { data: undefined }
+          if (route === "/api/session") return { data: [] }
+          return { data: null }
+        },
+        undefined,
+        { modelPrefs: async () => prefs },
+      )
+    // By default one of a family's twins (the first) shows; a choice on the catalogue id hides exactly it.
+    const plain = (await twinApi([]).run(record, "models.list", { project: "p1" })) as unknown as Listed
+    expect(plain.models.map((m) => m.id)).toEqual(["anthropic/sonnet-5", "openrouter/mystery"])
+    const chosen = (await twinApi([
+      { providerID: "anthropic", modelID: "sonnet-5", visibility: "hide" },
+      { providerID: "anthropic", modelID: "sonnet-5-fast", visibility: "show" },
+    ]).run(record, "models.list", { project: "p1" })) as unknown as Listed
+    expect(chosen.models.map((m: { id: string; name?: string }) => `${m.id}:${(m as { name: string }).name}`)).toEqual([
+      "openrouter/mystery:Mystery",
+      "anthropic/sonnet-5:Sonnet 5 Fast",
+    ])
+  })
+
+  test("the window's choices win: a shown old model appears, a hidden new one goes", async () => {
+    const got = (await api([
+      { providerID: "anthropic", modelID: "sonnet-4", visibility: "show" },
+      { providerID: "anthropic", modelID: "sonnet-5", visibility: "hide" },
+    ]).run(record, "models.list", { project: "p1" })) as unknown as Listed
+    expect(got.models.map((m) => m.id)).toEqual(["anthropic/sonnet-4", "openrouter/mystery"])
+    expect(got.default).toBe("anthropic/sonnet-4")
+    await expect(api([]).run(record, "session.new", { project: "p1", model: "anthropic/sonnet-4" })).rejects.toBeInstanceOf(
+      RefusalError,
+    )
+  })
+})

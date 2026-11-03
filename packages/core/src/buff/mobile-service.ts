@@ -14,6 +14,7 @@ import { mobileApi, type Call, type Fetch, type MobileApi, type Terminals } from
 import { lookupHome, type SignedIn } from "./mobile/home.js"
 import { machineNotice, noticeKindOf, type NoticeKind } from "./mobile/notify.js"
 import { fileStore } from "./mobile/store.js"
+import { prefsFile, readPrefs } from "./model-prefs.js"
 import { BuffLocale } from "./locale.js"
 import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
@@ -266,6 +267,9 @@ const make = Effect.gen(function* () {
           loop = call
           api = mobileApi(call, watches, {
             fetch: loopbackBytes(server.url, server.password),
+            // The same directory the plugin writes to (Global.Service honours OPENCODE_CONFIG_DIR).
+            modelPrefs: () =>
+              readPrefs(prefsFile(process.env.OPENCODE_CONFIG_DIR ?? Global.Path.config)).then((prefs) => prefs.user),
             terminals: terminals(server, call, (device, record) =>
               agent?.push(device, { kind: "event", stream: "bc.terminal", record }),
             ),
