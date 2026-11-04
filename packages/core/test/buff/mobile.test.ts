@@ -240,6 +240,26 @@ describe("api", () => {
     expect(((await noGoal.run(record, "session.state", { session: "g" })) as Record<string, unknown>).goal).toBeNull()
   })
 
+  // #753: a subagent's session names its parent — the phone opens it read-only — and its title.
+  test("session.state carries the session's parent and title", async () => {
+    const child = mobileApi(async (method, route) =>
+      route === "/api/session/c"
+        ? { data: { id: "c", parentID: "root", title: "Найти шрифты", location: { directory: "/w" } } }
+        : route === "/api/rpc/buff.goal/get"
+          ? { output: {} }
+          : { data: [] },
+    )
+    const got = (await child.run(record, "session.state", { session: "c" })) as Record<string, unknown>
+    expect(got.parent).toBe("root")
+    expect(got.title).toBe("Найти шрифты")
+    const root = mobileApi(async (method, route) =>
+      route === "/api/session/g" ? { data: { id: "g", location: { directory: "/w" } } } : route === "/api/rpc/buff.goal/get" ? { output: {} } : { data: [] },
+    )
+    const top = (await root.run(record, "session.state", { session: "g" })) as Record<string, unknown>
+    expect(top.parent).toBeNull()
+    expect(top.title).toBe("")
+  })
+
   test("a file from the phone arrives in chunks and goes into the prompt whole", async () => {
     calls.length = 0
     await api.run(record, "attachment_upload", { id: "u1", seq: 1, of: 2, name: "a.png", mime: "image/png", data: "CD==" })

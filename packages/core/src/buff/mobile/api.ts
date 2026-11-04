@@ -92,6 +92,9 @@ export interface SessionState {
   forms: unknown[]
   // Цель сессии (#711): плашка цели на телефоне, как в окне; null — цели нет.
   goal: unknown
+  // Родитель сессии (#753): у сабагента — id родительской, телефон открывает её только для чтения.
+  parent: string | null
+  title: string
 }
 
 // Кадр до телефона ограничен: длинный вывод инструмента идёт обрезанным, целиком — по запросу.
@@ -224,7 +227,7 @@ export function mobileApi(
   }
 
   const state = async (session: string): Promise<SessionState> => {
-    const [messages, active, permissions, forms, goal] = await Promise.all([
+    const [messages, active, permissions, forms, goal, info] = await Promise.all([
       call("GET", `/api/session/${session}/message`, { query: { limit: 6, order: "desc" } }),
       call("GET", "/api/session/active").then(
         (r) => Object.keys(data<Record<string, unknown>>(r) ?? {}),
@@ -233,6 +236,10 @@ export function mobileApi(
       call("GET", `/api/session/${session}/permission`).catch(() => ({ data: [] })),
       call("GET", `/api/session/${session}/form`).catch(() => ({ data: [] })),
       goalOf(session),
+      // Чья это сессия (#753): у сабагента есть родитель — телефон открывает её только для чтения.
+      call("GET", `/api/session/${session}`)
+        .then((r) => data<SessionInfo>(r))
+        .catch(() => undefined),
     ])
     const list = (r: unknown) => (Array.isArray(r) ? r : (data<unknown[]>(r) ?? []))
     return {
@@ -242,6 +249,8 @@ export function mobileApi(
       permissions: list(permissions),
       forms: list(forms),
       goal,
+      parent: info?.parentID ?? null,
+      title: info?.title ?? "",
     }
   }
 
