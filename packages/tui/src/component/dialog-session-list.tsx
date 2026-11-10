@@ -28,6 +28,7 @@ import { useConfig } from "../config"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { projectName } from "../util/project"
 import { useLocation } from "../context/location"
+import { BuffSetup } from "@opencode/schema/buff-setup"
 import { useSessionMarks } from "../feature-plugins/buff/session-marks"
 import { BuffSearch } from "@opencode/schema/buff-search"
 
@@ -177,8 +178,13 @@ export function DialogSessionList() {
         )
         .map((session) => [session.id, session]),
     )
-    const pinned = archive() ? [] : marks.pinned().filter((sessionID) => sessionMap.has(sessionID))
-    const pinnedSet = new Set(pinned)
+    // Режим «Настройка» (#765): свои сессии отдельной группой первыми, в остальные они не попадают.
+    const setup = archive() ? [] : [...sessionMap.values()].filter((session) => BuffSetup.isSetup(session))
+    const setupSet = new Set(setup.map((session) => session.id))
+    const pinned = archive()
+      ? []
+      : marks.pinned().filter((sessionID) => sessionMap.has(sessionID) && !setupSet.has(sessionID))
+    const pinnedSet = new Set([...pinned, ...setupSet])
     const slotByID = new Map(local.session.slots().map((sessionID, index) => [sessionID, index + 1]))
 
     const option = (session: SessionInfo, category: string) => {
@@ -236,7 +242,14 @@ export function DialogSessionList() {
         fg: undefined,
         gutter: undefined,
       }))
-    return [...pinned.map((sessionID) => option(sessionMap.get(sessionID)!, t("Pinned"))), ...remaining, ...inContent]
+    return [
+      ...setup
+        .toSorted((a, b) => b.time.updated - a.time.updated)
+        .map((session) => option(session, t("Setup"))),
+      ...pinned.map((sessionID) => option(sessionMap.get(sessionID)!, t("Pinned"))),
+      ...remaining,
+      ...inContent,
+    ]
   })
 
   onMount(() => dialog.setSize("large"))

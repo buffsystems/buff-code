@@ -4,7 +4,12 @@ import { expect, test } from "bun:test"
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { Timeline } from "./projection"
 
-const turn = (error: { type: string; message: string; status?: number }) =>
+const turn = (error: {
+  type: string
+  message: string
+  status?: number
+  attachments?: { name?: string; mime: string }[]
+}) =>
   [
     { id: "msg_1", type: "user", text: "сделай", time: { created: 1 } },
     {
@@ -33,6 +38,22 @@ test("a failed turn carries the refusal as it came", () => {
 test("a refusal without a response code carries none", () => {
   expect(failureOf(turn({ type: "provider.transport", message: "fetch failed" }))).toEqual([
     { userMessageID: "msg_1", providerID: "buff", type: "provider.transport", message: "fetch failed" },
+  ])
+})
+
+// #757: отказ на запросе с файлами несёт эти файлы — по ним карточка предлагает, как быть.
+test("a refusal of a request with files carries the files", () => {
+  const attachments = [{ name: "logo.png", mime: "image/png" }]
+  expect(failureOf(turn({ type: "provider.invalid-request", message: "no images", status: 400, attachments }))).toEqual([
+    {
+      userMessageID: "msg_1",
+      providerID: "buff",
+      type: "provider.invalid-request",
+      message: "no images",
+      status: 400,
+      attachments,
+      modelID: "buff",
+    },
   ])
 })
 

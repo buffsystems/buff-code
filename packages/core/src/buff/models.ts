@@ -5,9 +5,12 @@ import type { Scope } from "effect"
 import type { Context } from "@opencode/plugin/effect/plugin"
 import type { BuffContext } from "@opencode/schema/buff-context"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
+import { BuffVariant } from "@opencode/schema/buff-variant"
 import { Integration } from "../integration.js"
 import { Model } from "../model.js"
 import { Provider } from "../provider.js"
+import { Variant } from "../variant.js"
 
 /**
  * Модели организации в Buff Code (#370). Провайдер «Buff» — OpenAI-совместимая дверь шлюза
@@ -51,13 +54,24 @@ export function requestHeaders(
   }
 }
 
-/** Модель из списка коннектора: идентификатор, имя, под которым её показывать, и что она
- *  читает и пишет (#27) — картинку Buff Code отправляет только видящей модели. */
+/** Модель из списка коннектора: идентификатор, имя, под которым её показывать, что она
+ *  читает и пишет (#27) — картинку Buff Code отправляет только видящей модели; окно и потолок
+ *  вывода, умеет ли думать, и дефолты организации для Buff Code (#838). */
 export type Listed = {
   readonly id: string
   readonly name: string
   readonly input: readonly string[]
   readonly output: readonly string[]
+  readonly limit: { readonly context?: number; readonly output?: number }
+  readonly reasoning: boolean
+  readonly defaults: { readonly thinking?: string; readonly contextTokens?: number }
+}
+
+/** Уровни мышления, которые предлагает думающая модель организации — общий словарь Buff. */
+const LEVELS = BuffVariant.LEVELS.filter((level) => level !== "default")
+
+function positive(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : undefined
 }
 
 /** Модальности из списка, как их пишет OpenRouter; текст есть всегда, о чём не сказано — нет. */
@@ -71,19 +85,34 @@ function modalities(value: unknown): string[] {
 export function listedModels(reply: unknown): Listed[] {
   const data = (reply as { data?: unknown } | null)?.data
   return (Array.isArray(data) ? data : []).flatMap((item) => {
-    const { id, name, input_modalities, output_modalities } = (item ?? {}) as {
-      id?: unknown
-      name?: unknown
-      input_modalities?: unknown
-      output_modalities?: unknown
-    }
+    const { id, name, input_modalities, output_modalities, context_length, max_output_tokens, supports_reasoning, buff_defaults } =
+      (item ?? {}) as {
+        id?: unknown
+        name?: unknown
+        input_modalities?: unknown
+        output_modalities?: unknown
+        context_length?: unknown
+        max_output_tokens?: unknown
+        supports_reasoning?: unknown
+        buff_defaults?: unknown
+      }
     if (typeof id !== "string" || !id) return []
+    const defaults = (buff_defaults ?? {}) as { thinking?: unknown; context_tokens?: unknown }
+    const context = positive(context_length)
+    const output = positive(max_output_tokens)
+    const contextTokens = positive(defaults.context_tokens)
     return [
       {
         id,
         name: typeof name === "string" && name ? name : id,
         input: modalities(input_modalities),
         output: modalities(output_modalities),
+        limit: { ...(context ? { context } : {}), ...(output ? { output } : {}) },
+        reasoning: supports_reasoning === true,
+        defaults: {
+          ...(typeof defaults.thinking === "string" && defaults.thinking ? { thinking: defaults.thinking } : {}),
+          ...(contextTokens ? { contextTokens } : {}),
+        },
       },
     ]
   })
@@ -131,12 +160,24 @@ export const register = Effect.fn("BuffModels.register")(function* (
       provider.package = "@opencode/ai/providers/openai-compatible"
       provider.settings = { baseURL: `${connector}/v1`, provider: "buff" }
     })
-    for (const { id, name, input, output } of loaded.models) {
+    for (const { id, name, input, output, limit, reasoning, defaults } of loaded.models) {
       providers.models.update(providerID, id, (model) => {
         model.modelID = Model.ID.make(id)
         model.name = name
         // Что модель читает и пишет — как сказал бэкенд по живому каталогу провайдера (#27).
         model.capabilities = { tools: true, input: [...input], output: [...output] }
+        // Окно и потолок вывода (#838): окно организации — её дефолт, урезающий окно модели;
+        // о чём склад промолчал — остаётся как было.
+        model.limit = {
+          ...model.limit,
+          context: BuffContextWindow.effective(limit.context, defaults.contextTokens) ?? model.limit.context,
+          output: limit.output ?? model.limit.output,
+        }
+        // Думающая модель предлагает общие уровни мышления; уровень организации по умолчанию
+        // подставляет сам коннектор, когда запрос его не называет.
+        model.variants = reasoning
+          ? [...Variant.resolve({ ...model, package: "@opencode/ai/providers/openai-compatible" }, [{ type: "effort", values: LEVELS }])]
+          : []
         // Модель организации актуальна по определению — её выбрал администратор. Выбор
         // моделей в десктопе показывает только последнюю модель своего семейства за полгода:
         // без даты она читается как 1970 год, без семейства не считается ничьей последней.

@@ -1326,7 +1326,9 @@ test("direct footer steers the oldest queued prompt from an empty composer", asy
   }
 })
 
-test("direct footer preserves steer and queue submission shortcuts while busy", async () => {
+// Buff (#805): while the agent works, Enter queues — like the queue shortcut; «send now» is the
+// palette command (or an empty Enter, which steers the oldest queued prompt).
+test("direct footer queues Enter and the queue shortcut while busy", async () => {
   const submitted: RunPrompt[] = []
   const app = await renderFooter({
     state: { phase: "running" },
@@ -1338,7 +1340,7 @@ test("direct footer preserves steer and queue submission shortcuts while busy", 
 
   try {
     await app.renderOnce()
-    await app.mockInput.typeText("steer now")
+    await app.mockInput.typeText("wait for the turn")
     app.mockInput.pressEnter()
     await Bun.sleep(0)
     await app.mockInput.typeText("queue later")
@@ -1346,9 +1348,29 @@ test("direct footer preserves steer and queue submission shortcuts while busy", 
     app.mockInput.pressEnter()
     await Bun.sleep(0)
     expect(submitted).toEqual([
-      { text: "steer now", parts: [], delivery: "steer" },
+      { text: "wait for the turn", parts: [], delivery: "queue" },
       { text: "queue later", parts: [], delivery: "queue" },
     ])
+  } finally {
+    app.cleanup()
+  }
+})
+
+test("direct footer sends Enter at once when the session is idle (#805)", async () => {
+  const submitted: RunPrompt[] = []
+  const app = await renderFooter({
+    onSubmit: (prompt) => {
+      submitted.push(prompt)
+      return true
+    },
+  })
+
+  try {
+    await app.renderOnce()
+    await app.mockInput.typeText("go")
+    app.mockInput.pressEnter()
+    await Bun.sleep(0)
+    expect(submitted).toEqual([{ text: "go", parts: [], delivery: "steer" }])
   } finally {
     app.cleanup()
   }

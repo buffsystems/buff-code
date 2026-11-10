@@ -56,6 +56,10 @@ export function sessionFormRequest(
     session,
     request,
     sessionID,
-    (item) => item.metadata?.kind === "question" || item.metadata?.kind === "websearch.provider",
+    (item) =>
+      item.metadata?.kind === "question" ||
+      item.metadata?.kind === "websearch.provider" ||
+      // Buff (#765): форма режима «Настройка» — тоже ждёт ответа человека.
+      item.metadata?.kind === "setup",
   )
 }

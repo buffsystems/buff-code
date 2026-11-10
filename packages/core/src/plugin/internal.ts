@@ -117,7 +117,13 @@ import { BuffPlanPlugin } from "../buff/plan.js"
 import { BuffGoalPlugin } from "../buff/goal.js"
 import { BuffMobilePlugin } from "../buff/mobile.js"
 import { BuffMobileService } from "../buff/mobile-service.js"
+import { BuffSharePlugin } from "../buff/share.js"
+import { BuffShareService } from "../buff/share-service.js"
 import { BuffSidePlugin } from "../buff/side.js"
+import { BuffSetupPlugin } from "../buff/setup.js"
+import { BuffSetupFormPlugin } from "../buff/setup-form.js"
+import { BuffConnectionPlugin } from "../buff/connection.js"
+import { BuffSecret } from "../buff/secret.js"
 import { BuffGoalService } from "../buff/goal-service.js"
 import { BuffWorkflowPlugin } from "../buff/workflow.js"
 import { BuffWorkflowService } from "../buff/workflow-service.js"
@@ -146,6 +152,8 @@ const services = [
   BuffGoalService.Service,
   // Buff (#639): телефон — служба процесса.
   BuffMobileService.Service,
+  // Buff (#816): публичные ссылки — служба процесса.
+  BuffShareService.Service,
   Agent.Service,
   AppProcess.Service,
   Provider.Service,
@@ -166,6 +174,8 @@ const services = [
   Image.Service,
   InstructionDiscovery.Service,
   Integration.Service,
+  // Buff (#765): секреты форм — для инструментов подключений.
+  BuffSecret.Service,
   Job.Service,
   KV.Service,
   LLMClient.Service,
@@ -204,6 +214,7 @@ export const requirements = LayerNode.group([
   BuffWorkflowService.node,
   BuffGoalService.node,
   BuffMobileService.node,
+  BuffShareService.node,
   Agent.node,
   AppProcess.node,
   Provider.node,
@@ -224,6 +235,7 @@ export const requirements = LayerNode.group([
   Image.node,
   InstructionDiscovery.node,
   Integration.node,
+  BuffSecret.node,
   Job.node,
   KV.node,
   llmClient,
@@ -337,7 +349,11 @@ const post = [
   BuffPlanPlugin.Plugin,
   BuffGoalPlugin.Plugin,
   BuffMobilePlugin.Plugin,
+  BuffSharePlugin.Plugin,
   BuffSidePlugin.Plugin,
+  BuffSetupPlugin.Plugin,
+  BuffSetupFormPlugin.Plugin,
+  BuffConnectionPlugin.Plugin,
 ] as const satisfies readonly InternalPlugin[]
 
 export const list = Effect.fn("PluginInternal.list")(function* () {

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import type { SessionMessageAssistant, SessionMessageInfo } from "@opencode/client/promise"
 import { model, session } from "../../core/data/fixtures"
 import { emptyData, locationKey, type DataState } from "../../core/data/state"
-import { createBackgroundSelector, sessionBackground } from "./background"
+import { createBackgroundSelector, runningSubagents, sessionBackground } from "./background"
 
 const running = (id: string, name: "shell" | "subagent", metadata: Record<string, string>, input: Record<string, string>) => ({
   type: "tool" as const,
@@ -101,4 +101,26 @@ test("the selector keeps its result while unrelated state changes", () => {
   const value = select(first)
   expect(select({ ...first, defaultLocation: { directory: "/other" } })).toBe(value)
   expect(select({ ...first, session: { ...first.session, active: { ses_child: "running" } } })).toBe(value)
+})
+
+// #762: the composer's subagents icon counts the working subagents — the turn's running calls and
+// the background ones — and leaves the shells out.
+test("the working subagents are the turn's running calls and the background ones", () => {
+  expect(
+    runningSubagents({
+      blocking: [
+        { type: "subagent", partID: "p1", id: "ses_a", label: "Ревью вёрстки" },
+        { type: "subagent", partID: "p2" },
+        { type: "shell", partID: "p3", id: "sh", label: "bun test" },
+      ],
+      tasks: [
+        { id: "ses_b", type: "subagent", label: "Ревью фактов", agent: "review", started: 1 },
+        { id: "sh2", type: "shell", label: "bun dev" },
+      ],
+    }),
+  ).toEqual([
+    { id: "ses_a", label: "Ревью вёрстки" },
+    { label: "" },
+    { id: "ses_b", label: "Ревью фактов", agent: "review" },
+  ])
 })

@@ -334,13 +334,7 @@ export const layer = (options?: Options) =>
           const filepath = (yield* Effect.filter(candidates, fs.isFile)).at(-1) ?? path.join(directory, BuffNames.USER_CONFIG_FILE)
           const text = (yield* fs.readFileStringSafe(filepath)) ?? "{}\n"
           const updated = yield* Effect.try({
-            try: () =>
-              applyEdits(
-                text,
-                modify(text, ["shell"], patch.shell ?? undefined, {
-                  formattingOptions: { tabSize: 2, insertSpaces: true },
-                }),
-              ),
+            try: () => patchConfigText(text, patch),
             catch: (cause) => new FSUtil.FileSystemError({ method: "config.update", cause }),
           })
           yield* fs.writeWithDirs(filepath, updated.endsWith("\n") ? updated : `${updated}\n`)
@@ -373,3 +367,17 @@ export function configured(options?: Options) {
 }
 
 export const node = configured()
+
+/** The user's config text with the patch applied (#835): each named key set, or removed on null;
+ *  keys the patch leaves out stay as they are, as do comments and formatting (JSONC edits). */
+export function patchConfigText(text: string, patch: Patch): string {
+  const keys = ["shell", "thinking", "context"] as const
+  return keys.reduce((current, key) => {
+    if (!(key in patch)) return current
+    const value = patch[key]
+    return applyEdits(
+      current,
+      modify(current, [key], value ?? undefined, { formattingOptions: { tabSize: 2, insertSpaces: true } }),
+    )
+  }, text)
+}

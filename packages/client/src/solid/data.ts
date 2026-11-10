@@ -695,6 +695,30 @@ export function createData(config: CreateDataInput) {
             }),
         )
         return
+      // Buff (#837): the session's context cap — the row in the transcript names the new limit.
+      case "session.context.selected":
+        if (store.session.info[event.data.sessionID])
+          setStore("session", "info", event.data.sessionID, "limit", event.data.limit)
+        if (!store.session.message[event.data.sessionID]) return
+        message.insert(event.data.sessionID, {
+          id: messageIDFromEvent(event.id),
+          type: "context-switched",
+          limit: event.data.limit,
+          previous: event.data.previous,
+          time: { created: event.created },
+        })
+        refresh(() =>
+          api()
+            .session.message.get({ sessionID: event.data.sessionID, messageID: messageIDFromEvent(event.id) })
+            .then((item) => {
+              message.update(event.data.sessionID, (draft, index) => {
+                const position = index.get(item.id)
+                if (position === undefined) return message.append(draft, index, item)
+                draft[position] = item
+              })
+            }),
+        )
+        return
       case "session.renamed": {
         // Preserve the live title when it races the session's initial read.
         refresh(() => {
@@ -1465,6 +1489,8 @@ export function createData(config: CreateDataInput) {
         projectID?: string
         // Buff (#450): session rules chosen before the session exists.
         permissions?: { action: string; resource: string; effect: "allow" | "deny" | "ask" }[]
+        // Buff (#837): the session's context cap from the start.
+        limit?: { context: number }
       }) {
         const { projectID, ...payload } = input
         const id = payload.id ?? SessionID.create()
@@ -1478,6 +1504,7 @@ export function createData(config: CreateDataInput) {
             projectID: projectID ?? store.location[locationKey(location)]?.info?.project.id ?? "",
             agent: payload.agent,
             model: payload.model,
+            limit: payload.limit,
             cost: 0,
             tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
             time: { created: now, updated: now },

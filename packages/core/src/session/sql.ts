@@ -56,6 +56,8 @@ export const SessionTable = sqliteTable(
       providerID: string
       variant?: string
     }>(),
+    /** The session's own context window cap in tokens (#835); null — the model's whole window. */
+    context_limit: integer(),
     ...Timestamps,
     time_idle: integer(),
     time_viewed: integer(),

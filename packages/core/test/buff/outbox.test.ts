@@ -17,6 +17,7 @@ const makeDb = Effect.gen(function* () {
   const db = yield* EffectDrizzleSqlite.makeWithDefaults()
   yield* db.run(sql`create table session_v2 (id text primary key, title text, cost real, time_updated integer)`)
   yield* db.run(sql`create table credential (id text primary key, secret text)`)
+  yield* db.run(sql`create table kv (key text primary key, value text)`)
   return db
 })
 
@@ -57,6 +58,27 @@ test("таблицы из списка исключений не дублиру�
       yield* db.run(sql`insert into session_v2 (id) values ('s2')`)
       const out = yield* rows(db)
       expect(out.map((r) => r.tbl)).toEqual(["session_v2"])
+    }),
+  )
+})
+
+test("секреты человека в kv не попадают в очередь ни одной операцией; уже стоящие — вычищаются (#765)", async () => {
+  await run(
+    Effect.gen(function* () {
+      const db = yield* makeDb
+      yield* BuffOutbox.install(db, { skip: new Set() })
+      yield* db.run(sql`insert into kv (key, value) values ('buff.secret:sec_1', '"тайна"'), ('other', '1')`)
+      yield* db.run(sql`update kv set value = '"тайна-2"' where key = 'buff.secret:sec_1'`)
+      yield* db.run(sql`delete from kv where key = 'buff.secret:sec_1'`)
+      const out = yield* rows(db)
+      expect(out.map((r) => [r.tbl, r.op, JSON.parse(r.key)])).toEqual([["kv", "insert", ["other"]]])
+      expect(out.map((r) => r.row).join()).not.toContain("тайна")
+      // Строка из очереди прежней версии: секрет уже стоял в ней — установка его убирает.
+      yield* db.run(
+        sql`insert into buff_outbox (tbl, op, key, row) values ('kv', 'insert', '["buff.secret:sec_0"]', '{"key":"buff.secret:sec_0","value":"\"old\""}')`,
+      )
+      yield* BuffOutbox.install(db, { skip: new Set() })
+      expect((yield* rows(db)).map((r) => JSON.parse(r.key))).toEqual([["other"]])
     }),
   )
 })

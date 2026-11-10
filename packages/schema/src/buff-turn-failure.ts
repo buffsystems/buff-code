@@ -1,3 +1,4 @@
+import { BuffAttachment } from "./buff-attachment.js"
 import { BuffI18n } from "./buff-i18n.js"
 
 /**
@@ -9,6 +10,14 @@ export interface TurnError {
   readonly type: string
   readonly message: string
   readonly status?: number
+  /** Файлы запроса, который модель отвергла (#757). */
+  readonly attachments?: ReadonlyArray<{ readonly name?: string; readonly mime: string }>
+}
+
+/** Файлы отвергнутого запроса: как их назвать человеку и какие форматы перестать отправлять. */
+export interface TurnFiles {
+  readonly names: readonly string[]
+  readonly formats: readonly BuffAttachment.Modality[]
 }
 
 export interface TurnFailure {
@@ -18,6 +27,11 @@ export interface TurnFailure {
   readonly action?: "sign-in" | "choose-context" | "top-up" | "replace-key" | "connect-provider"
   /** Отказ как пришёл — для «Подробности» и для письма в поддержку. */
   readonly details: string
+  /**
+   * Модель отвергла запрос с файлами (#757): карточка предлагает разобрать их кодом, сменить
+   * модель или продолжить без них.
+   */
+  readonly files?: TurnFiles
 }
 
 const BUFF = "buff"
@@ -112,6 +126,69 @@ function ownReading(error: TurnError, provider: string, t: BuffI18n.T): Pick<Tur
   return { text: t("Error in Buff Code ({said}). Copy the details and send them to support.", words) }
 }
 
+const FORMAT_LABELS: Record<BuffAttachment.Modality, string> = {
+  image: "image",
+  pdf: "PDF",
+  audio: "audio",
+  video: "video",
+}
+
+function filesOf(error: TurnError, t: BuffI18n.T): TurnFiles | undefined {
+  const attachments = error.attachments ?? []
+  const formats = BuffAttachment.modalities(attachments)
+  if (formats.length === 0) return undefined
+  const names = attachments.flatMap((file) => {
+    const format = BuffAttachment.modalityOf(file.mime)
+    if (!format) return []
+    return [file.name ?? t(FORMAT_LABELS[format])]
+  })
+  return { names, formats }
+}
+
+// Обёртки прокси перед словами провайдера: «litellm.BadRequestError: OpenAIException - …».
+const WRAPPER = /^\s*[\w.]*(?:Error|Exception)\s*[:-]\s*/
+
+/** Слова провайдера коротко: первая строка без обёрток прокси; целиком — в «Подробностях». */
+function shortQuote(message: string): string {
+  let line = message.trim().split("\n")[0] ?? ""
+  while (WRAPPER.test(line)) line = line.replace(WRAPPER, "")
+  line = line.trim().replace(/\.$/, "")
+  return line.length > 160 ? `${line.slice(0, 159)}…` : line
+}
+
+function filesReading(error: TurnError, files: TurnFiles, t: BuffI18n.T): string {
+  const said = shortQuote(error.message)
+  const quoted = error.status === undefined ? said : t("response {status}: {message}", { status: error.status, message: said })
+  return t(
+    "The model did not accept the request with the files {files} ({said}). It may not read this kind of file — choose how to continue.",
+    { files: files.names.join(", "), said: quoted },
+  )
+}
+
+/** Как продолжить после отказа с файлами — готовое сообщение модели и формат, который больше не отправлять. */
+export type FileChoice = "analyze" | "without-files"
+
+export function fileFollowUp(
+  choice: FileChoice,
+  files: TurnFiles,
+  t: BuffI18n.T = BuffI18n.english,
+): { readonly text: string; readonly metadata: ReturnType<typeof BuffAttachment.omitMetadata> } {
+  const names = files.names.join(", ")
+  const text =
+    choice === "analyze"
+      ? t(
+          "The model cannot read {files} directly. Analyse them with code or command-line tools: extract the text, colours, structure — whatever the task needs — and continue the task.",
+          { files: names },
+        )
+      : t("Continue the task without the files {files}.", { files: names })
+  return { text, metadata: BuffAttachment.omitMetadata(files.formats, choice === "analyze" ? "code" : "ignore") }
+}
+
+/** Модель читает файлы, когда принимает каждый их формат: так окно и консоль сужают выбор модели. */
+export function readsFormats(input: readonly string[], formats: readonly BuffAttachment.Modality[]): boolean {
+  return formats.every((format) => input.some((item) => item.startsWith(format)))
+}
+
 /** `provider` — имя провайдера для людей; без него — его идентификатор. */
 export function turnFailure(
   error: TurnError,
@@ -119,6 +196,8 @@ export function turnFailure(
   t: BuffI18n.T = BuffI18n.english,
   provider: string = providerID,
 ): TurnFailure {
+  const files = filesOf(error, t)
+  if (files) return { text: filesReading(error, files, t), details: details(error, t), files }
   const read = providerID === BUFF ? reading(error, t) : ownReading(error, provider, t)
   return {
     ...read,

@@ -115,6 +115,17 @@ export function update(adapter: Adapter, event: SessionEvent.DurableEvent) {
             }),
           )
         }),
+      "session.context.selected": (event) =>
+        adapter.appendMessage(
+          SessionMessage.ContextSelected.make({
+            id: SessionMessage.ID.fromEvent(event.id),
+            type: "context-switched",
+            metadata: event.metadata,
+            limit: event.data.limit,
+            previous: event.data.previous,
+            time: { created },
+          }),
+        ),
       "session.moved": (event) =>
         Effect.gen(function* () {
           yield* adapter.appendMessage(

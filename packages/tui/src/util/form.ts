@@ -21,7 +21,7 @@ export function formInitialValues(fields: ReadonlyArray<FormField>) {
   return {
     answers: Object.fromEntries(
       fields.flatMap((field) =>
-        isFormAnswerField(field) && field.default !== undefined ? [[field.key, field.default]] : [],
+        isFormAnswerField(field) && "default" in field && field.default !== undefined ? [[field.key, field.default]] : [],
       ),
     ) as Record<string, FormValue | undefined>,
     custom: Object.fromEntries(
@@ -36,7 +36,12 @@ export function formInitialValues(fields: ReadonlyArray<FormField>) {
 
 export function formTextual(field: FormField | undefined) {
   if (!field) return false
-  return field.type === "number" || field.type === "integer" || (field.type === "string" && !field.options)
+  return (
+    field.type === "number" ||
+    field.type === "integer" ||
+    field.type === "secret" ||
+    (field.type === "string" && !field.options)
+  )
 }
 
 export function formCustom(field: FormField | undefined) {
@@ -95,6 +100,8 @@ export function formValidateValue(field: FormAnswerField, value: FormValue | und
       return t("Select an available option")
     return
   }
+  // Секрет (#765): текст без правил формата; маска ввода — забота экрана.
+  if (field.type === "secret") return typeof value === "string" ? undefined : t("Expected text")
   if (field.type === "number" || field.type === "integer") {
     if (typeof value !== "number" || !Number.isFinite(value)) return t("Expected a number")
     if (field.type === "integer" && !Number.isInteger(value)) return t("Expected an integer")
@@ -112,6 +119,8 @@ export function formValidateValue(field: FormAnswerField, value: FormValue | und
 
 export function formDisplayValue(field: FormAnswerField, value: FormValue | undefined, emptyMultiselect: string) {
   if (value === undefined) return ""
+  // Секрет (#765): значение не показывается ни в обзоре, ни в поле — только то, что оно введено.
+  if (field.type === "secret") return value === "" ? "" : "••••••••"
   const label = (item: string | number | boolean) =>
     formRows(field).find((row) => row.value === item)?.label ?? String(item)
   if (Array.isArray(value)) return value.length === 0 ? emptyMultiselect : value.map(label).join(", ")

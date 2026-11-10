@@ -7,6 +7,8 @@ import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { Bus } from "@opencode/core/bus"
 import { Database } from "@opencode/core/database/database"
 import { Form } from "@opencode/core/form"
+import { BuffSecret } from "@opencode/core/buff/secret"
+import { fakeKV } from "./buff/fake-kv"
 import { Location } from "@opencode/core/location"
 import { LocationActivity } from "@opencode/core/location-activity"
 import { LocationServiceMap, type LocationServices } from "@opencode/core/location-services"
@@ -63,6 +65,8 @@ const locations = Layer.effect(
           ),
         ).pipe(
           Layer.provideMerge(Form.layer),
+          // Buff (#765): секреты форм — в памяти.
+          Layer.provide(Layer.succeed(BuffSecret.Service, BuffSecret.make(fakeKV()))),
           Layer.provide(Layer.succeed(Bus.Service, bus)),
           Layer.fresh,
         ) as unknown as Layer.Layer<LocationServices>,

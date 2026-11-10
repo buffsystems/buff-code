@@ -87,6 +87,16 @@ export const make = Effect.fn("Session.make")(function* () {
     const session = yield* get(sessionID)
     yield* bus.publish(SessionEvent.AgentSelected, { sessionID, agent: input.agent, previous: session.agent })
   })
+  /** The session's own context window cap (#835): the smaller of it and the model's window is what
+   *  compaction fires against. `undefined` — back to the model's window. Unchanged — nothing published. */
+  const switchContext = Effect.fn("Session.switchContext")(function* (
+    sessionID: SessionSchema.ID,
+    input: { limit: SessionSchema.ContextLimit | undefined },
+  ) {
+    const session = yield* get(sessionID)
+    if ((session.limit?.context ?? 0) === (input.limit?.context ?? 0)) return
+    yield* bus.publish(SessionEvent.ContextSelected, { sessionID, limit: input.limit, previous: session.limit })
+  })
   const switchModel = Effect.fn("Session.switchModel")(function* (
     sessionID: SessionSchema.ID,
     input: { model: Model.Ref },
@@ -345,6 +355,7 @@ export const make = Effect.fn("Session.make")(function* () {
     setPermissions,
     switchAgent,
     switchModel,
+    switchContext,
     inbox,
     prompt,
     synthetic,
@@ -368,6 +379,7 @@ export const make = Effect.fn("Session.make")(function* () {
     const setPermissions = operations.setPermissions.bind(undefined, sessionID)
     const switchAgent = operations.switchAgent.bind(undefined, sessionID)
     const switchModel = operations.switchModel.bind(undefined, sessionID)
+    const switchContext = operations.switchContext.bind(undefined, sessionID)
     const inbox = operations.inbox.bind(undefined, sessionID)
     const prompt = operations.prompt.bind(undefined, sessionID)
     const synthetic = operations.synthetic.bind(undefined, sessionID)
@@ -394,6 +406,7 @@ export const make = Effect.fn("Session.make")(function* () {
       setPermissions,
       switchAgent,
       switchModel,
+      switchContext,
       inbox,
       prompt,
       synthetic,

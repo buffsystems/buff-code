@@ -55,6 +55,8 @@ describe("which files get their own preview", () => {
     expect(previewKind("flow.mermaid")).toBe("mermaid")
     expect(previewKind("doc.pdf")).toBe("pdf")
     expect(previewKind("clip.webm")).toBe("video")
+    expect(previewKind("out/report.html")).toBe("html")
+    expect(previewKind("INDEX.HTM")).toBe("html")
     expect(previewKind("a.ts")).toBeUndefined()
     expect(previewKind(undefined)).toBeUndefined()
   })

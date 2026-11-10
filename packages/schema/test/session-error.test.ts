@@ -33,6 +33,17 @@ describe("SessionError", () => {
     ).toEqual({ type: "provider.timeout", message: "Timeout" })
   })
 
+  test("keeps the files a failed request carried (#757)", () => {
+    const value: SessionError.Error = {
+      type: "provider.invalid-request",
+      message: "Image input is not supported",
+      status: 400,
+      attachments: [{ name: "logo.png", mime: "image/png" }, { mime: "application/pdf" }],
+    }
+    const codec = Schema.fromJsonString(SessionError.Error)
+    expect(Schema.decodeUnknownSync(codec)(Schema.encodeSync(codec)(value))).toEqual(value)
+  })
+
   test("rejects missing envelope fields", () => {
     expect(() => Schema.decodeUnknownSync(SessionError.Error)({ type: "provider.auth" })).toThrow()
     expect(() => Schema.decodeUnknownSync(SessionError.Error)({ message: "Missing type" })).toThrow()

@@ -324,13 +324,35 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
   })
 })
 
+/**
+ * Buff (#765): код авторизации, принесённый человеком — сам код или адрес страницы, куда его
+ * отправил сервис (`?code=…&state=…`); состояние, если оно в адресе, должно совпасть.
+ */
+export function pastedCode(text: string, state: string): { code: string; iss?: string } | { error: string } {
+  const trimmed = text.trim()
+  if (!trimmed) return { error: "Missing authorization code" }
+  if (!/^https?:\/\//i.test(trimmed)) return { code: trimmed }
+  const url = URL.parse(trimmed)
+  if (!url) return { error: "The pasted address is not a URL" }
+  const error = url.searchParams.get("error_description") ?? url.searchParams.get("error")
+  if (error) return { error }
+  const pastedState = url.searchParams.get("state")
+  if (pastedState !== null && pastedState !== state) return { error: "OAuth state mismatch" }
+  const code = url.searchParams.get("code")
+  if (!code) return { error: "The pasted address has no authorization code" }
+  return { code, iss: url.searchParams.get("iss") ?? undefined }
+}
+
 export const authorize = (input: {
   readonly name: string
   readonly config: typeof ConfigMCP.Remote.Type
   readonly integrationID: Integration.ID
   readonly methodID: Integration.MethodID
+  /** Buff (#780): `redirect_uri` из ответа формы — возврат в приложение, когда входят с телефона. */
+  readonly answer?: Readonly<Record<string, unknown>>
 }) =>
   Effect.gen(function* () {
+    const override = typeof input.answer?.["redirect_uri"] === "string" ? input.answer["redirect_uri"] : undefined
     const fields = { server: input.name, methodID: input.methodID, oauthAttemptID: crypto.randomUUID() }
     const context = yield* Effect.context()
     const run = Effect.runPromiseWith(context)
@@ -348,6 +370,7 @@ export const authorize = (input: {
     }
     const code = yield* Deferred.make<{ code: string; iss: string | undefined }, Error>()
     const redirect = oauth?.redirect_uri ? new URL(oauth.redirect_uri) : undefined
+    const handoff = override ? new URL(override) : undefined
     const redirectPath = redirect?.pathname ?? "/callback"
     const state = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url")
 
@@ -425,6 +448,7 @@ export const authorize = (input: {
     const cimd =
       !oauth?.client_id &&
       !oauth?.redirect_uri &&
+      !handoff &&
       discovery.authorizationServerMetadata?.client_id_metadata_document_supported === true &&
       (discovery.authorizationServerMetadata.token_endpoint_auth_methods_supported?.includes("none") ?? false)
     yield* Effect.logInfo("mcp oauth client registration selected", {
@@ -439,7 +463,7 @@ export const authorize = (input: {
       clientMetadataUrl: cimd ? CLIENT_METADATA_URL : undefined,
       discovery: { ...discovery, resourceMetadataUrl: resourceMetadataUrl?.toString() },
       redirect: {
-        url: oauth?.redirect_uri ?? `http://127.0.0.1:${port}${redirectPath}`,
+        url: handoff?.toString() ?? oauth?.redirect_uri ?? `http://127.0.0.1:${port}${redirectPath}`,
         state,
         open: (url) => {
           authorizationUrl = url
@@ -470,8 +494,16 @@ export const authorize = (input: {
 
     return {
       url: authorizationUrl.toString(),
-      instructions: `Authorize ${input.name} in your browser. This window will close automatically.`,
+      instructions: handoff
+        ? `Authorize ${input.name} in your browser; the app brings the code back by itself.`
+        : `Authorize ${input.name} in your browser. This window will close automatically.`,
       mode: "auto" as const,
+      enter: (text: string) =>
+        Effect.suspend(() => {
+          const parsed = pastedCode(text, state)
+          if ("error" in parsed) return Effect.fail(new Error(parsed.error))
+          return Deferred.succeed(code, { code: parsed.code, iss: parsed.iss }).pipe(Effect.asVoid)
+        }),
       callback: Deferred.await(code).pipe(
         Effect.flatMap((value) =>
           Effect.tryPromise({

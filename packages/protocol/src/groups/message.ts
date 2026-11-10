@@ -24,6 +24,7 @@ export const SessionMessagesQuery = Schema.Struct({
     Schema.Literals([
       "agent-switched",
       "model-switched",
+      "context-switched",
       "location-switched",
       "user",
       "synthetic",
@@ -52,6 +53,7 @@ const PublicLocationSwitched = Schema.Struct({
 export const PublicSessionMessage = Schema.Union([
   SessionMessage.AgentSelected,
   SessionMessage.ModelSelected,
+  SessionMessage.ContextSelected,
   PublicLocationSwitched,
   SessionMessage.User,
   SessionMessage.Synthetic,

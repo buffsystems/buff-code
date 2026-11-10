@@ -3,6 +3,7 @@
 // но только в известных проектах: новая сессия — проект и модель лишь из списков службы,
 // произвольный путь не открывается.
 import { RefusalError, type DeviceRecord, type Reply } from "@buff/mobile-protocol"
+import { BuffAttachment } from "@opencode/schema/buff-attachment"
 import { BuffModelPrefs } from "@opencode/schema/buff-model-prefs"
 import { BuffPermissionMode } from "@opencode/schema/buff-permission-mode"
 import { BuffLocale } from "../locale.js"
@@ -28,8 +29,9 @@ interface SessionInfo {
   title?: string
   time: { created: number; updated: number; archived?: number }
   metadata?: Record<string, unknown>
-  model?: { id: string; providerID: string }
+  model?: { id: string; providerID: string; variant?: string }
   agent?: string
+  permissions?: BuffPermissionMode.Rule[]
 }
 
 interface ModelInfo {
@@ -40,6 +42,16 @@ interface ModelInfo {
   family?: string
   time?: { released?: number }
   limit?: { context?: number }
+  capabilities?: { input?: string[] }
+  variants?: { id: string }[]
+}
+
+interface StoredUser {
+  id: string
+  type: string
+  text?: string
+  files?: { data: string; mime: string; name?: string; description?: string }[]
+  metadata?: Record<string, unknown>
 }
 
 interface AgentInfo {
@@ -54,6 +66,20 @@ const data = <T>(reply: unknown): T => (reply as { data: T }).data
 /** Сколько ждать, пока сервер откроет каталог и плагины осядут (#739), и шаг переспроса. */
 const SETTLE_MS = 5000
 const SETTLE_STEP_MS = 250
+
+// Очередь сообщений (#811): отправленное во время работы агента ждёт конца хода; «сейчас» — в текущий ход.
+const deliveryOf = (args: Record<string, unknown>): "queue" | "steer" => {
+  if (args.delivery === undefined || args.delivery === "queue") return "queue"
+  if (args.delivery === "steer") return "steer"
+  throw new RefusalError(BuffLocale.t("Unknown delivery mode"))
+}
+
+interface InboxItem {
+  id: string
+  type: string
+  delivery: string
+  payload?: { text?: string; files?: unknown[] }
+}
 
 const str = (args: Record<string, unknown>, key: string): string => {
   const v = args[key]
@@ -90,11 +116,19 @@ export interface SessionState {
   messages: unknown[]
   permissions: unknown[]
   forms: unknown[]
+  setup?: boolean
   // Цель сессии (#711): плашка цели на телефоне, как в окне; null — цели нет.
   goal: unknown
   // Родитель сессии (#753): у сабагента — id родительской, телефон открывает её только для чтения.
   parent: string | null
   title: string
+  // Режим разрешений сессии (#760), как его показывает окно; custom — правила писал кто-то другой.
+  mode: BuffPermissionMode.Mode | "custom"
+  plan: boolean
+  // Субагенты сессии (#762): дочерние сессии и какие из них работают.
+  subagents: { id: string; title: string; agent?: string; running: boolean }[]
+  // Очередь сообщений (#811): что пользователь отправил во время работы агента и что ждёт конца хода.
+  queued: { id: string; text: string; files: number }[]
 }
 
 // Кадр до телефона ограничен: длинный вывод инструмента идёт обрезанным, целиком — по запросу.
@@ -118,6 +152,8 @@ const RPC: Record<string, readonly string[]> = {
   "buff.workflow": ["list", "read", "saveMeta", "remove", "start", "runs", "run", "stop", "resume", "answer"],
   // Цель сессии (#711): плашка на телефоне ставит на паузу, продолжает, сбрасывает.
   "buff.goal": ["get", "pause", "resume", "clear"],
+  // Режим «Настройка» (#765): новая сессия режима с телефона.
+  "buff.setup": ["open"],
 }
 
 // Файл до телефона — частями: кадр ретранслятора ограничен. Кратно трём: части в base64 склеиваются
@@ -175,6 +211,8 @@ export function mobileApi(
           updated: x.time.updated,
           origin: x.metadata?.origin === "phone" ? "phone" : "window",
           running: active.has(x.id),
+          // Режим «Настройка» (#765): сессии режима — своей группой на телефоне.
+          ...(x.agent ? { agent: x.agent } : {}),
         })),
       ...(page.cursor?.next ? { cursor: page.cursor.next } : {}),
     }
@@ -191,8 +229,10 @@ export function mobileApi(
     }
   }
   // Модели — как в композере окна (#743): по отметкам человека, иначе новейшие в семействе и без даты.
+  const allModels = (directory: string) =>
+    settled(async () => data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? [])
   const models = async (directory: string) => {
-    const all = await settled(async () => data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? [])
+    const all = await allModels(directory)
     const choices = (await extra?.modelPrefs?.().catch(() => [])) ?? []
     // The window's choices name the catalogue id (`id`), not the API model (`modelID`): the
     // «fast» variant of a model shares its API id and must be told apart.
@@ -202,6 +242,15 @@ export function mobileApi(
     ).map((c) => c.model)
   }
   const modelKey = (m: { providerID: string; modelID?: string; id: string }) => `${m.providerID}/${m.modelID ?? m.id}`
+  // Режим размышлений (#759) — вариант модели, как в окне; default и неизвестный — без варианта.
+  /** Окно контекста из аргумента телефона (#835): целое число токенов > 0 — лимит; иное — всё окно (null). */
+function contextLimit(value: unknown): { context: number } | null {
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : 0
+  return Number.isInteger(n) && n > 0 ? { context: n } : null
+}
+
+const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
+    typeof wanted === "string" && wanted !== "default" && m?.variants?.some((v) => v.id === wanted) ? wanted : undefined
   // Агенты, которых человек выбирает сам: без сабагентов и скрытых; plan — это отметка «План».
   const agents = (directory: string) =>
     settled(async () =>
@@ -226,31 +275,70 @@ export function mobileApi(
     return reply?.output?.goal ?? null
   }
 
+  const ownerOf = (args: Record<string, unknown>) => (typeof args.owner === "string" && args.owner) || str(args, "session")
+
   const state = async (session: string): Promise<SessionState> => {
-    const [messages, active, permissions, forms, goal, info] = await Promise.all([
+    const [messages, active, permissions, forms, goal, info, inbox] = await Promise.all([
       call("GET", `/api/session/${session}/message`, { query: { limit: 6, order: "desc" } }),
       call("GET", "/api/session/active").then(
         (r) => Object.keys(data<Record<string, unknown>>(r) ?? {}),
         () => [] as string[],
       ),
       call("GET", `/api/session/${session}/permission`).catch(() => ({ data: [] })),
-      call("GET", `/api/session/${session}/form`).catch(() => ({ data: [] })),
+      // Формы сессии и общие формы MCP-серверов (#765): у общих владелец «global», ответ уходит ему.
+      Promise.all([
+        call("GET", `/api/session/${session}/form`).catch(() => ({ data: [] })),
+        call("GET", "/api/form").catch(() => ({ data: [] })),
+      ]).then(([own, all]) => {
+        const list = (r: unknown): { sessionID?: string }[] => {
+          const got = Array.isArray(r) ? r : data<unknown>(r)
+          return Array.isArray(got) ? (got as { sessionID?: string }[]) : []
+        }
+        return [...list(own), ...list(all).filter((form) => form.sessionID === "global")]
+      }),
       goalOf(session),
       // Чья это сессия (#753): у сабагента есть родитель — телефон открывает её только для чтения.
       call("GET", `/api/session/${session}`)
         .then((r) => data<SessionInfo>(r))
         .catch(() => undefined),
+      call("GET", `/api/session/${session}/inbox`)
+        .then((r) => {
+          const items = Array.isArray(r) ? r : data<unknown>(r)
+          return Array.isArray(items) ? (items as InboxItem[]) : []
+        })
+        .catch(() => [] as InboxItem[]),
     ])
+    // Субагенты сессии (#762) — её дочерние сессии, и какие из них работают (фоновые тоже).
+    const children = await call("GET", "/api/session", {
+      query: { ...(info?.projectID ? { project: info.projectID } : {}), parentID: session, limit: 50, order: "desc" },
+    })
+      .then((r) => data<SessionInfo[]>(r) ?? [])
+      .catch(() => [] as SessionInfo[])
+    const subagents = children.map((c) => ({
+      id: c.id,
+      title: c.title ?? "",
+      ...(c.agent ? { agent: c.agent } : {}),
+      running: active.includes(c.id),
+    }))
     const list = (r: unknown) => (Array.isArray(r) ? r : (data<unknown[]>(r) ?? []))
+    const plan = info?.agent === "plan"
     return {
       session,
       running: active.includes(session),
       messages: clip(list(messages)) as unknown[],
       permissions: list(permissions),
       forms: list(forms),
+      // Режим «Настройка» (#765): сессия режима — по агенту.
+      setup: info?.agent === "setup",
       goal,
       parent: info?.parentID ?? null,
       title: info?.title ?? "",
+      mode: BuffPermissionMode.modeOf(info?.permissions, plan) ?? "custom",
+      plan,
+      subagents,
+      queued: inbox
+        .filter((item) => item.type === "user" && item.delivery === "queue")
+        .map((item) => ({ id: item.id, text: item.payload?.text ?? "", files: item.payload?.files?.length ?? 0 })),
     }
   }
 
@@ -364,9 +452,18 @@ export function mobileApi(
       })
     },
     "session.agent": async (args) => call("POST", `/api/session/${str(args, "session")}/agent`, { body: { agent: str(args, "agent") } }),
+    // Окно контекста сессии (#835, режимы ИИ): число токенов; 0 — всё окно модели.
+    "session.context": async (args) => call("POST", `/api/session/${str(args, "session")}/context-limit`, { body: { limit: contextLimit(args.context) } }),
+    // Смена модели (#759): названный вариант — он; не названный — вариант сессии (и выбранный в окне),
+    // если он есть у новой модели.
     "session.model": async (args) => {
+      const session = str(args, "session")
       const [providerID, ...rest] = str(args, "model").split("/")
-      return call("POST", `/api/session/${str(args, "session")}/model`, { body: { model: { id: rest.join("/"), providerID } } })
+      const id = rest.join("/")
+      const info = data<SessionInfo & { location: { directory: string } }>(await call("GET", `/api/session/${session}`))
+      const model = (await allModels(info.location.directory)).find((m) => modelKey(m) === `${providerID}/${id}`)
+      const variant = variantOf(model, typeof args.variant === "string" ? args.variant : info.model?.variant)
+      return call("POST", `/api/session/${session}/model`, { body: { model: { id, providerID, ...(variant ? { variant } : {}) } } })
     },
     attachment_upload: async (args) => {
       const id = str(args, "id")
@@ -433,7 +530,11 @@ export function mobileApi(
     // default — модель последней сессии проекта, пока она есть на машине, иначе модель по умолчанию.
     "models.list": async (args) => {
       const p = await project(str(args, "project"))
-      const [list, last] = await Promise.all([models(p.canonical), lastSession(p.id)])
+      // #757: `all` — every model, hidden ones too: after a refusal with files the phone looks for one that reads them.
+      const [list, last] = await Promise.all([
+        args.all === true ? allModels(p.canonical) : models(p.canonical),
+        lastSession(p.id),
+      ])
       const keys = list.map(modelKey)
       const recent = last?.model ? modelKey(last.model) : undefined
       const fallback = async () => {
@@ -449,6 +550,10 @@ export function mobileApi(
           name: m.name,
           provider: m.providerID,
           ...(m.limit?.context ? { context: m.limit.context } : {}),
+          // #757: какие файлы модель читает — телефон предлагает только такие модели после отказа.
+          ...(m.capabilities?.input ? { input: m.capabilities.input } : {}),
+          // #759: режимы размышлений модели — её варианты.
+          ...(m.variants?.length ? { variants: m.variants.map((v) => v.id) } : {}),
         })),
         ...(chosen ? { default: chosen } : {}),
       }
@@ -468,6 +573,14 @@ export function mobileApi(
       return sessionsOf(p.id, Number(args.limit ?? 50), typeof args.cursor === "string" ? args.cursor : undefined)
     },
     "session.get": async (args) => call("GET", `/api/session/${str(args, "session")}`),
+    // Сводка сжатия для модели (#761) — целиком: в ленте она идёт обрезанной, как всё длинное.
+    "session.compaction": async (args) => {
+      const m = data<{ type?: string; status?: string; summary?: string }>(
+        await call("GET", `/api/session/${str(args, "session")}/message/${str(args, "message")}`),
+      )
+      if (m?.type !== "compaction") throw new RefusalError(BuffLocale.t("No such compaction in the session"))
+      return { status: m.status, summary: m.summary ?? "" }
+    },
     // Страница таймлайна: первая — новые сверху (order=desc), дальше — по курсору назад (без order:
     // сервер не принимает оба сразу).
     "session.messages": async (args) =>
@@ -491,14 +604,17 @@ export function mobileApi(
       // Режим разрешений и «план» — как у окна: правила сессии и агент plan (он важнее выбранного).
       const mode = args.mode === "edit" || args.mode === "full" ? args.mode : "ask"
       const plan = args.plan === true
+      const variant = variantOf(model, args.variant)
       const created = data<{ id: string }>(
         await call("POST", "/api/session", {
           body: {
-            model: { id: model.modelID, providerID: model.providerID },
+            model: { id: model.modelID, providerID: model.providerID, ...(variant ? { variant } : {}) },
             location: { directory: p.canonical },
             metadata: { origin: "phone", device: record.display },
             permissions: BuffPermissionMode.rules(mode, plan),
             ...(plan ? { agent: "plan" } : agent ? { agent } : {}),
+            // Окно контекста, если телефон его назвал (#835) — с самого начала сессии.
+            ...(contextLimit(args.context) ? { limit: contextLimit(args.context) } : {}),
           },
         }),
       )
@@ -514,8 +630,48 @@ export function mobileApi(
       const files = filesOf(args)
       const text = typeof args.text === "string" ? args.text.trim() : ""
       if (!text && !files.length) throw new RefusalError(BuffLocale.t("A text or a file is required"))
+      // #757: «разобрать кодом» и «без файлов» больше не шлют модели этот формат.
+      const omitted = [
+        ...BuffAttachment.omittedMedia([{ type: "user", metadata: { omitMedia: args.omitMedia, omitAs: args.omitAs } }]),
+      ]
+      const metadata = omitted.length
+        ? BuffAttachment.omitMetadata(
+            omitted.map(([format]) => format),
+            omitted[0]![1],
+          )
+        : {}
       return call("POST", `/api/session/${str(args, "session")}/prompt`, {
-        body: { text, metadata: { source: "phone" }, ...(files.length ? { files } : {}) },
+        body: {
+          text,
+          metadata: { source: "phone", ...metadata },
+          ...(files.length ? { files } : {}),
+          delivery: deliveryOf(args),
+        },
+      })
+    },
+    // Очередь сообщений (#811): ожидающее — убрать или отправить сейчас, в текущий ход агента.
+    "session.queue.cancel": async (args) =>
+      call("DELETE", `/api/session/${str(args, "session")}/inbox/${str(args, "id")}`),
+    "session.queue.send": async (args) =>
+      call("PATCH", `/api/session/${str(args, "session")}/inbox/${str(args, "id")}`, { body: { delivery: "steer" } }),
+    // #757: упавшее сообщение ещё раз — после смены модели; вложения уходят адресом, как с телефона.
+    "session.retry": async (args) => {
+      const session = str(args, "session")
+      const listed = await call("GET", `/api/session/${session}/message`, { query: { limit: 20, order: "desc" } })
+      const messages = Array.isArray(listed) ? (listed as StoredUser[]) : (data<StoredUser[]>(listed) ?? [])
+      const message = messages.find((m) => m.type === "user" && m.id === str(args, "message"))
+      if (!message) throw new RefusalError(BuffLocale.t("The message to repeat is not found"))
+      const { model: _model, ...metadata } = message.metadata ?? {}
+      const files = (message.files ?? []).map((file) => ({
+        uri: `data:${file.mime};base64,${file.data}`,
+        ...(file.name ? { name: file.name } : {}),
+      }))
+      return call("POST", `/api/session/${session}/prompt`, {
+        body: {
+          text: message.text ?? "",
+          ...(files.length ? { files } : {}),
+          metadata: { ...metadata, source: "phone" },
+        },
       })
     },
     "session.abort": async (args) =>
@@ -529,10 +685,11 @@ export function mobileApi(
       })
     },
     // «Не сейчас» на форме MCP: форма отменяется, ход продолжается без ответа.
+    // Владелец формы (#765): общая форма MCP-сервера принадлежит «global», а не сессии экрана.
     "question.cancel": async (args) =>
-      call("DELETE", `/api/session/${str(args, "session")}/form/${str(args, "form")}`),
+      call("DELETE", `/api/session/${ownerOf(args)}/form/${str(args, "form")}`),
     "question.answer": async (args) =>
-      call("POST", `/api/session/${str(args, "session")}/form/${str(args, "form")}/reply`, {
+      call("POST", `/api/session/${ownerOf(args)}/form/${str(args, "form")}/reply`, {
         body: { answer: args.answer ?? {} },
       }),
   }

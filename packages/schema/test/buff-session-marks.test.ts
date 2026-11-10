@@ -59,8 +59,32 @@ describe("the list", () => {
   const shape = (sections: Marks.Section<{ id: string }>[]) =>
     sections.map((section) => [section.title, section.items.map((item) => item.id)])
 
+  test("setup sessions have their own section first, kept out of pins, groups and time (#765)", () => {
+    const withSetup = [
+      ...sessions,
+      { ...session("setup-new", now - 500), setup: true },
+      { ...session("setup-old", now - 7 * day), setup: true },
+    ]
+    const both: Marks.State = {
+      ...marks,
+      pinned: ["pinned", "setup-new"],
+      membership: { grouped: "g1", "setup-old": "g1" },
+    }
+    expect(shape(Marks.sections(withSetup, both, now))).toEqual([
+      ["Setup", ["setup-new", "setup-old"]],
+      ["Pinned", ["pinned"]],
+      ["Выпуск", ["grouped"]],
+      ["Today", ["today"]],
+      ["Yesterday", ["yesterday"]],
+      ["Earlier", ["old"]],
+    ])
+    // Пустой раздел виден — это вход в режим; при поиске без совпадений он пропадает.
+    expect(shape(Marks.sections(sessions, marks, now))[0]).toEqual(["Setup", []])
+    expect(shape(Marks.sections(withSetup, marks, now, "setup-old"))).toEqual([["Setup", ["setup-old"]]])
+  })
+
   test("pinned first, then groups, then by time; archived are out", () => {
-    expect(shape(Marks.sections(sessions, marks, now))).toEqual([
+    expect(shape(Marks.sections(sessions, marks, now)).slice(1)).toEqual([
       ["Pinned", ["pinned"]],
       ["Выпуск", ["grouped"]],
       ["Today", ["today"]],
@@ -79,7 +103,7 @@ describe("the list", () => {
       pinned: "/w/shop",
     }
     const projectOf = (item: { id: string }) => where[item.id] ?? ""
-    const sections = Marks.sections(sessions, marks, now, "", projectOf)
+    const sections = Marks.sections(sessions, marks, now, "", projectOf).slice(1)
     expect(shape(sections)).toEqual([
       ["Pinned", ["pinned"]],
       ["Выпуск", ["grouped"]],
@@ -94,7 +118,7 @@ describe("the list", () => {
 
   test("a pinned session of a group shows among the pinned only", () => {
     const both = { ...marks, pinned: ["pinned", "grouped"] }
-    expect(shape(Marks.sections(sessions, both, now)).slice(0, 2)).toEqual([
+    expect(shape(Marks.sections(sessions, both, now)).slice(1, 3)).toEqual([
       ["Pinned", ["pinned", "grouped"]],
       ["Выпуск", []],
     ])

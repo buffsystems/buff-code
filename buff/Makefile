@@ -6,10 +6,9 @@ ROOT  := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 IMAGE := buff-code-build:local
 BRAND := $(ROOT)/buff/brand.json
 BINARY := $(shell python3 -c "import json;print(json.load(open('$(BRAND)'))['binary'])")
-UPSTREAM_TAG := $(shell python3 -c "import json;print(json.load(open('$(BRAND)'))['upstream']['tag'])")
-# Номер нашего выпуска — из brand.json, чтобы консоль и десктоп никогда не разъезжались.
-BUFF_RELEASE ?= $(shell python3 -c "import json;print(json.load(open('$(BRAND)')).get('release',1))")
-VERSION ?= $(UPSTREAM_TAG:v%=%)-buff.$(BUFF_RELEASE)
+# Версия — из brand.json, чтобы консоль и десктоп никогда не разъезжались: сквозная версия выпуска,
+# которую туда пишет выпуск (#848); до неё — прежняя `<апстрим>-buff.<N>`.
+VERSION ?= $(shell python3 -c "import json;b=json.load(open('$(BRAND)'));print(b.get('version') or b['upstream']['tag'].lstrip('v')+'-buff.'+str(b.get('release',1)))")
 DIST_HOST := $(ROOT)/buff/dist
 DIST := /src/buff/dist
 DOCKER_RUN := docker run --rm -v $(ROOT):/src -w /src \

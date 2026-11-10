@@ -108,6 +108,7 @@ export function createAdmissions(context: DataContext, outbox: Outbox) {
       location?: LocationRef
       projectID?: string
       permissions?: PermissionRuleset
+      limit?: { context: number }
     }) {
       const { projectID, ...payload } = input
       const id = payload.id ?? SessionID.create()
@@ -122,6 +123,7 @@ export function createAdmissions(context: DataContext, outbox: Outbox) {
           projectID: projectID ?? state.location[locationKey(location)]?.info?.project.id ?? "",
           agent: payload.agent,
           model: payload.model,
+          limit: payload.limit,
           cost: 0,
           tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
           time: { created: now, updated: now },

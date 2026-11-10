@@ -1,13 +1,19 @@
 import { describe, expect } from "bun:test"
-import { Deferred, Effect, Exit, Fiber } from "effect"
+import { Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Bus } from "@opencode/core/bus"
 import { Form } from "@opencode/core/form"
+import { BuffSecret } from "@opencode/core/buff/secret"
+import { fakeKV } from "./buff/fake-kv"
 import { SessionSchema } from "@opencode/core/session/schema"
 import { testEffect } from "./lib/effect"
 
-const forms = AppNodeBuilder.build(LayerNode.group([Bus.node, Form.node]))
+// Buff (#765): секреты форм — в памяти; ключ-значение хранилища виден тестам.
+const secrets = fakeKV()
+const forms = AppNodeBuilder.build(LayerNode.group([Bus.node, Form.node]), [
+  BuffSecret.node.replace(Layer.succeed(BuffSecret.Service, BuffSecret.make(secrets))),
+])
 const it = testEffect(forms)
 
 const formID = Form.ID.create("frm_test")
@@ -48,6 +54,40 @@ describe("Form", () => {
 
       expect(yield* Fiber.join(fiber)).toEqual({ status: "cancelled" })
       expect(yield* service.state(form.id)).toEqual({ status: "cancelled" })
+    }),
+  )
+
+  // Buff (#765): секрет не доходит ни до события, ни до состояния — только ссылка.
+  it.effect("withholds a secret field: the store keeps the value, the answer carries a reference", () =>
+    Effect.gen(function* () {
+      const service = yield* Form.Service
+      const bus = yield* Bus.Service
+      const replied = yield* Deferred.make<Form.Answer>()
+      const unsubscribe = yield* bus.listen((event) =>
+        event.type === Form.Event.Replied.type
+          ? Deferred.succeed(replied, (event.data as { readonly answer: Form.Answer }).answer).pipe(Effect.asVoid)
+          : Effect.void,
+      )
+      yield* Effect.addFinalizer(() => unsubscribe)
+      const form = yield* service.create({
+        sessionID: SessionSchema.ID.make("ses_secret"),
+        title: "Connection",
+        fields: [
+          { key: "login", type: "string", required: true },
+          { key: "password", type: "secret", required: true },
+        ],
+      })
+      yield* service.reply({ id: form.id, answer: { login: "me", password: "hunter2" } })
+      const state = yield* service.state(form.id)
+      if (state.status !== "answered") throw new Error("expected an answer")
+      expect(state.answer.login).toBe("me")
+      expect(String(state.answer.password).startsWith("secret:sec_")).toBe(true)
+      expect(JSON.stringify(state)).not.toContain("hunter2")
+      expect(JSON.stringify(yield* Deferred.await(replied))).not.toContain("hunter2")
+      expect([...secrets.data.values()]).toEqual(["hunter2"])
+      expect(Form.validateAnswer(form.fields, { login: "me", password: "" })).toBe(
+        "Missing required form field: password",
+      )
     }),
   )
 

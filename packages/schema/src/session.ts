@@ -5,7 +5,7 @@ import { Agent } from "./agent.js"
 import { Location } from "./location.js"
 import { Model } from "./model.js"
 import { Project } from "./project.js"
-import { DateTimeUtcFromMillis, optional, RelativePath } from "./schema.js"
+import { DateTimeUtcFromMillis, optional, PositiveInt, RelativePath } from "./schema.js"
 import { SessionEvent } from "./session-event.js"
 import { SessionID } from "./session-id.js"
 import { SessionMetadata } from "./session-metadata.js"
@@ -27,6 +27,12 @@ export { Revert }
 export const ForkBoundary = SessionFork.Boundary
 export type ForkBoundary = SessionFork.Boundary
 
+/** A session's context window cap (#835). */
+export interface ContextLimit extends Schema.Schema.Type<typeof ContextLimit> {}
+export const ContextLimit = Schema.Struct({
+  context: PositiveInt,
+}).annotate({ identifier: "Session.ContextLimit" })
+
 export interface Info extends Schema.Schema.Type<typeof Info> {}
 export const Info = Schema.Struct({
   id: ID,
@@ -38,6 +44,9 @@ export const Info = Schema.Struct({
   projectID: Project.ID,
   agent: Agent.ID.pipe(optional),
   model: Model.Ref.pipe(optional),
+  /** The session's own context window cap in tokens (#835, режимы ИИ): compaction fires against
+   *  the smaller of this and the model's window. Absent — the model's whole window. */
+  limit: ContextLimit.pipe(optional),
   cost: Money.USD,
   tokens: TokenUsage.Info,
   /** Outcome of the last completed execution, recorded at `time.idle`. Absent until a run reaches a terminal transition. */

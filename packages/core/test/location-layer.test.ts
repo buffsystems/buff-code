@@ -485,6 +485,14 @@ describe("LocationServiceMap", () => {
           expect(blockedTools.filter((name) => name !== "execute").sort()).toEqual([
             // Buff (#447): «создать автоматизацию».
             "automation_create",
+            // Buff (#765): подключения режима «Настройка».
+            "connection_auth",
+            "connection_instructions",
+            "connection_list",
+            "connection_remove",
+            "connection_save",
+            "connection_script",
+            "connection_test",
             "edit",
             "glob",
             "grep",
@@ -495,6 +503,10 @@ describe("LocationServiceMap", () => {
             "read",
             // Buff (#708): отдать файл человеку.
             "send_file",
+            // Buff (#765): переход в режим «Настройка».
+            "session_open",
+            // Buff (#765): форма режима «Настройка».
+            "setup_form",
             "shell",
             "skill",
             "subagent",
@@ -524,6 +536,14 @@ describe("LocationServiceMap", () => {
           expect(blockedTools.includes("execute")).toBe(allowedTools.includes("execute"))
           expect(allowedTools.filter((name) => name !== "execute").sort()).toEqual([
             "automation_create",
+            // Buff (#765): подключения режима «Настройка».
+            "connection_auth",
+            "connection_instructions",
+            "connection_list",
+            "connection_remove",
+            "connection_save",
+            "connection_script",
+            "connection_test",
             "edit",
             "glob",
             "grep",
@@ -534,6 +554,10 @@ describe("LocationServiceMap", () => {
             "read",
             // Buff (#708): отдать файл человеку.
             "send_file",
+            // Buff (#765): переход в режим «Настройка».
+            "session_open",
+            // Buff (#765): форма режима «Настройка».
+            "setup_form",
             "shell",
             "skill",
             "subagent",

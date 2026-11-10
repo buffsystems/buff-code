@@ -7,6 +7,7 @@ import { BuffAutomationService } from "@opencode/core/buff/automation-service"
 import { BuffWorkflowService } from "@opencode/core/buff/workflow-service"
 import { BuffGoalService } from "@opencode/core/buff/goal-service"
 import { BuffMobileService } from "@opencode/core/buff/mobile-service"
+import { BuffShareService } from "@opencode/core/buff/share-service"
 import { InstallationEvent } from "@opencode/schema/installation-event"
 import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { hasPtyConnectTicketURL } from "@opencode/protocol/groups/pty"
@@ -128,10 +129,16 @@ export const start = Effect.fn("ServerProcess.start")(function* <E, R>(
       )
       // Buff (#639): телефон — агент машины ходит в этот же сервер по петле, с паролем службы.
       const loop = bound.server.address()
-      if (loop && typeof loop !== "string")
+      if (loop && typeof loop !== "string") {
+        const server = { url: `http://127.0.0.1:${loop.port}`, password }
         yield* Context.get(context, BuffMobileService.Service)
-          .start({ url: `http://127.0.0.1:${loop.port}`, password })
+          .start(server)
           .pipe(Effect.provideService(Scope.Scope, applicationScope))
+        // Buff (#816): публичные ссылки — через агента машины и тот же сервер по петле.
+        yield* Context.get(context, BuffShareService.Service)
+          .start(server)
+          .pipe(Effect.provideService(Scope.Scope, applicationScope))
+      }
     }
     const app = Context.get(context, HttpRouter.HttpRouter)
       .asHttpEffect()

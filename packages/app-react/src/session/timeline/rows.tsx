@@ -9,6 +9,7 @@ import type {
   SessionMessageInfo,
 } from "@opencode/client/promise"
 import { Tooltip } from "@buff/ui/react"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import { parseCommentNote, readPromptPresentation } from "@opencode/app/react-reuse/comment-note"
 import { currentContentDefaultOpen, currentToolFailed } from "@opencode/session-ui/current-tool-state"
 import { noticeSummary } from "@opencode/session-ui/timeline/buff-notice"
@@ -194,7 +195,7 @@ function useNoticeContent() {
           ? `${capitalizeAgent(message.previous)} → ${capitalizeAgent(message.agent)}`
           : capitalizeAgent(message.agent),
       }
-    if (message.type === "model-switched") return undefined
+    if (message.type === "model-switched" || message.type === "context-switched") return undefined
     if (message.type === "skill") return { label: i18n.t("ui.tool.skill"), data: message.name }
     if (message.type === "system") {
       const prefix = "Instructions updated: "
@@ -268,6 +269,17 @@ function Notice(props: { messageID: string; grouped?: boolean; onSizeChange?: ()
         <bdi data-slot="session-timeline-notice-value" dir="ltr" className="min-w-0 truncate">
           {message.location.directory}
         </bdi>
+      </div>
+    )
+  // #836: the session's context cap changed — the row names the limit now in force.
+  if (message.type === "context-switched")
+    return (
+      <div data-slot="session-timeline-notice" data-type="context-switched" className={`w-full py-2 ${inset}`}>
+        <TimelineSeparator
+          label={i18n.buff.t("Context limit: {limit}", {
+            limit: BuffContextWindow.label(message.limit?.context, undefined, i18n.buff.t),
+          })}
+        />
       </div>
     )
   if (modelSwitch)

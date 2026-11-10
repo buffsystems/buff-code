@@ -31,6 +31,7 @@ import { BuffAutomationService } from "@opencode/core/buff/automation-service"
 import { BuffWorkflowService } from "@opencode/core/buff/workflow-service"
 import { BuffGoalService } from "@opencode/core/buff/goal-service"
 import { BuffMobileService } from "@opencode/core/buff/mobile-service"
+import { BuffShareService } from "@opencode/core/buff/share-service"
 import { PluginUpdate } from "@opencode/core/plugin/update"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { WellKnown } from "@opencode/core/wellknown"
@@ -82,6 +83,7 @@ const applicationServiceNodes = [
   BuffGoalService.node,
   // Buff (#639): телефон — агент машины на ретрансляторе buff.systems; поднимает его служба (process.ts).
   BuffMobileService.node,
+  BuffShareService.node,
 ] as const
 const applicationServices = LayerNode.group(applicationServiceNodes)
 

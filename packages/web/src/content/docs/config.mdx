@@ -544,6 +544,27 @@ This setting applies across all interfaces: TUI, CLI (`opencode run`), desktop a
 
 ---
 
+### Thinking and context defaults
+
+Two defaults for new sessions: how long the model thinks and how much of the conversation it keeps before compaction.
+
+```json title="opencode.json"
+{
+  "$schema": "https://opencode.ai/config.json",
+  "thinking": "high",
+  "context": 200000
+}
+```
+
+- `thinking` — the model variant id a new session starts with when you name none (`none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`). Applied when the chosen model offers that variant; the `/thinking` command and the «Thinking mode» control change it per session.
+- `context` — a cap on the context window in tokens. Compaction fires against the smaller of this and the model's window; `0` or absent means the model's whole window. The `/context` command and the «Context window» control change it per session, and the change is written into the session's timeline as a «Context limit» row.
+
+In the window both defaults are set under Settings → Models → «Default modes». The composer's «Context window» control beside «Thinking mode» offers the model's maximum, the presets that fit the model (64k, 200k, 500k) and a size of your own; the context usage in the session header and the Context tab is counted against the limit in force.
+
+An organisation's Buff connector hands Buff Code the window the organisation allows for its model (that window is the model's maximum in Buff Code) and the organisation's default thinking level, which the connector applies when a request names none; a level you choose in the session wins.
+
+---
+
 ### Subagent depth
 
 You can control how deeply subagents can invoke other subagents using the `subagent_depth` option.

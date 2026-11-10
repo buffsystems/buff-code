@@ -16,6 +16,7 @@ import { promptLength } from "@opencode/app/react-reuse/composer-prompt-parts"
 import { useSession, useSessionView } from "../context"
 import { useRequestsBlocked } from "../docks/requests"
 import { PermissionModeControl } from "../docks/permission-mode"
+import { SubagentsControl } from "./subagents-control"
 import { Composer } from "./composer"
 import type { ContextItem } from "@opencode/app/react-reuse/composer-schema"
 import { usePaneSession } from "../panes/session"
@@ -36,6 +37,7 @@ import { draftRegistry } from "./draft/registry"
 import { BackgroundChip } from "../timeline/background-work"
 import { useRevertConfirm } from "../timeline/buff-turn"
 import { useModelSelection } from "./models/use-selection"
+import { useSessionContextLimit } from "./context-limit"
 import { useSessionQueue } from "./queue/use-queue"
 import { QueuePanel } from "./queue/queue-panel"
 import { useSettings } from "../../shell/settings-context"
@@ -81,6 +83,7 @@ function ActiveComposer(props: { directory: string }) {
     sessionID,
   })
   const selection = useModelSelection({ server, directory: props.directory, sessionID })
+  const contextLimit = useSessionContextLimit(server, sessionID)
   const working = useServerData(server, (state) => state.session.active[sessionID] === "running")
   const behavior = useSettings((settings) => settings.general.followUpBehavior)
   const editor = useRef<HTMLElement | undefined>(undefined)
@@ -229,7 +232,13 @@ function ActiveComposer(props: { directory: string }) {
           working={working}
           queue={queue}
           borderUnderlay
-          beforeModel={<PermissionModeControl selection={selection} server={server} sessionID={sessionID} />}
+          contextLimit={contextLimit}
+          beforeModel={
+            <>
+              <PermissionModeControl selection={selection} server={server} sessionID={sessionID} />
+              <SubagentsControl />
+            </>
+          }
           onEditor={(element) => {
             editor.current = element
           }}

@@ -56,6 +56,15 @@ export const ModelSelected = Schema.Struct({
   previous: Model.Ref.pipe(optional),
 }).annotate({ identifier: "Session.Message.ModelSelected" })
 
+/** The session's context window cap changed (#835): shown in the timeline, never sent to the model. */
+export interface ContextSelected extends Schema.Schema.Type<typeof ContextSelected> {}
+export const ContextSelected = Schema.Struct({
+  ...Base,
+  type: Schema.tag("context-switched"),
+  limit: Schema.Struct({ context: PositiveInt }).pipe(optional),
+  previous: Schema.Struct({ context: PositiveInt }).pipe(optional),
+}).annotate({ identifier: "Session.Message.ContextSelected" })
+
 export interface LocationSwitched extends Schema.Schema.Type<typeof LocationSwitched> {}
 export const LocationSwitched = Schema.Struct({
   ...Base,
@@ -295,6 +304,7 @@ export const Idle = Schema.Struct({
 export const Info = Schema.Union([
   AgentSelected,
   ModelSelected,
+  ContextSelected,
   LocationSwitched,
   User,
   Synthetic,
@@ -308,6 +318,7 @@ export const Info = Schema.Union([
 export type Info =
   | AgentSelected
   | ModelSelected
+  | ContextSelected
   | LocationSwitched
   | User
   | Synthetic

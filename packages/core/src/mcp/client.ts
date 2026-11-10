@@ -27,6 +27,7 @@ import {
 import { Cause, Effect, Exit, Schema } from "effect"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
 import type { Session } from "@opencode/schema/session"
+import { BuffConnectionScript } from "../buff/connection-script.js"
 import { McpStdio } from "./stdio.js"
 
 const DEFAULT_STARTUP_TIMEOUT = 30_000
@@ -195,13 +196,16 @@ export const connect = Effect.fnUntraced(function* (
   const exit = yield* Effect.gen(function* () {
     if (config.type === "local") {
       const [command, ...args] = config.command
+      // Buff (#765): команда `buff` — сам бинарник Buff Code в режиме bun: так запускаются
+      // скриптовые подключения без Node и зависимостей; `opencode` — как у апстрима.
+      const self = command === "opencode" || command === BuffConnectionScript.SELF
       const transport = yield* McpStdio.make({
         server,
-        command,
+        command: command === BuffConnectionScript.SELF ? process.execPath : command,
         args,
         cwd: config.cwd ? path.resolve(directory, config.cwd) : directory,
         environment: {
-          ...(command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
+          ...(self ? { BUN_BE_BUN: "1" } : {}),
           ...config.environment,
         },
       })

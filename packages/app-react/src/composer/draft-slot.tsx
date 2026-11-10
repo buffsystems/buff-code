@@ -1,6 +1,8 @@
 // The composer and its dropzone on the new-session draft screen (#584); the composer itself lives
 // in src/session/composer.
-import { lazySlot, type DraftSlot } from "../new-session/slots"
+// #847: lazySlot comes straight from its module — new-session/slots gathers this file eagerly.
+import type { DraftSlot } from "../new-session/slots"
+import { lazySlot } from "../react/lazy-slot"
 
 export default [
   {

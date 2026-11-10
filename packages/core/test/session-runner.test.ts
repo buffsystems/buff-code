@@ -4473,6 +4473,87 @@ describe("SessionRunnerLLM", () => {
     expect(keys[0]).not.toBe(keys[1])
   })
 
+  const logo = {
+    uri: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    name: "logo.png",
+  }
+  const primary = (s: Scenario) =>
+    s.requests.filter((request) => !request.system.some((part) => part.text.includes("Generate a title")))
+
+  scenario("names the attached files when the model rejects the request (#757)", function* (s) {
+    yield* s.session.prompt({ sessionID, text: "Describe the logo", files: [logo], resume: false })
+    yield* s.llm.push(Stream.fail(invalidRequest()))
+
+    yield* s.resume.pipe(Effect.flip)
+    expect(yield* s.context).toMatchObject([
+      Expected.user("Describe the logo"),
+      Expected.assistant(
+        {
+          finish: "error",
+          error: {
+            type: "provider.invalid-request",
+            message: "Invalid request",
+            attachments: [{ name: "logo.png", mime: "image/png" }],
+          },
+        },
+        [],
+      ),
+    ])
+  })
+
+  scenario("stops sending a format once the person omits it (#757)", function* (s) {
+    yield* s.session.prompt({ sessionID, text: "Describe the logo", files: [logo], resume: false })
+    yield* s.llm.push(Stream.fail(invalidRequest()))
+    yield* s.resume.pipe(Effect.flip)
+
+    yield* s.session.prompt({
+      sessionID,
+      text: "Continue without the files",
+      metadata: { omitMedia: ["image"] },
+      resume: false,
+    })
+    yield* s.llm.push(TestLLM.text("Done", "text-done"))
+    yield* s.resume
+
+    const last = primary(s).at(-1)!
+    const parts = last.messages.flatMap((message) => message.content)
+    expect(parts.some((part) => part.type === "media")).toBe(false)
+    const note = parts.find(
+      (part): part is Extract<typeof part, { type: "text" }> =>
+        part.type === "text" && part.text.startsWith('"logo.png" is not attached as an image'),
+    )
+    expect(note?.text).toMatch(/analyse image files with code instead\. The file is saved at .+-logo\.png: analyse it with code/)
+  })
+
+  scenario("sends the omitted format again after a switch to another model (#757)", function* (s) {
+    yield* s.session.prompt({ sessionID, text: "Describe the logo", files: [logo], resume: false })
+    yield* s.llm.push(Stream.fail(invalidRequest()))
+    yield* s.resume.pipe(Effect.flip)
+
+    yield* s.session.prompt({
+      sessionID,
+      text: "Continue without the files",
+      metadata: { omitMedia: ["image"], omitAs: "ignore" },
+      resume: false,
+    })
+    yield* s.llm.push(TestLLM.text("Done", "text-done"))
+    yield* s.resume
+
+    yield* s.bus.publish(SessionEvent.ModelSelected, {
+      sessionID,
+      model: { id: ID.make("replacement"), providerID: Provider.ID.make("fake") },
+    })
+    yield* s.session.prompt({ sessionID, text: "Now describe the logo", resume: false })
+    yield* s.llm.push(TestLLM.text("A blue logo", "text-logo"))
+    yield* s.resume
+
+    const [omitted, switched] = primary(s).slice(-2).map((request) =>
+      request.messages.flatMap((message) => message.content),
+    )
+    expect(omitted!.some((part) => part.type === "media")).toBe(false)
+    expect(switched!.some((part) => part.type === "media")).toBe(true)
+  })
+
   scenario("fans out one failed run and allows a later retry", function* (s) {
     yield* s.admit("Retry after failure")
 

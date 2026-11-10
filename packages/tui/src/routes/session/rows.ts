@@ -225,6 +225,7 @@ export function createSessionRows(sessionID: Accessor<string>, onSynced?: (sessi
     data.on("session.shell.started", message),
     data.on("session.agent.selected", message),
     data.on("session.model.selected", message),
+    data.on("session.context.selected", message),
     data.on("session.text.delta", (event) => {
       if (event.data.sessionID === sessionID() && event.data.delta.trim())
         appendPart({ messageID: event.data.assistantMessageID, partID: `text:${event.data.ordinal}` }, { type: "text" })

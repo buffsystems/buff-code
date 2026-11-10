@@ -96,6 +96,7 @@ import { CommandPaletteDialog } from "./component/command-palette"
 import { COMMAND_PALETTE_COMMAND, Keymap, type KeymapCommand } from "./context/keymap"
 
 import { DialogVariant } from "./component/dialog-variant"
+import { DialogContextLimit } from "./component/dialog-context-limit"
 import { keyFailure, settleKeyFailure } from "./feature-plugins/buff/turn-failure"
 import { checkModel } from "./component/own-provider"
 import { destroyRenderer } from "./util/renderer"
@@ -157,6 +158,7 @@ const appBindingCommands = [
   "agent.cycle.reverse",
   "variant.cycle",
   "variant.list",
+  "context.list",
   "provider.connect",
   "opencode.settings",
   "opencode.status",
@@ -932,6 +934,16 @@ function App(props: { pair?: DialogPairCredentials }) {
             })
           }
           dialog.replace(() => <DialogVariant />)
+        },
+      },
+      {
+        // Окно контекста (#837): потолок контекста сессии — /context, /window.
+        name: "context.list",
+        title: t("Switch context window"),
+        category: t("Agent"),
+        slash: { name: "context", aliases: ["window"] },
+        run: () => {
+          dialog.replace(() => <DialogContextLimit />)
         },
       },
       {

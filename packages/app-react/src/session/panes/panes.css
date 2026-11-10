@@ -505,6 +505,16 @@
   padding: 8px 24px 24px;
 }
 
+/* #808: a page fills the pane below the switch — a frame has no height of its own. */
+.buff-preview-page {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 160px);
+  min-height: 320px;
+  border: 0;
+  background: #fff;
+}
+
 .panes-context-value {
   font-size: 12px;
   font-weight: 500;

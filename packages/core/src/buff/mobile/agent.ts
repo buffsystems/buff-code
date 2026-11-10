@@ -107,6 +107,21 @@ export class MobileAgent {
     return this.local?.identity.id ?? null
   }
 
+  /** Поднять связь со шлюзом, если её нет (#816: публичные ссылки нуждаются в ней и без телефонов). */
+  async connect(): Promise<void> {
+    await this.ensure()
+  }
+
+  get connected(): boolean {
+    return this.link?.connected ?? false
+  }
+
+  /** Команда шлюзу в имени машины — связь поднимается, если её ещё нет. */
+  async command(command: string, body: object): Promise<Reply> {
+    await this.ensure()
+    return this.request(command, body)
+  }
+
   status(phones: number): AgentStatus {
     return {
       gateway: this.p.gatewayHost,

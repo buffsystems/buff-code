@@ -25,6 +25,8 @@ import type { Content } from "@opencode/schema/tool"
 import { Cause, Context, Effect, Layer, Result, Stream } from "effect"
 import { HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
+import { Global } from "@opencode/util/global"
+import path from "node:path"
 import { App } from "../app.js"
 import { Permission } from "../permission.js"
 import { PluginHooks } from "../plugin/hooks.js"
@@ -37,6 +39,8 @@ import { SessionSchema } from "./schema.js"
 import { SessionSystemPrompt } from "./system-prompt.js"
 import { toLLMMessages } from "./runner/to-llm-message.js"
 import type { SessionMessage } from "./message.js"
+import { SessionMediaFiles } from "./media-files.js"
+import { BuffAttachment } from "@opencode/schema/buff-attachment"
 
 const IMAGE_BYTES_TRIGGER = 25 * 1024 * 1024 // 25 MiB
 const IMAGE_BYTES_TARGET = 15 * 1024 * 1024 // 15 MiB
@@ -68,6 +72,8 @@ export interface Input {
   readonly system: Array<SystemPart>
   readonly messages: Array<Message>
   readonly toolChoice?: LLM.RequestInput["toolChoice"]
+  /** Форматы файлов, которые человек решил больше не отправлять модели в этой сессии, и как (#757). */
+  readonly omitMedia?: SessionMediaFiles.Omitted
   /** Only the durable runner may use a stateful WebSocket. */
   readonly webSocket?: "session"
 }
@@ -94,29 +100,58 @@ export const baseTranscript = (input: {
   }
 }
 
-const mimeToModality = (mime: string) => {
-  if (mime.startsWith("image/")) return "image"
-  if (mime.startsWith("audio/")) return "audio"
-  if (mime.startsWith("video/")) return "video"
-  if (mime === "application/pdf") return "pdf"
-}
+const SAVED_HINT = (path: string) =>
+  ` The file is saved at ${path}: analyse it with code or command-line tools if the task needs it.`
 
-const unsupportedMedia = (mime: string, name: string | undefined, capabilities: Model.Capabilities) => {
-  const modality = mimeToModality(mime)
-  if (!modality || capabilities.input.some((item) => item.startsWith(modality))) return
+const replacement = (
+  mime: string,
+  name: string | undefined,
+  data: string | Uint8Array,
+  capabilities: Model.Capabilities,
+  options: ReplaceOptions,
+) => {
+  const omitted: SessionMediaFiles.Omitted = options.omitted ?? new Map()
+  if (!SessionMediaFiles.isReplaced(mime, capabilities, omitted)) return undefined
+  const modality = BuffAttachment.modalityOf(mime)!
+  const saved = options.saved?.get(SessionMediaFiles.mediaKey(data))
+  const hint = saved === undefined ? "" : SAVED_HINT(saved)
+  const label = name ? `"${name}"` : modality
+  const kind = modality === "image" ? "an image" : `a ${modality} file`
+  // #757: «без файлов» — модель знает, что файл был, и не читает его; «кодом» — получает путь.
+  if (omitted.get(modality) === "ignore")
+    return {
+      type: "text" as const,
+      text: `${label} is not attached as ${kind}: in this session the user chose to go on without ${modality} files. Do not try to read it.`,
+    }
+  if (omitted.has(modality))
+    return {
+      type: "text" as const,
+      text: `${label} is not attached as ${kind}: in this session the user asked to analyse ${modality} files with code instead.${hint}`,
+    }
   return {
     type: "text" as const,
-    text: `ERROR: Cannot read ${name ? `"${name}"` : modality} (this model does not support ${modality} input). Inform the user.`,
+    text: `ERROR: Cannot read ${label} (this model does not support ${modality} input).${hint} Inform the user.`,
   }
 }
 
-export const unsupportedParts = (messages: LLMRequest["messages"], capabilities: Model.Capabilities) =>
+export interface ReplaceOptions {
+  /** Форматы, которые человек решил больше не отправлять модели, и как (#757). */
+  readonly omitted?: SessionMediaFiles.Omitted
+  /** Пути сохранённых файлов по `SessionMediaFiles.mediaKey`. */
+  readonly saved?: ReadonlyMap<string, string>
+}
+
+export const unsupportedParts = (
+  messages: LLMRequest["messages"],
+  capabilities: Model.Capabilities,
+  options: ReplaceOptions = {},
+) =>
   messages.map((message) =>
     Message.make({
       ...message,
       content: message.content.map((part) => {
         if (part.type === "media") {
-          return unsupportedMedia(part.mediaType, part.filename, capabilities) ?? part
+          return replacement(part.mediaType, part.filename, part.data, capabilities, options) ?? part
         }
         if (part.type !== "tool-result" || part.result.type !== "content") return part
         return {
@@ -125,7 +160,7 @@ export const unsupportedParts = (messages: LLMRequest["messages"], capabilities:
             ...part.result,
             value: part.result.value.map((item: Content) => {
               if (item.type !== "file") return item
-              return unsupportedMedia(item.mime, item.name, capabilities) ?? item
+              return replacement(item.mime, item.name, item.uri, capabilities, options) ?? item
             }),
           },
         }
@@ -200,6 +235,7 @@ export const layer = Layer.effect(
     const hooks = yield* PluginHooks.Service
     const transport = yield* SessionModelTransport.Service
     const app = yield* App.Metadata
+    const global = yield* Global.Service
     const prepare = Effect.fn("SessionModelRequest.prepare")(function* <
       S extends SessionRequest & { tools?: Definitions },
     >(kind: SessionRequestKind, input: Input, shape: (draft: SessionRequest, tools: Definitions) => Effect.Effect<S>) {
@@ -232,6 +268,17 @@ export const layer = Layer.effect(
       const generation = Object.fromEntries(entries.filter(([k]) => GENERATION_KEYS.has(k))) as GenerationOptionsFields
       const providerOptions = Object.fromEntries(entries.filter(([k]) => !GENERATION_KEYS.has(k)))
       const root = session.fork?.sessionID ?? session.id
+      // Файл, который модель получит текстом, лежит на диске: модели называется путь к нему (#757).
+      const omitted: SessionMediaFiles.Omitted = input.omitMedia ?? new Map()
+      const saved = yield* Effect.tryPromise(() =>
+        SessionMediaFiles.save(
+          SessionMediaFiles.replaced(shaped.messages, model.capabilities, omitted),
+          path.join(global.tmp, "attachments", session.id),
+        ),
+      ).pipe(
+        Effect.tapError((error) => Effect.logWarning("attachment files were not saved", error)),
+        Effect.orElseSucceed(() => new Map<string, string>()),
+      )
       const base = LLM.request({
         model: model.model,
         http: {
@@ -248,7 +295,7 @@ export const layer = Layer.effect(
         // TODO: Persist cache lineage so nested forks reuse the root session's cache key.
         promptCacheKey: /^ses_[0-9a-f]{64}$/.test(root) ? root.slice(4) : root,
         system: shaped.system,
-        messages: boundImages(unsupportedParts(shaped.messages, model.capabilities)),
+        messages: boundImages(unsupportedParts(shaped.messages, model.capabilities, { omitted, saved })),
         tools: Array.from(hooked, ([name, t]) => ({ ...t, name })),
         toolChoice: input.toolChoice,
         generation: Object.keys(generation).length === 0 ? undefined : generation,
@@ -384,5 +431,5 @@ export const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [PluginHooks.node, SessionModelTransport.node, App.node],
+  deps: [PluginHooks.node, SessionModelTransport.node, App.node, Global.node],
 })

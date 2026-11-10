@@ -12,6 +12,8 @@ export function PromptMetadataRow(props: {
   model: string
   provider: string
   variant?: string
+  /** #837: the session's context cap, when below the model's window. */
+  limit?: string
   muted: boolean
   highlight: RGBA
   agentAlpha: number
@@ -30,6 +32,7 @@ export function PromptMetadataRow(props: {
       model: props.model,
       provider: props.provider,
       variant: props.variant,
+      limit: props.limit,
     })
   })
 
@@ -79,6 +82,14 @@ export function PromptMetadataRow(props: {
                 </>
               )}
             </Show>
+            <Show when={layout().limit}>
+              {(limit) => (
+                <>
+                  <text fg={fade(theme.text.muted, props.modelAlpha)}>·</text>
+                  <text fg={fade(theme.text.muted, props.modelAlpha)}>{limit()}</text>
+                </>
+              )}
+            </Show>
           </box>
         </Show>
       </Show>
@@ -96,6 +107,7 @@ type Layout = {
   model: string
   provider?: string
   variant?: string
+  limit?: string
 }
 
 function promptMetadataLayout(input: {
@@ -106,18 +118,21 @@ function promptMetadataLayout(input: {
   model: string
   provider: string
   variant?: string
+  limit?: string
 }) {
   const agent = input.terminalWidth < 44 ? undefined : input.agent
   const provider = input.terminalWidth < 44 ? "" : input.provider
   const candidates: Layout[] = [
-    { agent, auto: input.auto, model: input.model, provider, variant: input.variant },
-    { agent, model: input.model, provider, variant: input.variant },
+    { agent, auto: input.auto, model: input.model, provider, variant: input.variant, limit: input.limit },
+    { agent, model: input.model, provider, variant: input.variant, limit: input.limit },
     {
       agent,
       model: input.model,
       provider: provider.split(" / ").at(-1) ?? provider,
       variant: input.variant,
+      limit: input.limit,
     },
+    { agent, model: input.model, variant: input.variant, limit: input.limit },
     { agent, model: input.model, variant: input.variant },
   ]
   const fit = candidates.find((candidate) => stringWidth(text(candidate)) <= input.width)
@@ -142,5 +157,6 @@ function text(input: Layout) {
     ...(input.model ? [...(input.agent ? ["·"] : []), input.model] : []),
     ...(input.provider ? [input.provider] : []),
     ...(input.variant ? ["·", input.variant] : []),
+    ...(input.limit ? ["·", input.limit] : []),
   ].join(" ")
 }

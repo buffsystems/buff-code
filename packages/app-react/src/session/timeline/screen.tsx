@@ -11,7 +11,9 @@ import { formatServerError } from "@opencode/app/react-reuse/server-errors"
 import { retryInput } from "@opencode/app/react-reuse/retry-turn"
 import { readLocalImage } from "@opencode/app/react-reuse/server-image"
 import { useCore } from "../../react/core"
+import { useDialog } from "../../dialog/dialogs"
 import { useI18n } from "../../i18n/provider"
+import { ShareDialog } from "../share/share-dialog"
 import { showToast } from "../../shell/notifications/toast"
 import { draftRegistry } from "../composer/draft/registry"
 import { createSessionRevert } from "../composer/revert"
@@ -173,6 +175,7 @@ function TimelineView(props: { server: Server; sessionID: string; active: boolea
 function useTurnActions(server: Server, sessionID: string, directory: string): TimelineActions {
   const core = useCore()
   const i18n = useI18n()
+  const dialog = useDialog()
   const directoryRef = useRef(directory)
   directoryRef.current = directory
   const confirm = useRevertConfirm(server, sessionID, () => directoryRef.current)
@@ -193,21 +196,38 @@ function useTurnActions(server: Server, sessionID: string, directory: string): T
         }),
       confirm: (message) => confirmRef.current(message),
     })
+    const failed = (error: unknown) =>
+      void showToast({
+        variant: "error",
+        title: i18n.buff.t("Could not retry"),
+        description: formatServerError(error, undefined, i18n.t("common.requestFailed")),
+      })
     const retry = (userMessageID: string) => {
       const message = server.data.session.message.get(sessionID, userMessageID)
       if (message?.type !== "user") return
-      return server.data.session.prompt(retryInput(sessionID, message)).then(
-        () => undefined,
-        (error: unknown) =>
-        void showToast({
-          variant: "error",
-          title: i18n.buff.t("Could not retry"),
-          description: formatServerError(error, undefined, i18n.t("common.requestFailed")),
-        }),
-      )
+      return server.data.session.prompt(retryInput(sessionID, message)).then(() => undefined, failed)
     }
+    // #757: the same message on the model just chosen — switched first, so the turn runs on it.
+    const retryWith = async (userMessageID: string, model: { providerID: string; modelID: string }) => {
+      const message = server.data.session.message.get(sessionID, userMessageID)
+      if (message?.type !== "user") return
+      const input = retryInput(sessionID, message)
+      return server
+        .api()
+        .session.switchModel({ sessionID, model: { id: model.modelID, providerID: model.providerID } })
+        .then(() => server.data.session.prompt({ ...input, metadata: { ...input.metadata, model } }))
+        .then(() => undefined, failed)
+    }
+    const followUp = (input: {
+      readonly text: string
+      readonly metadata: { readonly omitMedia: string[]; readonly omitAs: string }
+    }) =>
+      server.data.session.prompt({ sessionID, text: input.text, metadata: { ...input.metadata } }).then(() => undefined, failed)
     return {
       revert: ({ messageID }) => revert.to(messageID),
+      // Buff (#817): a public link to one message — the share dialog opens with it picked.
+      share: (messageID) =>
+        dialog.show((close) => <ShareDialog server={server} sessionID={sessionID} preselect={[messageID]} onClose={close} />),
       turnSummary: ({ userMessageID }) => (
         <TurnSummary
           server={server}
@@ -224,10 +244,12 @@ function useTurnActions(server: Server, sessionID: string, directory: string): T
           sessionID={sessionID}
           failure={failure}
           onRetry={() => retry(failure.userMessageID)}
+          onRetryWith={(model) => retryWith(failure.userMessageID, model)}
+          onFollowUp={followUp}
         />
       ),
     }
-  }, [core, server, sessionID, directory, i18n])
+  }, [core, server, sessionID, directory, i18n, dialog])
 }
 
 /** A kept view keeps its title row; only the shown one registers the summary's command. */

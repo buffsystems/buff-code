@@ -8,6 +8,7 @@ import {
   type KeyEvent,
 } from "@opentui/core"
 import { BuffFirstRun } from "@opencode/schema/buff-first-run"
+import { contextCapLabel } from "../../util/session"
 import { BuffComposerParts } from "@opencode/schema/buff-composer-parts"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match, For } from "solid-js"
 import path from "path"
@@ -60,6 +61,7 @@ import { useInteractivity } from "../../context/interactivity"
 import { abbreviateHome } from "../../runtime"
 import { Slot } from "../../plugin/render"
 import type { SessionInbox } from "@opencode/schema/session-inbox"
+import { enterDelivery } from "./delivery"
 import {
   deduplicatePromptImages,
   preserveMentionlessPromptAttachments,
@@ -457,6 +459,21 @@ export function Prompt(props: PromptProps) {
           if (!input.focused) return
           if (auto()?.visible && !auto()?.completeQueueableCommand()) return
           const handled = await submit("queue")
+          if (!handled) return
+          dialog.clear()
+        },
+      },
+      {
+        // Buff (#805): Enter queues while the agent works; this sends into the current turn.
+        title: t("Send prompt now"),
+        name: "prompt.steer",
+        category: t("Prompt"),
+        run: async (_input: string | undefined, event?: KeyEvent) => {
+          event?.preventDefault()
+          event?.stopPropagation()
+          if (!input.focused) return
+          if (auto()?.visible) return
+          const handled = await submit("steer")
           if (!handled) return
           dialog.clear()
         },
@@ -1089,7 +1106,8 @@ export function Prompt(props: PromptProps) {
   })
 
   let submitting = false
-  async function submit(delivery: SessionInbox.Delivery = "steer") {
+  // Buff (#805): Enter is "auto" — queued while the agent works, at once otherwise (enterDelivery).
+  async function submit(delivery: SessionInbox.Delivery | "auto" = "auto") {
     if (disabled()) return false
     // Prevent overlapping invocations (e.g. a double-pressed Enter, or the
     // input's native onSubmit racing another dispatch). Without this guard,
@@ -1106,7 +1124,8 @@ export function Prompt(props: PromptProps) {
     }
   }
 
-  async function submitInner(delivery: SessionInbox.Delivery) {
+  async function submitInner(requested: SessionInbox.Delivery | "auto") {
+    let delivery: SessionInbox.Delivery = requested === "queue" ? "queue" : "steer"
     // IME: double-defer may fire before onContentChange flushes the last
     // composed character (e.g. Korean hangul) to the store, so read
     // plainText directly and sync before any downstream reads.
@@ -1150,6 +1169,11 @@ export function Prompt(props: PromptProps) {
       (data.location.command.list(currentLocation.ref) ?? []).some((command) => command.name === slashHead.name)
     const editorSelection = editorContext()
     const pendingEditorSelection = editorSelection && editor.labelState() === "pending" ? editorSelection : undefined
+    if (requested === "auto")
+      delivery = enterDelivery({
+        running: status() === "running",
+        queueable: store.mode !== "shell" && !pendingEditorSelection,
+      })
     if (delivery === "queue" && pendingEditorSelection) {
       toast.show({ message: t("Editor context cannot be queued"), variant: "warning" })
       return false
@@ -1237,6 +1261,7 @@ export function Prompt(props: PromptProps) {
           id: selection.modelID,
           variant,
         },
+        limit: local.contextLimit.draft(),
       })
       sessionID = created.id
       session = data.session.get(created.id)
@@ -1532,6 +1557,7 @@ export function Prompt(props: PromptProps) {
     modelLabel: string
     providerLabel: string
     variant: string | undefined
+    limit: string | undefined
   }>(
     (previous) => {
       const location = currentLocation.ref ?? data.location.default()
@@ -1551,6 +1577,8 @@ export function Prompt(props: PromptProps) {
         modelLabel: model.model,
         providerLabel: model.provider,
         variant: local.model.variant.current(),
+        // #837: the context cap, when it cuts the model's window.
+        limit: contextCapLabel(local.contextLimit.current(), local.contextLimit.modelWindow()),
       }
     },
     {
@@ -1559,6 +1587,7 @@ export function Prompt(props: PromptProps) {
       modelLabel: local.model.parsed().model,
       providerLabel: local.model.parsed().provider,
       variant: undefined,
+      limit: undefined,
     },
   )
   const highlight = createMemo(() => {
@@ -1837,6 +1866,7 @@ export function Prompt(props: PromptProps) {
                 model={promptDisplay().modelLabel}
                 provider={promptDisplay().providerLabel}
                 variant={promptDisplay().variant}
+                limit={promptDisplay().limit}
                 muted={!!muted()}
                 highlight={highlight()}
                 agentAlpha={agentMetaAlpha()}

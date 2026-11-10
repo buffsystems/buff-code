@@ -1,5 +1,6 @@
 export * as SessionStep from "./step.js"
 
+import { SessionMediaFiles } from "../media-files.js"
 import {
   AIError,
   InvalidProviderOutputError,
@@ -163,7 +164,11 @@ export const make = Effect.gen(function* () {
               })
             : undefined
         const llmFailure = streamFailure instanceof AIError ? streamFailure : unknownFinish
-        const llmError = llmFailure && !recorded.providerFailed ? toSessionError(llmFailure) : undefined
+        // Отказ на запросе с файлами называет их — клиенты предложат, как быть (#757).
+        const llmError =
+          llmFailure && !recorded.providerFailed
+            ? SessionMediaFiles.withAttachments(toSessionError(llmFailure), input.prepared.request.messages)
+            : undefined
         if (
           input.recoverContinuation &&
           llmFailure?.reason._tag === "Transport" &&

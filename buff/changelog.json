@@ -1,1 +1,59 @@
-[]
+[
+  {
+    "tag": "0.24.0",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Агент подключает сервисы сам",
+            "description": "Режим «Настройка» в боковой колонке: скажите, какой сервис нужен, и агент подключит его — спросит формой, проверит и сохранит. Секреты вводятся скрыто, модель их не видит."
+          },
+          {
+            "title": "Очередь сообщений",
+            "description": "Пишите, пока агент работает: сообщение дождётся конца хода. Его можно убрать или отправить сразу."
+          },
+          {
+            "title": "Публичные ссылки",
+            "description": "«Поделиться» отдаёт сессию или выбранные сообщения по ссылке, с паролем или без. Пока сессия идёт, страница обновляется вживую."
+          },
+          {
+            "title": "Размер контекстного окна",
+            "description": "Лимит контекста на сессию, значения по умолчанию в настройках и сколько контекста уже занято — у поля ввода."
+          },
+          {
+            "title": "Новая нумерация версий",
+            "description": "Buff Code теперь нумеруется так же, как выпуски Buff: 0.24.0 — это обновление после 2.0.11-buff, а не откат."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "The agent connects services itself",
+            "description": "Setup mode in the sidebar: name the service you need and the agent connects it — asks with a form, tests and saves it. Secrets are typed hidden and the model never sees them."
+          },
+          {
+            "title": "Message queue",
+            "description": "Keep writing while the agent works: the message waits for the end of the turn. Drop it or send it right away."
+          },
+          {
+            "title": "Public links",
+            "description": "Share sends a session or picked messages by link, with or without a password. While the session runs, the page updates live."
+          },
+          {
+            "title": "Context window size",
+            "description": "A context limit per session, defaults in Settings, and the used context shown by the composer."
+          },
+          {
+            "title": "New version numbers",
+            "description": "Buff Code is now numbered like Buff releases: 0.24.0 is an update after 2.0.11-buff, not a step back."
+          }
+        ]
+      }
+    ]
+  }
+]

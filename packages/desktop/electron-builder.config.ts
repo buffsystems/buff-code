@@ -229,7 +229,10 @@ function getConfig() {
           channel: "latest",
         },
         deb: { fpm: [metainfoFpm(appId)] },
-        rpm: { packageName: "buff-code", fpm: [metainfoFpm(appId)] },
+        // Epoch 1 (#848): Buff Code moved to the release numbering (2.0.11-buff.N → 0.24.0), and rpm,
+        // yum refuse a lower version without it. fpm takes flags only before the first path, and
+        // the metainfo mapping is a path — so the flag goes first.
+        rpm: { packageName: "buff-code", fpm: ["--epoch", "1", metainfoFpm(appId)] },
       }
     }
   }

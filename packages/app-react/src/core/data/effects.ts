@@ -56,6 +56,7 @@ export function runEffects(context: DataContext, reads: EffectReads, event: Open
       context.gate.complete(`session.message:${event.data.sessionID}`)
       return
     case "session.model.selected":
+    case "session.context.selected":
       if (!state().session.message[event.data.sessionID]) return
       refresh(() =>
         context

@@ -11,10 +11,11 @@ import { AbsolutePath } from "@opencode/core/schema"
 import { SessionModelRequest } from "@opencode/core/session/model-request"
 import { SessionModelTransport } from "@opencode/core/session/model-transport"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
-import { DateTime, Effect, Stream } from "effect"
+import { DateTime, Effect, Layer, Stream } from "effect"
 import { HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { testEffect } from "./lib/effect"
 import { PluginTestLayer } from "./plugin/fixture"
+import { tempGlobalLayer } from "./fixture/global"
 
 const it = testEffect(PluginTestLayer)
 
@@ -54,7 +55,7 @@ describe("SessionModelRequest HTTP hooks", () => {
           seen.push({ hook: "response", kind: event.kind, agent: event.agent })
         }),
       )
-      const requests = yield* SessionModelRequest.Service.pipe(Effect.provide(SessionModelRequest.layer))
+      const requests = yield* SessionModelRequest.Service.pipe(Effect.provide(SessionModelRequest.layer.pipe(Layer.provide(tempGlobalLayer))))
 
       for (const kind of KINDS) {
         const prepared = yield* requests[kind]({
@@ -124,7 +125,7 @@ describe("SessionModelRequest HTTP hooks", () => {
         closeAll: Effect.void,
       })
       const requests = yield* SessionModelRequest.Service.pipe(
-        Effect.provide(SessionModelRequest.layer),
+        Effect.provide(SessionModelRequest.layer.pipe(Layer.provide(tempGlobalLayer))),
         Effect.provideService(SessionModelTransport.Service, websocketTransport),
       )
       const prepared = yield* requests.primary({

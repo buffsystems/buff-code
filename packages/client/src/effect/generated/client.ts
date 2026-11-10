@@ -40,6 +40,8 @@ import type {
   SessionSwitchAgentOutput,
   SessionSwitchModelInput,
   SessionSwitchModelOutput,
+  SessionSwitchContextLimitInput,
+  SessionSwitchContextLimitOutput,
   SessionUpdateInput,
   SessionUpdateOutput,
   SessionMoveInput,
@@ -378,6 +380,7 @@ const EndpointSessionCreate = (raw: RawClient["server.session"]) => (input?: Ses
         title: input?.["title"],
         agent: input?.["agent"],
         model: input?.["model"],
+        limit: input?.["limit"],
         location: input?.["location"],
         metadata: input?.["metadata"],
         permissions: input?.["permissions"],
@@ -448,6 +451,15 @@ const EndpointSessionSwitchModel = (raw: RawClient["server.session"]) => (input:
       Effect.mapError(mapClientError),
     ),
   )
+
+const EndpointSessionSwitchContextLimit =
+  (raw: RawClient["server.session"]) => (input: SessionSwitchContextLimitInput) =>
+    preserveEffect<SessionSwitchContextLimitOutput>()(
+      raw["session.switchContextLimit"]({
+        params: { sessionID: input["sessionID"] },
+        payload: { limit: input["limit"] },
+      }).pipe(Effect.mapError(mapClientError)),
+    )
 
 const EndpointSessionUpdate = (raw: RawClient["server.session"]) => (input: SessionUpdateInput) =>
   preserveEffect<SessionUpdateOutput>()(
@@ -749,6 +761,7 @@ const adaptGroupSession = (raw: RawClient["server.session"]) => ({
   fork: EndpointSessionFork(raw),
   switchAgent: EndpointSessionSwitchAgent(raw),
   switchModel: EndpointSessionSwitchModel(raw),
+  switchContextLimit: EndpointSessionSwitchContextLimit(raw),
   update: EndpointSessionUpdate(raw),
   move: EndpointSessionMove(raw),
   prompt: EndpointSessionPrompt(raw),
@@ -1515,9 +1528,11 @@ const EndpointConfigGet = (raw: RawClient["server.config"]) => (input?: ConfigGe
 const EndpointConfigShells = (raw: RawClient["server.config"]) => () =>
   preserveEffect<ConfigShellsOutput>()(raw["config.shells"]({}).pipe(Effect.mapError(mapClientError)))
 
-const EndpointConfigUpdate = (raw: RawClient["server.config"]) => (input: ConfigUpdateInput) =>
+const EndpointConfigUpdate = (raw: RawClient["server.config"]) => (input?: ConfigUpdateInput) =>
   preserveEffect<ConfigUpdateOutput>()(
-    raw["config.update"]({ payload: { shell: input["shell"] } }).pipe(Effect.mapError(mapClientError)),
+    raw["config.update"]({
+      payload: { shell: input?.["shell"], thinking: input?.["thinking"], context: input?.["context"] },
+    }).pipe(Effect.mapError(mapClientError)),
   )
 
 const adaptGroupConfig = (raw: RawClient["server.config"]) => ({

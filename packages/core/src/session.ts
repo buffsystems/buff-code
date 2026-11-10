@@ -84,6 +84,8 @@ type CreateBaseInput = {
   title?: string
   agent?: Agent.ID
   model?: Model.Ref
+  /** The session's context window cap from the start (#835); absent — the model's window. */
+  limit?: SessionSchema.ContextLimit
   metadata?: SessionSchema.Metadata
   permissions?: Permission.Ruleset
 }
@@ -169,6 +171,8 @@ export interface Interface {
   }) => Stream.Stream<SessionEvent.DurableEvent | EventLog.Synced, NotFoundError>
   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: Agent.ID }) => Effect.Effect<void, NotFoundError>
   readonly switchModel: (input: { sessionID: SessionSchema.ID; model: Model.Ref }) => Effect.Effect<void, NotFoundError>
+  /** The session's own context window cap (#835); undefined — back to the model's window. */
+  readonly switchContext: (input: { sessionID: SessionSchema.ID; limit: SessionSchema.ContextLimit | undefined }) => Effect.Effect<void, NotFoundError>
   readonly rename: (input: { sessionID: SessionSchema.ID; title: string }) => Effect.Effect<void, NotFoundError>
   readonly setPermissions: (input: {
     sessionID: SessionSchema.ID
@@ -270,6 +274,7 @@ const layer = Layer.effect(
               // location, so host policies that read them treat the family uniformly.
               metadata: input.metadata ?? parent?.metadata,
               permissions: input.permissions ?? parent?.permissions,
+              limit: input.limit,
               model: input.model
                 ? {
                     id: Model.ID.make(input.model.id),
@@ -416,6 +421,7 @@ const layer = Layer.effect(
       skill: (input) => sessions.forSession(input.sessionID).skill(input),
       switchAgent: (input) => sessions.forSession(input.sessionID).switchAgent(input),
       switchModel: (input) => sessions.forSession(input.sessionID).switchModel(input),
+      switchContext: (input) => sessions.forSession(input.sessionID).switchContext(input),
       rename: (input) => sessions.forSession(input.sessionID).rename(input),
       setPermissions: (input) => sessions.forSession(input.sessionID).setPermissions(input),
       move: moves.move,

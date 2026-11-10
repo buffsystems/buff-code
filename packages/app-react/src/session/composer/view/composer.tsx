@@ -3,6 +3,9 @@
 // variant, the "Steer / Queue" hint and send. React renders the frame; typing never re-renders it.
 
 import { cx } from "@buff/ui/react"
+import { BuffVariant } from "@opencode/schema/buff-variant"
+import { Brain, Layers } from "lucide-react"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { isAttachment } from "@opencode/app/react-reuse/composer-prompt-parts"
 import type { ContextItem } from "@opencode/app/react-reuse/composer-schema"
@@ -39,6 +42,8 @@ export type ComposerViewProps = {
   queue?: { alternate(): ComposerDelivery | undefined; editing(): string | undefined }
   agent?: { options: SelectOption[]; current: string; onSelect(id: string): void }
   variant: { options: SelectOption[]; current: string; onSelect(id: string): void }
+  /** #836: the session's context cap, beside the thinking mode. */
+  context?: { options: SelectOption[]; current: string; onSelect(id: string): void }
   /** The model control and what sits beside it (Buff's permission mode). */
   modelControls?: ReactNode
   keys: ComposerKeys
@@ -183,12 +188,25 @@ export function ComposerView(props: ComposerViewProps) {
             {props.modelControls}
             {props.variant.options.length > 1 && (
               <SelectControl
-                title={i18n.t("ui.promptInput.chooseVariant")}
+                title={i18n.buff.t(BuffVariant.TITLE)}
+                heading={i18n.buff.t(BuffVariant.TITLE)}
+                icon={<Brain aria-hidden className="size-3.5 shrink-0" />}
                 keys={props.keys.variant}
                 options={props.variant.options}
                 current={props.variant.current}
                 className={props.variant.current === "default" ? "composer-variant-default" : undefined}
                 onSelect={props.variant.onSelect}
+              />
+            )}
+            {props.context && (
+              <SelectControl
+                title={i18n.buff.t(BuffContextWindow.TITLE)}
+                heading={i18n.buff.t(BuffContextWindow.TITLE)}
+                icon={<Layers aria-hidden className="size-3.5 shrink-0" />}
+                options={props.context.options}
+                current={props.context.current}
+                className={props.context.current === "0" ? "composer-variant-default" : undefined}
+                onSelect={props.context.onSelect}
               />
             )}
           </Controls>

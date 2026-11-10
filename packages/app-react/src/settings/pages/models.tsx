@@ -14,6 +14,7 @@ import { useStore } from "../../react/use-store"
 import { useProviderCatalog } from "../../providers/catalog/use-catalog"
 import { ModelVisibilityGroups } from "../../providers/models/visibility-groups"
 import { SettingsBody, SettingsHeader } from "../kit"
+import { DefaultModesSection } from "./modes"
 import { useSettingsScope } from "../scope"
 
 // Which provider groups are folded, per server, where the Solid window keeps them.
@@ -85,6 +86,7 @@ export function SettingsModels(props: { autofocus: boolean }) {
         </div>
       </SettingsHeader>
       <SettingsBody className="settings-models">
+        <DefaultModesSection />
         <ModelVisibilityGroups
           models={catalog.models}
           ready={catalog.ready}

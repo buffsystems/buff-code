@@ -11,6 +11,7 @@ import { PermissionModeControl, newSessionPermissions } from "../docks/permissio
 import { tabKey } from "../../shell/tabs/tabs"
 import { moveFollowUp, restoreFollowUp } from "../preparing/follow-up"
 import { Composer } from "./composer"
+import { useDraftContextLimit } from "./context-limit"
 import { draftRegistry } from "./draft/registry"
 import { useModelSelection } from "./models/use-selection"
 import type { ComposerAdapter, ComposerSession } from "./submit/submit"
@@ -23,6 +24,7 @@ export function DraftComposer() {
   const registry = draftRegistry(host)
   const draft = registry.get({ type: "draft", draftID: context.draft.draftID })
   const selection = useModelSelection({ server, directory: context.directory, draftID: context.draft.draftID })
+  const contextLimit = useDraftContextLimit(server, context.directory)
   const editor = useRef<HTMLElement | undefined>(undefined)
   const latest = useRef(context)
   latest.current = context
@@ -90,6 +92,7 @@ export function DraftComposer() {
             id: sessionID,
             agent: choice.agent,
             model: { id: choice.model.modelID, providerID: choice.model.providerID, variant: choice.variant },
+            limit: contextLimit.limit(),
             location: { directory },
             // Buff (#450): a new session starts in the permission mode chosen in the composer.
             permissions: newSessionPermissions(choice.agent),
@@ -129,6 +132,7 @@ export function DraftComposer() {
       selection={selection}
       adapter={adapter}
       working={false}
+      contextLimit={contextLimit.choice}
       beforeModel={<PermissionModeControl selection={selection} server={server} />}
       onEditor={(element) => {
         editor.current = element

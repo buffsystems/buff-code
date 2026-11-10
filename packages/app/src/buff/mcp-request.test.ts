@@ -3,7 +3,7 @@
 // начинаются поля и какой ответ уходит серверу.
 import { expect, test } from "bun:test"
 import type { FormInfo } from "@opencode/client/promise"
-import { fieldView, formAnswer, formDefaults, formProblem, mcpForm } from "./mcp-request"
+import { fieldView, formAnswer, formDefaults, formProblem, mcpForm, setupForm, withOwn } from "./mcp-request"
 
 const knowledge: FormInfo = {
   id: "frm_1",
@@ -68,4 +68,49 @@ test("ссылка подтверждается только после того
   const fields = [{ key: "auth", type: "external", url: "https://example.test" }] as FormInfo["fields"]
   expect(formAnswer(fields, { auth: true })).toEqual({ auth: true })
   expect(formProblem(fields, {}, (text) => text)).toBe("Open the page first.")
+})
+
+// #765: форма режима «Настройка» — секрет с маской, свои варианты к выбору.
+test("форма режима «Настройка» — у своей сессии, не среди форм MCP", () => {
+  const setup = {
+    ...knowledge,
+    id: "frm_s",
+    sessionID: "ses_1",
+    metadata: { kind: "setup", note: "Зачем" },
+  } as FormInfo
+  expect(setupForm([knowledge, setup])?.id).toBe("frm_s")
+  expect(mcpForm([setup])).toBeUndefined()
+})
+
+test("секрет: ввод с маской, начинается пустым, уходит строкой, обязательный пустой — назван", () => {
+  const fields = [
+    { key: "login", type: "string", required: true },
+    { key: "password", type: "secret", required: true, placeholder: "пароль" },
+  ] as FormInfo["fields"]
+  expect(fieldView(fields[1]!, fields)).toBe("secret")
+  expect(formDefaults(fields)).toEqual({ login: "", password: "" })
+  expect(formAnswer(fields, { login: "me", password: "hunter2" })).toEqual({ login: "me", password: "hunter2" })
+  expect(formProblem(fields, { login: "me", password: "" }, (text, params) => `${text}:${params?.field}`)).toBe(
+    "Fill in «{field}».:password",
+  )
+})
+
+test("свои варианты: один побеждает выбор, несколько добавляются к выбранным; без custom не учитываются", () => {
+  const fields = [
+    { key: "one", type: "string", custom: true, options: [{ value: "a", label: "A" }] },
+    { key: "many", type: "multiselect", custom: true, options: [{ value: "a", label: "A" }] },
+    { key: "closed", type: "multiselect", options: [{ value: "a", label: "A" }] },
+  ] as FormInfo["fields"]
+  expect(
+    withOwn(
+      fields,
+      { one: "a", many: ["a"], closed: ["a"] },
+      { one: [" свой "], many: ["x", "y", "x", " "], closed: ["z"] },
+    ),
+  ).toEqual({
+    one: "свой",
+    many: ["a", "x", "y"],
+    closed: ["a"],
+  })
+  expect(withOwn(fields, { one: "a", many: ["a"], closed: [] }, {})).toEqual({ one: "a", many: ["a"], closed: [] })
 })

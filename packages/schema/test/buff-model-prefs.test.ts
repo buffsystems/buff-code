@@ -21,7 +21,17 @@ describe("filter", () => {
       model("openrouter", "mystery", undefined),
       model("openrouter", "zero", 0),
     ]
-    expect(BuffModelPrefs.filter(models, [], now).map((m) => m.modelID)).toEqual(["sonnet-5", "haiku", "mystery"])
+    expect(BuffModelPrefs.filter(models, [], now).map((m) => m.modelID)).toEqual(["sonnet-5", "haiku", "mystery", "zero"])
+  })
+
+  // #763: a model from the person's own provider has no release date — the schema writes 0 for it.
+  // That is «unknown», not 1970: it shows by default, and a «hide» still hides it.
+  test("released 0 is an unknown date: shown by default, hidden on request", () => {
+    const own = [model("litellm", "deepseek", 0), model("litellm", "glm", 0)]
+    expect(BuffModelPrefs.filter(own, [], now).map((m) => m.modelID)).toEqual(["deepseek", "glm"])
+    expect(
+      BuffModelPrefs.filter(own, [{ providerID: "litellm", modelID: "glm", visibility: "hide" }], now).map((m) => m.modelID),
+    ).toEqual(["deepseek"])
   })
 
   test("a choice wins over the rule, both ways", () => {

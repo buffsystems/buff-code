@@ -39,10 +39,20 @@ export function pickerModels(models: CatalogModel[]) {
   )
 }
 
-function ModelList(props: { handle: ModelSelectionHandle; onSelected(): void; autoFocus?: boolean }) {
+/** `only` narrows the list (Buff, #757: models that read the files a turn failed on). */
+type ListProps = {
+  handle: ModelSelectionHandle
+  onSelected(): void
+  autoFocus?: boolean
+  only?: (model: CatalogModel) => boolean
+  onChosen?: (model: { providerID: string; modelID: string }) => void
+}
+
+function ModelList(props: ListProps) {
   const i18n = useI18n()
   const selection = props.handle.selection
-  const models = pickerModels(selection.listed)
+  // A narrowed list looks through every connected model: the one that reads the files may be hidden.
+  const models = pickerModels(props.only ? selection.all.filter(props.only) : selection.listed)
   const items: CommandItem[] = models.map((model) => ({
     value: keyOf(model),
     label: model.name,
@@ -65,6 +75,7 @@ function ModelList(props: { handle: ModelSelectionHandle; onSelected(): void; au
         if (!model) return
         props.onSelected()
         props.handle.setModel({ providerID: model.provider.id, modelID: model.id }, { recent: true })
+        props.onChosen?.({ providerID: model.provider.id, modelID: model.id })
       }}
     />
   )
@@ -165,12 +176,25 @@ function ManageButton(props: { onClick(): void }) {
 }
 
 /** The "model.choose" command's dialog. */
-export function ModelDialog(props: { handle: ModelSelectionHandle; onClose(): void; onManage(): void }) {
+export function ModelDialog(props: {
+  handle: ModelSelectionHandle
+  onClose(): void
+  onManage(): void
+  title?: string
+  only?: ListProps["only"]
+  onChosen?: ListProps["onChosen"]
+}) {
   const i18n = useI18n()
   return (
-    <Dialog open onOpenChange={(open) => !open && props.onClose()} title={i18n.t("dialog.model.select.title")} closeLabel={i18n.t("common.close")}>
+    <Dialog open onOpenChange={(open) => !open && props.onClose()} title={props.title ?? i18n.t("dialog.model.select.title")} closeLabel={i18n.t("common.close")}>
       <DialogBody>
-        <ModelList handle={props.handle} onSelected={props.onClose} autoFocus />
+        <ModelList
+          handle={props.handle}
+          onSelected={props.onClose}
+          autoFocus
+          only={props.only}
+          onChosen={props.onChosen}
+        />
         <ManageButton
           onClick={() => {
             props.onClose()

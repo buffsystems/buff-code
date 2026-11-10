@@ -32,6 +32,7 @@ export const consolePrompt = {
   "Clear prompt": "Очистить поле ввода",
   "Submit prompt": "Отправить запрос",
   "Queue prompt": "Поставить запрос в очередь",
+  "Send prompt now": "Отправить сейчас",
   "Remove editor context": "Убрать контекст редактора",
   Paste: "Вставить",
   "View image attachments": "Посмотреть вложенные картинки",

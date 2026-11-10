@@ -210,6 +210,13 @@ export function UserMessage(props: {
               onClick={() => void writeClipboard(props.text).then((done) => done && markCopied())}
             />
           )}
+          {timeline.actions.share && (
+            <MessageActionButton
+              icon="share"
+              label={i18n.buff.t("Share this message")}
+              onClick={() => timeline.actions.share?.(props.message.id)}
+            />
+          )}
         </div>
       )}
       {preview && (

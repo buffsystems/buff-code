@@ -1,0 +1,72 @@
+// Buff Code: runner of a script connection. Written by Buff Code, do not edit.
+// Usage: buff _runner.mjs <script.ts>  — the script exports `tools` (and optionally `instructions`).
+// Speaks MCP over stdio: newline-delimited JSON-RPC; initialize, ping, tools/list, tools/call.
+const file = process.argv[2]
+if (!file) {
+  process.stderr.write("usage: _runner.mjs <script>\n")
+  process.exit(2)
+}
+// Путь к скрипту — абсолютным файлом: относительный bun принял бы за имя пакета.
+const { pathToFileURL } = await import("node:url")
+const { resolve } = await import("node:path")
+const module = await import(pathToFileURL(resolve(file)).href)
+const tools = Array.isArray(module.tools) ? module.tools : Array.isArray(module.default) ? module.default : []
+const instructions = typeof module.instructions === "string" ? module.instructions : undefined
+const write = (message) => process.stdout.write(JSON.stringify(message) + "\n")
+const reply = (id, result) => write({ jsonrpc: "2.0", id, result })
+const refuse = (id, code, message) => write({ jsonrpc: "2.0", id, error: { code, message } })
+const text = (value) => (typeof value === "string" ? value : JSON.stringify(value, null, 2))
+
+const handle = async (message) => {
+  const { id, method, params } = message
+  if (method === "initialize")
+    return reply(id, {
+      protocolVersion: params?.protocolVersion ?? "2025-06-18",
+      capabilities: { tools: {} },
+      serverInfo: { name: "buff-script-connection", version: "1" },
+      ...(instructions ? { instructions } : {}),
+    })
+  if (method === "ping") return reply(id, {})
+  if (method === "tools/list")
+    return reply(id, {
+      tools: tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description ?? "",
+        inputSchema: tool.input ?? { type: "object", properties: {} },
+      })),
+    })
+  if (method === "tools/call") {
+    const tool = tools.find((item) => item.name === params?.name)
+    if (!tool) return refuse(id, -32602, `Unknown tool: ${params?.name}`)
+    try {
+      const value = await tool.run(params?.arguments ?? {})
+      const structured = value !== null && typeof value === "object" ? { structuredContent: value } : {}
+      return reply(id, { content: [{ type: "text", text: text(value ?? "") }], ...structured, isError: false })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return reply(id, { content: [{ type: "text", text: message }], isError: true })
+    }
+  }
+  if (id === undefined) return
+  refuse(id, -32601, `Method not found: ${method}`)
+}
+
+let buffer = ""
+process.stdin.setEncoding("utf8")
+process.stdin.on("data", (chunk) => {
+  buffer += chunk
+  let at
+  while ((at = buffer.indexOf("\n")) >= 0) {
+    const line = buffer.slice(0, at).trim()
+    buffer = buffer.slice(at + 1)
+    if (!line) continue
+    let message
+    try {
+      message = JSON.parse(line)
+    } catch {
+      continue
+    }
+    void handle(message)
+  }
+})
+process.stdin.on("end", () => process.exit(0))

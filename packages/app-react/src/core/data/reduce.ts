@@ -79,6 +79,20 @@ export function reduceEvent(state: DataState, event: OpenCodeEvent): DataState {
         }),
       )
     }
+    case "session.context.selected": {
+      // #836: the session's context cap — the row in the transcript names the new limit.
+      const next = editInfo(state, event.data.sessionID, (info) => ({ ...info, limit: event.data.limit }))
+      if (!next.session.message[event.data.sessionID]) return next
+      return editMessages(next, event.data.sessionID, (messages) =>
+        appendMessage(messages, {
+          id: messageIDFromEvent(event.id),
+          type: "context-switched",
+          limit: event.data.limit,
+          previous: event.data.previous,
+          time: { created: event.created },
+        }),
+      )
+    }
     case "session.permissions":
       return editInfo(state, event.data.sessionID, (info) => ({ ...info, permissions: event.data.permissions }))
     case "session.moved":

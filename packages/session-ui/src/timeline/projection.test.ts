@@ -353,4 +353,62 @@ describe("Buff cards", () => {
     expect(keys.some((key) => key.includes("t3") && !key.includes("context"))).toBe(true)
     expect(keys.some((key) => key.includes("t4") && !key.includes("context"))).toBe(true)
   })
+
+  // #808: the card of a file the agent handed over was folded into «Used 1 send_file» — not seen.
+  test("send_file is a row of its own, in both detail modes", () => {
+    const tool = (id: string, name: string): SessionMessageAssistantTool => ({
+      type: "tool",
+      id,
+      name,
+      state: { status: "completed", input: {}, content: [{ type: "text", text: "ok" }] },
+      time: { created: 1 },
+    })
+    const messages = [
+      { id: "user-1", type: "user", text: "send", time: { created: 1 } },
+      {
+        id: "assistant-1",
+        type: "assistant",
+        agent: "build",
+        model: { id: "m", providerID: "p" },
+        content: [tool("t1", "read"), tool("t2", "send_file")],
+        time: { created: 2, completed: 3 },
+      },
+    ] satisfies SessionMessageInfo[]
+    for (const timelineDetail of [timelinePresets.find((preset) => preset.id === "detailed")!.value, undefined]) {
+      const result = createTimelineProjection({
+        sessionMessages: messages,
+        status: { type: "idle" },
+        reasoningMode: "full",
+        ...(timelineDetail ? { timelineDetail } : {}),
+      })
+      const keys = result.rows.map((row) => TimelineRow.key(row))
+      expect(keys.some((key) => key.includes("t2") && !key.includes("context"))).toBe(true)
+    }
+  })
+
+  // Окно контекста (#836): смена потолка — отдельная строка-разделитель, как смена модели, а не
+  // часть группы «Used N».
+  test("a context limit change is a row of its own where notices are grouped, like a model switch", () => {
+    const messages = [
+      { id: "user-1", type: "user", text: "go", time: { created: 1 } },
+      {
+        id: "assistant-1",
+        type: "assistant",
+        agent: "build",
+        model: { id: "m", providerID: "p" },
+        content: [{ type: "text", text: "ok" }],
+        time: { created: 2, completed: 3 },
+      },
+      { id: "ctx", type: "context-switched", limit: { context: 200_000 }, time: { created: 4 } },
+    ] satisfies SessionMessageInfo[]
+    for (const id of ["detailed", "compact"]) {
+      const result = createTimelineProjection({
+        sessionMessages: messages,
+        status: { type: "idle" },
+        reasoningMode: "full",
+        timelineDetail: timelinePresets.find((preset) => preset.id === id)!.value,
+      })
+      expect(result.rows.some((row) => row._tag === "Notice" && row.messageID === "ctx")).toBe(true)
+    }
+  })
 })

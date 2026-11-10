@@ -18,7 +18,9 @@ import {
   type Accessor,
 } from "solid-js"
 import path from "node:path"
+import open from "open"
 import { EOL, tmpdir } from "node:os"
+import { existsSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import { useRoute, useRouteData } from "../../context/route"
 import { createStore } from "solid-js/store"
@@ -115,6 +117,7 @@ import {
   type SessionRow,
 } from "./rows"
 import { switchLabel } from "../../util/model"
+import { contextSwitchText } from "../../util/session"
 import { findMessageBoundary, messageNavigationSlack } from "./message-navigation"
 import { stringWidth } from "../../util/string-width"
 import { useArgs } from "../../context/args"
@@ -829,15 +832,8 @@ export function Session(props: {
     },
   ]
 
+  // Buff (#818): /share and /unshare are the share plugin's (feature-plugins/buff/share.tsx).
   const baseCommands = createMemo(() => [
-    {
-      title: t("Share session"),
-      id: "session.share",
-      suggested: route.type === "session",
-      group: t("Session"),
-      slash: { name: "share" },
-      run: () => unavailable(t("Sharing")),
-    },
     {
       title: t("Rename session"),
       id: "session.rename",
@@ -908,14 +904,6 @@ export function Session(props: {
           .catch((error) => toast.show({ message: errorMessage(error), variant: "error" }))
         dialog.clear()
       },
-    },
-    {
-      title: t("Unshare session"),
-      id: "session.unshare",
-      group: t("Session"),
-      enabled: false,
-      slash: { name: "unshare" },
-      run: () => unavailable(t("Unsharing")),
     },
     {
       title: t("Undo previous message"),
@@ -1742,6 +1730,7 @@ function SessionMessageView(props: { message: SessionMessageInfo }) {
         when={
           props.message.type === "agent-switched" ||
           props.message.type === "model-switched" ||
+          props.message.type === "context-switched" ||
           props.message.type === "location-switched"
         }
       >
@@ -2084,6 +2073,7 @@ function SessionSwitchMessageV2(props: { message: SessionMessageInfo }) {
     }
     if (props.message.type === "model-switched")
       return switchLabel(props.message.model, ctx.models(), props.message.previous)
+    if (props.message.type === "context-switched") return contextSwitchText(props.message, t)
     return ""
   }
   return (
@@ -3691,8 +3681,29 @@ function PlanCard(props: ToolProps) {
 
 function SendFile(props: ToolProps) {
   const sent = createMemo(() => BuffSendFile.sentOf(props.metadata))
+  const ctx = use()
+  const data = useData()
+  const toast = useToast()
+  // Buff (#808): a click opens the file in its program — when it is on this computer.
+  const openSent = () => {
+    const file = sent()?.file
+    const directory = data.session.get(ctx.sessionID)?.location.directory
+    if (!file || !directory) return
+    const full = path.join(directory, file)
+    if (!existsSync(full)) {
+      toast.show({ message: t("The file is on another computer — open it there or on the phone"), variant: "info" })
+      return
+    }
+    void open(full).catch(toast.error)
+  }
   return (
-    <InlineTool icon="↓" pending={t("Handing over the file…")} complete={sent()} part={props.part}>
+    <InlineTool
+      icon="↓"
+      pending={t("Handing over the file…")}
+      complete={sent()}
+      part={props.part}
+      onClick={sent() ? openSent : undefined}
+    >
       {t("File for you")}: {sent()?.file ?? stringValue(props.input.path)}
       {sent() ? ` · ${BuffSendFile.sizeOf(sent()!.bytes, t)}` : ""}
       {sent()?.note ? ` — ${sent()!.note}` : ""}

@@ -76,7 +76,8 @@ describe("settings schema", () => {
         mobileTitlebarPosition: "top",
         mobileDiffWrap: true,
         terminalPlacement: "side",
-        followUpBehavior: "steer",
+        // Buff (#805): сообщение во время работы агента ждёт конца хода.
+        followUpBehavior: "queue",
         experimentalBrowser: false,
       },
       sessionSummary: { projectExpanded: true, serverExpanded: true },
@@ -125,7 +126,7 @@ describe("settings schema", () => {
       autoSave: false,
       releaseNotes: true,
       timelineDetail: timelinePresets[2].value,
-      followUpBehavior: "steer",
+      followUpBehavior: "queue",
     })
     expect(settings.appearance).toEqual({
       fontSize: 14,
@@ -204,5 +205,11 @@ describe("settings font families", () => {
 
   test("preserves the separate terminal font default", () => {
     expect(terminalFontFamily(undefined)).toStartWith('"JetBrainsMono Nerd Font Mono", ')
+  })
+})
+
+describe("follow-up behavior (#805)", () => {
+  test("an explicitly chosen steer survives the new queue default", () => {
+    expect(decode({ general: { followUpBehavior: "steer" } }).general.followUpBehavior).toBe("steer")
   })
 })

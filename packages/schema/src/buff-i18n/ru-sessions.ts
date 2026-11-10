@@ -53,4 +53,9 @@ export const sessions = {
   "No sessions yet.": "Сессий пока нет.",
   "In conversations": "В переписке",
   "Archive · {count}": "Архив · {count}",
+  // #765: раздел режима «Настройка».
+  Setup: "Настройка",
+  "New setup": "Новая настройка",
+  "Nothing connected yet — press + and ask to connect something.":
+    "Пока ничего не подключено — нажмите + и попросите что-нибудь подключить.",
 } as const

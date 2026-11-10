@@ -450,6 +450,7 @@ const layer = Layer.effectDiscard(
             title: event.data.title,
             agent: event.data.agent,
             model: event.data.model,
+            context_limit: event.data.limit?.context ?? null,
             metadata: event.data.metadata,
             permission: event.data.permissions,
             version: event.data.version,
@@ -560,6 +561,17 @@ const layer = Layer.effectDiscard(
         yield* db
           .update(SessionTable)
           .set({ model: event.data.model, time_updated: event.created })
+          .where(eq(SessionTable.id, event.data.sessionID))
+          .run()
+          .pipe(Effect.orDie)
+      }),
+    )
+    yield* bus.project(SessionEvent.ContextSelected, (event) =>
+      Effect.gen(function* () {
+        yield* run(db, event)
+        yield* db
+          .update(SessionTable)
+          .set({ context_limit: event.data.limit?.context ?? null, time_updated: event.created })
           .where(eq(SessionTable.id, event.data.sessionID))
           .run()
           .pipe(Effect.orDie)

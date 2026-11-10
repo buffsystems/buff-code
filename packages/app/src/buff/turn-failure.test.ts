@@ -2,7 +2,7 @@
 // консоли (`@opencode/schema/buff-turn-failure`).
 import { expect, test } from "bun:test"
 import { BuffI18n } from "@opencode/schema/buff-i18n"
-import { EMPTY_ANSWER, isEmptyAnswer, turnFailure } from "@opencode/schema/buff-turn-failure"
+import { EMPTY_ANSWER, fileFollowUp, isEmptyAnswer, readsFormats, turnFailure } from "@opencode/schema/buff-turn-failure"
 
 const ru: BuffI18n.T = (text, params) => BuffI18n.t("ru", text, params)
 
@@ -140,4 +140,67 @@ test("a turn that failed before the model answered points at the usual cause", (
     text: "Запрос не дошёл до модели: она недоступна в этом каталоге. Выберите контекст Buff и модель, затем повторите.",
     action: "choose-context",
   })
+})
+
+// #757: модель отвергла запрос с файлами — карточка называет файлы и предлагает, как быть.
+test("a request with files the model rejected names the files", () => {
+  const failure = turnFailure(
+    {
+      type: "provider.invalid-request",
+      message: "Image input is not supported.",
+      status: 400,
+      attachments: [{ name: "logo.png", mime: "image/png" }, { mime: "application/pdf" }],
+    },
+    "litellm",
+    ru,
+    "LiteLLM",
+  )
+  expect(failure).toMatchObject({
+    text: "Модель не приняла запрос с файлами logo.png, PDF (ответ 400: Image input is not supported). Возможно, она не читает такие файлы — выберите, как продолжить.",
+    files: { names: ["logo.png", "PDF"], formats: ["image", "pdf"] },
+  })
+  expect(failure.action).toBeUndefined()
+  expect(failure.details).toContain("Image input is not supported.")
+})
+
+test("files mean nothing for a failure they cannot cause", () => {
+  expect(
+    turnFailure({ type: "provider.rate-limit", message: "Slow down", status: 429 }, "litellm", ru, "LiteLLM").files,
+  ).toBeUndefined()
+})
+
+test("the shortcuts send a prepared message that stops sending the format", () => {
+  const files = { names: ["logo.png", "brand.pdf"], formats: ["image", "pdf"] as const }
+  expect(fileFollowUp("analyze", files, ru)).toEqual({
+    text: "Модель не может прочитать logo.png, brand.pdf напрямую. Разбери их кодом или инструментами командной строки: извлеки текст, цвета, структуру — всё, что нужно для задачи, — и продолжай задачу.",
+    metadata: { omitMedia: ["image", "pdf"], omitAs: "code" },
+  })
+  expect(fileFollowUp("without-files", files, ru)).toEqual({
+    text: "Продолжай задачу без файлов logo.png, brand.pdf.",
+    metadata: { omitMedia: ["image", "pdf"], omitAs: "ignore" },
+  })
+})
+
+test("a model reads the files when it takes every format of them", () => {
+  expect(readsFormats(["text", "image", "pdf"], ["image", "pdf"])).toBe(true)
+  expect(readsFormats(["text", "image"], ["image", "pdf"])).toBe(false)
+  expect(readsFormats(["text"], [])).toBe(true)
+})
+
+test("the provider's words are quoted short: first line, without the wrappers of proxies", () => {
+  const failure = turnFailure(
+    {
+      type: "provider.invalid-request",
+      message:
+        "litellm.BadRequestError: OpenAIException - litellm.BadRequestError: OpenAIException - Invalid request\n\nLiteLLM: model group 'glm' failed with the error above.",
+      status: 400,
+      attachments: [{ name: "brand.png", mime: "image/png" }],
+    },
+    "litellm",
+    ru,
+  )
+  expect(failure.text).toBe(
+    "Модель не приняла запрос с файлами brand.png (ответ 400: Invalid request). Возможно, она не читает такие файлы — выберите, как продолжить.",
+  )
+  expect(failure.details).toContain("LiteLLM: model group 'glm' failed")
 })

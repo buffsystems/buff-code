@@ -126,6 +126,21 @@ function backgroundHistory(state: DataState, sessionID: string) {
   }
 }
 
+/** A subagent at work (#762): its session (none until it starts) and what it was asked. */
+export type RunningSubagent = { id?: string; label: string; agent?: string }
+
+/** The working subagents for the composer's icon (#762): the turn's running calls and the background ones. */
+export function runningSubagents(work: SessionBackground): RunningSubagent[] {
+  return [
+    ...work.blocking.flatMap((item) =>
+      item.type === "subagent" ? [{ ...(item.id ? { id: item.id } : {}), label: item.label ?? "" }] : [],
+    ),
+    ...work.tasks.flatMap((task) =>
+      task.type === "subagent" ? [{ id: task.id, label: task.label, ...(task.agent ? { agent: task.agent } : {}) }] : [],
+    ),
+  ]
+}
+
 /** Equal when the same work is listed, so a streaming delta does not re-render its readers. */
 export function sameBackground(previous: SessionBackground, next: SessionBackground) {
   return JSON.stringify(previous) === JSON.stringify(next)

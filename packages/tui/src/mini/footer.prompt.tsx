@@ -19,6 +19,7 @@ import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { normalizePromptContent } from "../prompt/content"
 import { deduplicatePromptImages, promptAttachmentLabel } from "../prompt/attachment"
 import { resolvePastedAttachments } from "../component/prompt/local-attachment"
+import { enterDelivery } from "../component/prompt/delivery"
 import { createTuiClipboard, type OwnedClipboardService } from "../clipboard"
 import type { ClipboardService } from "../context/clipboard"
 import fuzzysort from "fuzzysort"
@@ -1217,6 +1218,16 @@ export function createPromptState(input: PromptInput): PromptState {
           onSubmit("queue")
         },
       },
+      {
+        // Buff (#805): Enter queues while the agent works; this sends into the current turn.
+        id: "prompt.steer",
+        title: t("Send prompt now"),
+        group: t("Prompt"),
+        palette: true,
+        run() {
+          onSubmit("steer")
+        },
+      },
     ],
   }))
 
@@ -1359,7 +1370,9 @@ export function createPromptState(input: PromptInput): PromptState {
   }
 
   let submitting = false
-  const submitPrompt = (next: RunPrompt, delivery: RunDelivery = "steer") => {
+  // Buff (#805): Enter is "auto" — queued while the agent works, at once otherwise (enterDelivery).
+  const submitPrompt = (next: RunPrompt, requested: RunDelivery | "auto" = "auto") => {
+    let delivery: RunDelivery = requested === "queue" ? "queue" : "steer"
     if (!area || area.isDestroyed) {
       draft = promptCopy(next)
     }
@@ -1389,6 +1402,14 @@ export function createPromptState(input: PromptInput): PromptState {
     }
 
     const command = next.mode === "shell" ? undefined : selectedCommand(next.text, next.command)
+    const unqueueable =
+      next.mode === "shell" ||
+      isNewCommand(next.text) ||
+      isCompactCommand(next.text) ||
+      isExitCommand(next.text) ||
+      next.text.trim().toLowerCase() === "/settings"
+    if (requested === "auto")
+      delivery = enterDelivery({ running: input.state().phase === "running", queueable: !unqueueable })
     if (
       delivery === "queue" &&
       (next.mode === "shell" ||
@@ -1446,7 +1467,7 @@ export function createPromptState(input: PromptInput): PromptState {
     })
   }
 
-  const onSubmit = (delivery: RunDelivery = "steer") => {
+  const onSubmit = (delivery: RunDelivery | "auto" = "auto") => {
     if (pasteQueue) {
       const before = revision
       void pasteQueue.then(() => {

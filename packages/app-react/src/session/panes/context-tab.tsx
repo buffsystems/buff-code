@@ -4,6 +4,7 @@
 
 import { createSessionContextFormatter } from "@opencode/app/react-reuse/session-context-format"
 import { Accordion, AccordionItem, ScrollArea } from "@buff/ui/react"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { useMemo } from "react"
 import { locationKey } from "../../core/data/state"
@@ -31,7 +32,7 @@ export function ContextTab(props: { session: PaneSession }) {
     const provider = location?.provider?.find((item) => item.id === last.model.providerID)
     const model = location?.model?.find((item) => item.providerID === last.model.providerID && item.id === last.model.id)
     const total = tokens.input + tokens.output + tokens.reasoning + tokens.cache.read + tokens.cache.write
-    const limit = model?.limit.context
+    const limit = BuffContextWindow.effective(model?.limit.context, info?.limit?.context)
     return {
       message: last,
       tokens,

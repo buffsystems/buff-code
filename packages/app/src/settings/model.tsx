@@ -252,7 +252,9 @@ export const defaultSettings: Settings = {
     mobileTitlebarPosition: "top",
     mobileDiffWrap: true,
     terminalPlacement: "side",
-    followUpBehavior: "steer",
+    // Buff (#805): сообщение, отправленное во время работы агента, ждёт конца хода (очередь);
+    // «вмешаться» — отдельной кнопкой.
+    followUpBehavior: "queue",
     experimentalBrowser: false,
   },
   sessionSummary: { projectExpanded: true, serverExpanded: true },

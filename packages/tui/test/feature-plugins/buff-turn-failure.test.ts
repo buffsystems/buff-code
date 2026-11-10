@@ -1,6 +1,12 @@
 // Ошибка хода в консоли (#458): та же причина словами, что и в окне, и чем её исправить здесь.
 import { expect, test } from "bun:test"
-import { consoleTurnFailure, failedBeforeAnswer, keyFailure, settleKeyFailure } from "../../src/feature-plugins/buff/turn-failure"
+import {
+  consoleTurnFailure,
+  failedBeforeAnswer,
+  filesFailure,
+  keyFailure,
+  settleKeyFailure,
+} from "../../src/feature-plugins/buff/turn-failure"
 
 test("a request with no organisation says which command chooses the context", () => {
   expect(consoleTurnFailure({ type: "provider.auth", message: "not a member of ", status: 403 }, "buff")).toEqual({
@@ -73,4 +79,38 @@ test("the provider whose key the last turn was refused on is found", () => {
   expect(keyFailure([assistant("openrouter", refused), { id: "u", type: "user" }, assistant("openrouter")])).toBeUndefined()
   expect(keyFailure([assistant("buff", refused)])).toBeUndefined()
   expect(keyFailure([])).toBeUndefined()
+})
+
+// #757: модель отвергла запрос с файлами — подсказка называет три пути дальше командами консоли.
+const withFiles = {
+  type: "provider.invalid-request",
+  message: "Image input is not supported",
+  status: 400,
+  attachments: [{ name: "logo.png", mime: "image/png" }],
+}
+
+test("a refusal with files names the commands that go on without them", () => {
+  const failure = consoleTurnFailure(withFiles, "litellm", "LiteLLM")
+  expect(failure.text).toStartWith("Модель не приняла запрос с файлами logo.png")
+  expect(failure.hint).toBe(
+    "/files-code — разобрать файлы кодом · /models — модель, которая их читает, затем ↑ · /files-skip — продолжить без файлов",
+  )
+})
+
+test("the files of the last turn are found only while it is the last one", () => {
+  const failed = { id: "a1", type: "assistant", model: { providerID: "litellm" }, error: withFiles }
+  expect(filesFailure([{ id: "u1", type: "user" }, failed])).toEqual({
+    names: ["logo.png"],
+    formats: ["image"],
+  })
+  // After a failed turn the service adds its marks (idle): the turn is still the last one.
+  expect(filesFailure([{ id: "u1", type: "user" }, failed, { id: "i1", type: "idle" }])).toEqual({
+    names: ["logo.png"],
+    formats: ["image"],
+  })
+  expect(filesFailure([failed, { id: "u2", type: "user" }, { id: "a2", type: "assistant" }])).toBeUndefined()
+  expect(filesFailure([failed, { id: "u2", type: "user" }])).toBeUndefined()
+  expect(
+    filesFailure([{ id: "a3", type: "assistant", error: { type: "provider.rate-limit", message: "x" } }]),
+  ).toBeUndefined()
 })

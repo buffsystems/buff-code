@@ -131,6 +131,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 title: ctx.payload.title,
                 agent: ctx.payload.agent,
                 model: ctx.payload.model,
+                limit: ctx.payload.limit,
                 metadata: ctx.payload.metadata,
                 permissions: ctx.payload.permissions,
                 location: ctx.payload.location ?? { directory: AbsolutePath.make(process.cwd()) },
@@ -248,6 +249,15 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
         Effect.fn(function* (ctx) {
           yield* session
             .switchModel({ sessionID: ctx.params.sessionID, model: ctx.payload.model })
+            .pipe(Effect.catchTag("Session.NotFoundError", missingSession))
+          return HttpApiSchema.NoContent.make()
+        }),
+      )
+      .handle(
+        "session.switchContextLimit",
+        Effect.fn(function* (ctx) {
+          yield* session
+            .switchContext({ sessionID: ctx.params.sessionID, limit: ctx.payload.limit ?? undefined })
             .pipe(Effect.catchTag("Session.NotFoundError", missingSession))
           return HttpApiSchema.NoContent.make()
         }),

@@ -250,6 +250,7 @@ const modelSwitched = (message: SessionMessage.ModelSelected, model: Model.Ref):
 function toLLMMessage(message: SessionMessage.Info, model: Model.Ref, providerMetadataKey: string): Message[] {
   switch (message.type) {
     case "agent-switched":
+    case "context-switched":
     case "idle":
       return []
     case "model-switched":

@@ -97,6 +97,18 @@ Compact the current session. _Alias_: `/summarize`
 
 ---
 
+### context
+
+Set the session's context window cap: the model's maximum, a preset that fits the model (64k, 200k, 500k) or a size of your own in tokens. Compaction fires against the smaller of the cap and the model's window; the change is written into the session's timeline, and the footer and sidebar count usage against the cap. Before a session exists the choice applies to the next session; the `context` config key sets the default.
+
+```bash frame="none"
+/context
+```
+
+**Alias:** `/window`
+
+---
+
 ### details
 
 Toggle tool execution details.

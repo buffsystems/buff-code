@@ -19,7 +19,12 @@ export function SidebarContext(props: { context: Plugin.Context; sessionID: stri
   const buffCost = createMemo(() => buffSessionCost(props.context, props.sessionID))
 
   const state = createMemo(() =>
-    contextUsage(msg(), props.context.data.location.model.list(session()?.location), session()?.revert?.messageID),
+    contextUsage(
+      msg(),
+      props.context.data.location.model.list(session()?.location),
+      session()?.revert?.messageID,
+      session()?.limit?.context,
+    ),
   )
 
   return (

@@ -117,3 +117,20 @@ describe("model selection", () => {
     expect(followServerAgent(kept, undefined, undefined)).toBe(kept)
   })
 })
+
+// Режимы ИИ (#836): ключ `thinking` в конфиге — предвыбор режима размышлений новой сессии,
+// когда ни сессия, ни предпочтение, ни агент его не называют.
+describe("thinking default from config", () => {
+  const go = { providerID: "opencode-go", modelID: "go" }
+  const config = (thinking: string) => [{ type: "document" as const, info: { thinking } }]
+  test("the configured level applies when the model has it and nothing else names one", () => {
+    const selection = resolveSelection(input({ config: config("high"), prefs: prefs([go]) }))
+    expect(selection.model?.id).toBe("go")
+    expect(selection.variant).toBe("high")
+  })
+  test("a level the model lacks, or an explicit pick, leaves the configured one aside", () => {
+    expect(resolveSelection(input({ config: config("xhigh"), prefs: prefs([go]) })).variant).toBeUndefined()
+    const picked = resolveSelection(input({ config: config("high"), prefs: prefs([go]), scope: { model: go, variant: null } }))
+    expect(picked.variant).toBeUndefined()
+  })
+})

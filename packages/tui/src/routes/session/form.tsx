@@ -83,7 +83,10 @@ export function FormPrompt(props: { form: FormWithLocation }) {
       answers: initial.answers,
       custom: initial.custom,
       externalReady: {},
-      selected: formSelected(configuredFields[0], configuredFields[0]?.default),
+      selected: formSelected(
+        configuredFields[0],
+        configuredFields[0] && "default" in configuredFields[0] ? configuredFields[0].default : undefined,
+      ),
       editing: false,
       error: "",
     },
@@ -167,8 +170,12 @@ export function FormPrompt(props: { form: FormWithLocation }) {
     return formCustom(answerField())
   })
   const multi = createMemo(() => answerField()?.type === "multiselect")
+  // Секрет (#765): текст вводится, но не показывается — ни в поле, ни в обзоре; на экране — точки по числу знаков.
+  const secret = createMemo(() => answerField()?.type === "secret")
+  const [secretLength, setSecretLength] = createSignal(0)
   const placeholder = createMemo(() => {
     const current = answerField()
+    if (current?.type === "secret" && current.placeholder) return current.placeholder
     if (current?.type === "string") {
       if (current.placeholder) return current.placeholder
       if (current.format === "email") return "name@example.com"
@@ -414,7 +421,7 @@ export function FormPrompt(props: { form: FormWithLocation }) {
       answer(current.key, value)
     }
 
-    if (isTextual && current.type === "string") {
+    if (isTextual && (current.type === "string" || current.type === "secret")) {
       const invalid = formValidateValue(current, text)
       if (invalid) {
         setStore("error", invalid)
@@ -437,7 +444,8 @@ export function FormPrompt(props: { form: FormWithLocation }) {
     }
 
     const configured = current.type === "string" && current.options?.some((option) => option.value === text)
-    setStore("custom", current.key, configured ? "" : text)
+    // Несколько своих вариантов (#765): записанный становится строкой списка, поле «свой» снова пустое.
+    setStore("custom", current.key, configured || (!isTextual && isMulti) ? "" : text)
     setStore("editing", false)
     return true
   }
@@ -912,11 +920,20 @@ export function FormPrompt(props: { form: FormWithLocation }) {
             </box>
             <Show when={textual() ? answerField()!.key : undefined} keyed>
               <box paddingLeft={1}>
+                <Show when={secret()}>
+                  <text fg={theme.text.base}>{secretLength() ? "•".repeat(secretLength()) : placeholder()}</text>
+                </Show>
                 <textarea
                   cursorStyle={config.cursor}
+                  visible={!secret()}
+                  onContentChange={() => {
+                    if (!textarea || textarea.isDestroyed) return
+                    setSecretLength(textarea.plainText.length)
+                  }}
                   ref={(val: TextareaRenderable) => {
                     textarea = val
                     val.traits = { status: "ANSWER" }
+                    setSecretLength(0)
                     queueMicrotask(() => {
                       if (val.isDestroyed) return
                       val.gotoLineEnd()
@@ -924,7 +941,9 @@ export function FormPrompt(props: { form: FormWithLocation }) {
                     })
                   }}
                   initialValue={
-                    input() || formDisplayValue(answerField()!, store.answers[answerField()!.key], t("(none)"))
+                    answerField()!.type === "secret"
+                      ? ""
+                      : input() || formDisplayValue(answerField()!, store.answers[answerField()!.key], t("(none)"))
                   }
                   placeholder={placeholder()}
                   placeholderColor={theme.text.muted}
@@ -934,6 +953,9 @@ export function FormPrompt(props: { form: FormWithLocation }) {
                   focusedTextColor={theme.text.base}
                   cursorColor={theme.text.base}
                 />
+                <Show when={secret()}>
+                  <text fg={theme.text.muted}>{t("Input is hidden")}</text>
+                </Show>
               </box>
             </Show>
             <Show when={!textual()}>
@@ -1075,6 +1097,8 @@ export function FormPrompt(props: { form: FormWithLocation }) {
                             onContentChange={(value) => {
                               const current = answerField()
                               if (!current || !textarea || textarea.isDestroyed) return
+                              // Записанный свой вариант (#765) уже строка списка: поздний отклик поля его не возвращает.
+                              if (!store.editing) return
                               updateCustom(current, typeof value === "string" ? value : textarea.plainText)
                             }}
                           />

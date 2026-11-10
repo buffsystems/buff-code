@@ -3,6 +3,7 @@ export * as Form from "./form.js"
 import { Form } from "@opencode/schema/form"
 import { Cache, Context, Deferred, Duration, Effect, Exit, Layer, Option, Schema } from "effect"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
+import { BuffSecret } from "./buff/secret.js"
 import { Bus } from "./bus.js"
 
 const RETENTION = Duration.minutes(10)
@@ -101,6 +102,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
+    const secrets = yield* BuffSecret.Service
     let closed = false
     const forms = yield* Cache.makeWith<ID, Entry>(
       () => Effect.die(new Error("Form cache must be used via set/getSuccess, never get")),
@@ -180,11 +182,13 @@ export const layer = Layer.effect(
           if (entry.state.status !== "pending") return yield* new AlreadySettledError({ id: input.id })
           const invalid = validateAnswer(entry.form.fields, input.answer)
           if (invalid) return yield* new InvalidAnswerError({ id: input.id, message: invalid })
-          const next: TerminalState = { status: "answered", answer: input.answer }
+          // Buff (#765): секреты — в хранилище до события и состояния; дальше идут только ссылки.
+          const answer = yield* withheld(entry.form.fields, input.answer, secrets.put)
+          const next: TerminalState = { status: "answered", answer }
           yield* bus.publish(Form.Event.Replied, {
             id: input.id,
             sessionID: entry.form.sessionID,
-            answer: input.answer,
+            answer,
           })
           yield* Cache.set(forms, input.id, { ...entry, state: next })
           yield* Deferred.succeed(entry.deferred, next)
@@ -223,7 +227,22 @@ export const layer = Layer.effect(
   }),
 )
 
-export const node = makeLocationNode({ service: Service, layer, deps: [Bus.node] })
+export const node = makeLocationNode({ service: Service, layer, deps: [Bus.node, BuffSecret.node] })
+
+/** Ответ без значений секретных полей: каждое отдано `put`, на его месте — ссылка. */
+export const withheld = Effect.fn("Form.withheld")(function* (
+  fields: ReadonlyArray<Form.Field>,
+  answer: Answer,
+  put: (value: string) => Effect.Effect<string>,
+) {
+  const secret = new Set(fields.filter((field) => field.type === "secret").map((field) => field.key))
+  const entries = yield* Effect.forEach(Object.entries(answer), ([key, value]) =>
+    secret.has(key) && typeof value === "string" && value.length > 0
+      ? put(value).pipe(Effect.map((reference) => [key, reference] as const))
+      : Effect.succeed([key, value] as const),
+  )
+  return Object.fromEntries(entries) as Answer
+})
 
 export function validateAnswer(form: ReadonlyArray<Form.Field>, answer: Answer) {
   const fields = new Map(form.map((field) => [field.key, field] as const))
@@ -293,6 +312,7 @@ function validateWhen(when: Form.When, target: InputField) {
     if (typeof when.value !== "number") return "Form field condition value must be a number"
     return
   }
+  if (target.type === "secret") return "Form field condition cannot reference a secret field"
   // string and multiselect targets both compare against string values
   if (typeof when.value !== "string") return "Form field condition value must be a string"
   const closed = target.type === "multiselect" ? !target.custom : target.options !== undefined && !target.custom
@@ -333,6 +353,11 @@ function validateField(field: InputField, value: Form.Value): string | undefined
   }
   if (field.type === "boolean") {
     if (typeof value !== "boolean") return `Expected boolean for form field: ${field.key}`
+    return
+  }
+  if (field.type === "secret") {
+    if (typeof value !== "string") return `Expected string for form field: ${field.key}`
+    if (field.required && value.length === 0) return `Missing required form field: ${field.key}`
     return
   }
   if (field.type === "multiselect") {

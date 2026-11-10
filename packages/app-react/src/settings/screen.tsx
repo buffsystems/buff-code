@@ -35,6 +35,7 @@ import { SettingsProjectGeneral } from "./pages/project"
 import { SettingsProjects } from "./pages/projects"
 import { SettingsProviders } from "./pages/providers"
 import { SettingsServerGeneral } from "./pages/server"
+import { SettingsShares } from "./pages/shares"
 import { SettingsShortcuts } from "./pages/shortcuts"
 import { SettingsWorkspaces } from "./pages/workspaces"
 import { revealSettingsSearch } from "./reveal"
@@ -53,7 +54,7 @@ const clientTabs = [
   { value: "shortcuts", label: "settings.tab.shortcuts" },
 ] as const
 
-const scopedTabs = ["projects", "workspaces", "providers", "models", "extensions", "phone"] as const
+const scopedTabs = ["projects", "workspaces", "providers", "models", "extensions", "phone", "shares"] as const
 
 const scopedRoot: readonly SettingsRootTab[] = [
   "projects",
@@ -62,6 +63,7 @@ const scopedRoot: readonly SettingsRootTab[] = [
   "models",
   "extensions",
   "phone",
+  "shares",
   "servers",
 ]
 
@@ -252,6 +254,7 @@ function RootSettings(props: { view: Extract<SettingsView, { type: "root" }>; se
     if (tab === "providers") return scoped(() => <SettingsProviders />)
     if (tab === "models") return scoped(() => <SettingsModels autofocus={autofocus} />)
     if (tab === "phone") return scoped(() => <SettingsPhone />)
+    if (tab === "shares") return scoped(() => <SettingsShares />)
     return scoped(() => <SettingsExtensions subtab={props.view.subtab} onSubtab={(subtab) => surface.subtab(subtab)} />)
   }
 
@@ -311,6 +314,7 @@ function ServerSettings(props: { view: Extract<SettingsView, { type: "server" }>
         {tab === "providers" && <SettingsProviders />}
         {tab === "models" && <SettingsModels autofocus />}
         {tab === "phone" && <SettingsPhone />}
+        {tab === "shares" && <SettingsShares />}
         {tab === "extensions" && (
           <SettingsExtensions subtab={props.view.subtab} onSubtab={(subtab) => surface.subtab(subtab)} />
         )}

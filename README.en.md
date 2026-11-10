@@ -56,8 +56,11 @@ The app for Linux, macOS and Windows is in the releases too. The `SHA256SUMS` li
 | **Visible and reversible** | Under each answer — what the agent changed; a diff, a safe revert that checks for others' edits. Permission requests with a preview of the edit. |
 | **Big tasks by plan** | A plan you approve, the agent's to-do list and a `/goal`: the agent keeps taking turns until a check confirms the result. Workflows — subagents in phases with checks. |
 | **On a schedule** | Automations: tasks for the agent on a schedule, run by a service on the machine — even with the window closed. |
+| **Sets itself up** | Setup mode: ask in plain words to connect mail, a folder, a tracker or any other service — the agent works out how to reach it, asks for what it needs with a form (passwords and keys go into a protected field it never sees), connects, tests and tells you what it can now do. With permission it improves its own connections, skills and instructions. Works from the phone too. |
+| **From your phone** | The Buff app for Android and iPhone: allow a command, answer the agent and start a session from your phone — [RuStore](https://www.rustore.ru/catalog/app/systems.buff.app); other stores and pairing — [buff.systems/en/mobile](https://buff.systems/en/mobile). |
 | **Git in the window** | What changed, a commit with a message from the agent, push, branches and history. |
 | **Extensible** | Your own MCP servers, skills, commands, subagents, `AGENTS.md` memory and hooks — from the window's and the console's settings. |
+| **AI modes** | The thinking mode and the context window per session — in the composer, as defaults in the settings (`thinking`, `context`) or with `/thinking` and `/context`; with the organisation's model the connector brings its window and default level. A change stays as a row in the timeline. |
 | **Any models** | The organisation's models through the connector, a LiteLLM gateway or a provider directly — OpenRouter, Anthropic, OpenAI, Ollama, LM Studio and any OpenAI-compatible endpoint; they can be combined. |
 | **Every turn recorded** | Development sessions are visible in the dashboard: a developer sees their own, the owner sees all; you can ask questions over the records. |
 

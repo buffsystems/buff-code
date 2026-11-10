@@ -194,6 +194,9 @@ export const Definitions = {
 
   "prompt.submit": keybind("none", "Submit prompt"),
   "prompt.queue": keybind("<leader>return", "Queue prompt"),
+  // Buff (#805): Enter queues while the agent works; this sends into the current turn (an empty
+  // Enter still sends the oldest queued prompt at once).
+  "prompt.steer": keybind("none", "Send prompt now"),
   "prompt.editor_context.clear": keybind("none", "Clear editor context"),
   "prompt.images.view": keybind("<leader>i", "View image attachments"),
   "prompt.skills": keybind("none", "Open skill selector"),

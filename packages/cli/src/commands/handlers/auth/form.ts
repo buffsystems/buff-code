@@ -38,7 +38,9 @@ export const answerForm = Effect.fn("cli.auth.form")(function* (
       provided !== undefined
         ? yield* suppliedAnswer(field, provided)
         : field.type !== "external" && field.hidden
-          ? field.default
+          ? "default" in field
+            ? field.default
+            : undefined
           : yield* answerField(field)
     if (field.type !== "external") {
       const invalid = formValidateValue(field, value)
@@ -143,8 +145,8 @@ const answerField = Effect.fn("cli.auth.form.field")(function* (field: FormField
   const value = yield* prompt<string>(() =>
     text({
       message,
-      placeholder: field.type === "string" ? field.placeholder : undefined,
-      initialValue: field.default === undefined ? undefined : String(field.default),
+      placeholder: field.type === "string" || field.type === "secret" ? field.placeholder : undefined,
+      initialValue: "default" in field && field.default !== undefined ? String(field.default) : undefined,
       validate: (input) => validateText(field, input),
     }),
   )
@@ -179,6 +181,8 @@ function validateText(field: Exclude<FormField, { type: "boolean" | "external" |
       return t("Must be at most {value}", { value: field.maximum })
     return undefined
   }
+  // Секрет (#765): текст без правил формата.
+  if (field.type === "secret") return undefined
   if (field.minLength !== undefined && value.length < field.minLength)
     return t("Must be at least {min} characters", { min: field.minLength })
   if (field.maxLength !== undefined && value.length > field.maxLength)

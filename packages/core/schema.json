@@ -1,8 +1,8 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "be60f352-8da1-40e1-8d70-dc41121cfbc5",
-  "prevIds": ["3fb67508-0196-4bae-b2bd-c08ece7583fd"],
+  "id": "3c717dee-97d4-4af7-94d5-8ce1cfaf87e3",
+  "prevIds": ["be60f352-8da1-40e1-8d70-dc41121cfbc5"],
   "ddl": [
     {
       "name": "account_state",
@@ -1327,6 +1327,16 @@
       "default": null,
       "generated": null,
       "name": "model",
+      "entityType": "columns",
+      "table": "session_v2"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "context_limit",
       "entityType": "columns",
       "table": "session_v2"
     },

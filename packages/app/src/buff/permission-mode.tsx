@@ -7,6 +7,7 @@ import { useData } from "@/runtime/server/current"
 import { useServerSDK } from "@/runtime/server/client"
 import { formatServerError } from "@/runtime/server/errors"
 import { showToast } from "@/shell/notifications/toast"
+import { BuffSetup } from "@opencode/schema/buff-setup"
 import { useBuffText } from "./i18n"
 import "./permission-mode.css"
 
@@ -72,12 +73,23 @@ export function BuffPermissionModeControl() {
   const { t } = useBuffText()
   const plan = createMemo(() => local.agent.current()?.name === PLAN)
   const hasPlan = createMemo(() => local.agent.list().some((agent) => agent.name === PLAN))
+  // Режим «Настройка» (#765): переключатель рядом с «Планом».
+  const setup = createMemo(() => local.agent.current()?.name === BuffSetup.AGENT)
+  const hasSetup = createMemo(() => local.agent.list().some((agent) => agent.name === BuffSetup.AGENT))
+  const working = () =>
+    local.agent.list().find((agent) => agent.name !== PLAN && agent.name !== BuffSetup.AGENT)?.name ?? "build"
   const session = createMemo(() => (params.id ? data.session.get(params.id) : undefined))
   const mode = createMemo(() => (session() ? Mode.modeOf(session()!.permissions, plan()) : preferred()))
   const options = createMemo(() => [
     ...(mode()
       ? []
-      : [{ value: "custom" as const, label: Mode.short(undefined, t), hint: t("The rules of this session are not set by a mode.") }]),
+      : [
+          {
+            value: "custom" as const,
+            label: Mode.short(undefined, t),
+            hint: t("The rules of this session are not set by a mode."),
+          },
+        ]),
     ...Mode.MODES.map((item) => ({ ...item, label: t(item.label), hint: t(item.hint) })),
   ])
 
@@ -102,9 +114,10 @@ export function BuffPermissionModeControl() {
   const togglePlan = () => {
     const next = !plan()
     // Вернуться из плана — к агенту, с которого в него вошли; иначе к основному.
-    local.agent.set(next ? PLAN : (local.agent.list().find((agent) => agent.name !== PLAN)?.name ?? "build"))
+    local.agent.set(next ? PLAN : working())
     apply(mode() ?? preferred(), next)
   }
+  const toggleSetup = () => local.agent.set(setup() ? working() : BuffSetup.AGENT)
 
   return (
     <div class="buff-mode" data-component="buff-permission-mode" data-mode={mode() ?? "custom"}>
@@ -139,6 +152,21 @@ export function BuffPermissionModeControl() {
         onClick={togglePlan}
       >
         {t("Plan")}
+      </button>
+      <button
+        type="button"
+        class="buff-mode-plan"
+        data-action="buff-setup-toggle"
+        data-active={setup()}
+        hidden={!hasSetup()}
+        title={
+          setup()
+            ? t("Setup: the agent connects itself to what you need. Click to get back to work.")
+            : t("Turn on Setup: connect a service, an account or a folder to the agent.")
+        }
+        onClick={toggleSetup}
+      >
+        {t("Setup")}
       </button>
     </div>
   )

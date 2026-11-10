@@ -23,6 +23,8 @@ export type TimelineActions = {
   turnFailure?: (failure: SessionTurnFailure) => ReactNode
   /** Buff (#449): under a finished turn's answer — the files it changed. */
   turnSummary?: (input: { userMessageID: string }) => ReactNode
+  /** Buff (#817): a public link to this message — the share dialog with it picked. */
+  share?: (messageID: string) => void
 }
 
 export type TimelineDisclosure = {

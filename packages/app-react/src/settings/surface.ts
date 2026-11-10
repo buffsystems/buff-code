@@ -17,11 +17,12 @@ export const rootTabs = [
   "models",
   "extensions",
   "phone",
+  "shares",
   "servers",
   "experimental",
   "about",
 ] as const
-export const serverTabs = ["general", "projects", "workspaces", "providers", "models", "extensions", "phone"] as const
+export const serverTabs = ["general", "projects", "workspaces", "providers", "models", "extensions", "phone", "shares"] as const
 export const projectTabs = ["general", "workspaces", "extensions"] as const
 
 export type SettingsRootTab = (typeof rootTabs)[number]

@@ -41,7 +41,7 @@ const extension = (path: string | undefined) => {
   return at === -1 ? "" : name.slice(at + 1).toLowerCase()
 }
 
-export type PreviewKind = "markdown" | "mermaid" | "pdf" | "video"
+export type PreviewKind = "markdown" | "mermaid" | "pdf" | "video" | "html"
 
 const PREVIEW: Record<string, PreviewKind> = {
   md: "markdown",
@@ -55,6 +55,9 @@ const PREVIEW: Record<string, PreviewKind> = {
   webm: "video",
   mov: "video",
   ogv: "video",
+  // #808: страница — отрисованной, исходник одним переключателем.
+  html: "html",
+  htm: "html",
 }
 
 /** Файлы, у которых есть свой просмотр вместо исходника. */

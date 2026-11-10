@@ -1,6 +1,8 @@
 // Buff's strips and chips on the new-session draft screen (#584); the same pieces the session
 // composer mounts, see draft-strips.tsx.
-import { lazySlot, type DraftSlot } from "../new-session/slots"
+// #847: lazySlot comes straight from its module — new-session/slots gathers this file eagerly.
+import type { DraftSlot } from "../new-session/slots"
+import { lazySlot } from "../react/lazy-slot"
 
 const strips = () => import("./draft-strips")
 

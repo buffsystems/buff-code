@@ -864,7 +864,11 @@ async function formAnswer(
   for (const field of fields) {
     if (!active(field, answer)) continue
     const value =
-      field.type !== "external" && field.hidden ? field.default : await fieldAnswer(dialog, title, field, retry)
+      field.type !== "external" && field.hidden
+        ? "default" in field
+          ? field.default
+          : undefined
+        : await fieldAnswer(dialog, title, field, retry)
     if (value === CANCELLED) return null
     if (value !== undefined) answer[field.key] = value
   }
@@ -946,8 +950,8 @@ async function selectAnswer(
 function textAnswer(
   dialog: ReturnType<typeof useDialog>,
   title: string,
-  field: Extract<FormAnswerField, { type: "string" | "number" | "integer" }>,
-  initial = field.default === undefined ? undefined : String(field.default),
+  field: Extract<FormAnswerField, { type: "string" | "number" | "integer" | "secret" }>,
+  initial = "default" in field && field.default !== undefined ? String(field.default) : undefined,
   failure?: string,
 ): Promise<FormValue | undefined | typeof CANCELLED> {
   return new Promise<FormValue | undefined | typeof CANCELLED>((resolve) => {

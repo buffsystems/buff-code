@@ -568,7 +568,9 @@ test("typing a custom single-select answer selects it without submitting", async
   }
 })
 
-test("committing a custom multiselect answer keeps one editable custom row", async () => {
+// Several own answers (#765, #776): a committed custom answer becomes a checked row of the list,
+// and the custom field below is empty again for the next one.
+test("committing a custom multiselect answer adds it as a checked row and empties the custom field", async () => {
   await using tmp = await tmpdir()
   const prompt = await mountForm(tmp.path, 80, [
     {
@@ -585,8 +587,8 @@ test("committing a custom multiselect answer keeps one editable custom row", asy
     await prompt.app.waitForFrame((frame) => frame.includes("2. [✓] production"))
 
     const frame = prompt.app.captureCharFrame()
-    expect(frame).not.toContain("Введите свой ответ")
-    expect(frame).not.toContain("3.")
+    expect(frame).toContain("3. [ ] Введите свой ответ")
+    expect(frame).not.toContain("4.")
     expect(prompt.replies).toEqual([])
   } finally {
     prompt.app.renderer.destroy()

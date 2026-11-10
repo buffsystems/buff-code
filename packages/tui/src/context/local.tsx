@@ -1,7 +1,7 @@
 import { createStore } from "solid-js/store"
 import { dedupeWith } from "effect/Array"
 import { createSimpleContext } from "./helper"
-import { batch, createMemo, onCleanup } from "solid-js"
+import { batch, createMemo, createSignal, onCleanup } from "solid-js"
 import { useEvent } from "./event"
 import path from "path"
 import { useTuiPaths } from "./runtime"
@@ -27,6 +27,9 @@ import { usePermission } from "./permission"
 import { useLocation } from "./location"
 import { parse } from "../util/model"
 import { BuffModelDefault } from "@opencode/schema/buff-model-default"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
+import { useClient } from "./client"
+import { errorMessage } from "../util/error"
 import { t as buffText } from "../feature-plugins/buff/locale"
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
@@ -41,6 +44,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const event = useEvent()
     const permission = usePermission()
     const location = useLocation()
+    const client = useClient()
 
     const models = () => data.location.model.list(location.ref)
     const providers = () => data.location.provider.list(location.ref)
@@ -619,11 +623,51 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
     const session = createSession()
 
+    // Окно контекста (#837): потолок контекста. У сессии он живёт на сервере (Session.Info.limit,
+    // POST /session/:id/context-limit — событие вернёт его и строку в ленту); до сессии — черновик,
+    // по умолчанию ключ `context` конфига места; 0 — всё окно модели.
+    function createContextLimit() {
+      const [draft, setDraft] = createSignal<number | undefined>(undefined)
+      const configured = createMemo(() => BuffContextWindow.configured(data.location.config.list(location.ref)))
+      const sessionCap = () =>
+        route.data.type === "session" ? (data.session.get(route.data.sessionID)?.limit?.context ?? 0) : undefined
+      return {
+        /** The cap in force: the session's, or the draft for the next session (0: the model's window). */
+        current(): number {
+          return sessionCap() ?? draft() ?? configured() ?? 0
+        },
+        /** The current model's window, for the choices that fit it. */
+        modelWindow(): number | undefined {
+          const selected = model.selection()
+          if (!selected) return undefined
+          const info = data.location.model
+            .list(location.ref)
+            ?.find((item) => item.providerID === selected.providerID && item.id === selected.modelID)
+          return info?.limit?.context
+        },
+        /** What the next session's create call sends. */
+        draft(): { context: number } | undefined {
+          const value = draft() ?? configured()
+          return value ? { context: value } : undefined
+        },
+        set(value: number) {
+          if (route.data.type !== "session") return setDraft(value)
+          const sessionID = route.data.sessionID
+          void client.api.session
+            .switchContextLimit({ sessionID, limit: value ? { context: value } : null })
+            .catch((error: unknown) =>
+              toast.show({ title: buffText("Failed to change the context window"), message: errorMessage(error), variant: "error" }),
+            )
+        },
+      }
+    }
+
     const result = {
       model,
       agent,
       session,
       permission,
+      contextLimit: createContextLimit(),
     }
     return result
   },

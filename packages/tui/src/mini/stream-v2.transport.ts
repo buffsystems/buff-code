@@ -9,6 +9,7 @@ import type {
   SessionMessageUser,
   SessionInboxInfo,
 } from "@opencode/client/promise"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import { Event } from "@opencode/schema/event"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { blockerStatus, pickBlockerView } from "./session-data"
@@ -162,6 +163,8 @@ type State = {
   pending: Map<string, PendingPrompt>
   admitted: Set<string>
   stepModel: RunInput["model"]
+  /** #837: the session's context cap, from its events; usage counts against the window cut by it. */
+  contextCap?: number
   activeCompaction?: string
 }
 
@@ -511,6 +514,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     pending: new Map(),
     admitted: new Set(),
     stepModel: undefined,
+    contextCap: undefined,
   }
   let readyResolve!: () => void
   let readyReject!: (error: unknown) => void
@@ -1071,6 +1075,10 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       if (state.pending.delete(event.data.inboxID)) syncPending()
       return
     }
+    if (event.type === "session.context.selected") {
+      if (event.data.sessionID === input.sessionID) state.contextCap = event.data.limit?.context
+      return
+    }
     if (event.type === "session.step.started") {
       state.stepModel = { providerID: event.data.model.providerID, modelID: event.data.model.id }
       write([], { phase: "running", status: t("assistant responding") })
@@ -1370,7 +1378,10 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         event.data.tokens.reasoning +
         event.data.tokens.cache.read +
         event.data.tokens.cache.write
-      const limit = state.stepModel ? input.contextLimit?.(state.stepModel) : undefined
+      const limit = BuffContextWindow.effective(
+        state.stepModel ? input.contextLimit?.(state.stepModel) : undefined,
+        state.contextCap,
+      )
       state.stepModel = undefined
       if (!showTools()) flushQuietText(event.data.assistantMessageID)
       write([], {

@@ -53,3 +53,11 @@ test("groups put the well-known providers first and match a search across names 
     ["sonnet"],
   ])
 })
+
+// #763: a model of the person's own provider has no release date (released 0, "1970-01-01" here):
+// the pickers show it without a choice, and a «hide» still hides it.
+test("a model without a release date shows in the pickers by default", () => {
+  const own = { id: "deepseek", release_date: new Date(0).toISOString().slice(0, 10), provider: { id: "litellm" } }
+  expect(modelVisible(own as never, undefined, new Set())).toBe(true)
+  expect(modelVisible(own as never, "hide", new Set())).toBe(false)
+})

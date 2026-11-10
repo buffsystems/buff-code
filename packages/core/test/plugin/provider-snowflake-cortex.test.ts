@@ -21,6 +21,7 @@ import { Socket } from "effect/unstable/socket"
 import { withEnv } from "../fixture/env"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
+import { tempGlobalLayer } from "../fixture/global"
 
 const it = testEffect(
   Layer.merge(PluginTestLayer, SessionModelTransport.layer.pipe(Layer.provide(Socket.layerWebSocketConstructorGlobal))),
@@ -89,7 +90,7 @@ const fixture = Effect.fn(function* () {
       Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer), Layer.fresh)),
       Effect.provideService(HttpClient.HttpClient, http),
     )
-  }).pipe(Effect.provide(SessionModelRequest.layer), Effect.provide(ModelResolver.layer))
+  }).pipe(Effect.provide(SessionModelRequest.layer.pipe(Layer.provide(tempGlobalLayer))), Effect.provide(ModelResolver.layer))
   const stop = Effect.gen(function* () {
     replies.push(Response.json({ message: "Conversation complete", error: {} }, { status: 400 }))
     expect((yield* send).find((event) => event.type === "finish")?.reason.normalized).toBe("stop")

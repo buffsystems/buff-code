@@ -21,12 +21,15 @@ import BuffHook from "../feature-plugins/buff/hook"
 import BuffPermissionMode from "../feature-plugins/buff/permission-mode"
 import BuffGit from "../feature-plugins/buff/git"
 import BuffBilling from "../feature-plugins/buff/billing"
+import BuffFiles from "../feature-plugins/buff/files"
 import BuffAutomation from "../feature-plugins/buff/automation"
 import BuffPhone from "../feature-plugins/buff/phone"
+import BuffShare from "../feature-plugins/buff/share"
 import BuffWorkflow from "../feature-plugins/buff/workflow"
 import BuffTodo from "../feature-plugins/buff/todo"
 import BuffGoal from "../feature-plugins/buff/goal"
 import BuffSide from "../feature-plugins/buff/side"
+import BuffSetupMode from "../feature-plugins/buff/setup"
 import BuffQueries from "../feature-plugins/buff/queries"
 
 export const builtins = [
@@ -45,9 +48,12 @@ export const builtins = [
   BuffGit,
   // Buff: остаток организации и свой расход (#455).
   BuffBilling,
+  BuffFiles,
   // Buff: задачи агенту по расписанию (#447).
   BuffAutomation,
   BuffPhone,
+  // Buff: публичные ссылки на диалоги (#818).
+  BuffShare,
   // Buff: сценарии — субагенты по фазам (#448).
   BuffWorkflow,
   // Buff: список дел — строка прогресса и /todos (#463).
@@ -56,6 +62,7 @@ export const builtins = [
   BuffGoal,
   // Buff: побочный диалог — /side открывает ответвление вкладкой (#464).
   BuffSide,
+  BuffSetupMode,
   // Buff: карта запросов — «Перейти к запросу», /queries (#465).
   BuffQueries,
   PromptFooter,

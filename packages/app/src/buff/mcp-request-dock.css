@@ -26,3 +26,23 @@
   gap: 8px;
   width: 100%;
 }
+
+/* Buff (#765): свои варианты к полю с несколькими — списком, с добавлением по одному. */
+.buff-mcp-form-own {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0 2px 8px;
+  border-left: 2px solid var(--v2-border-border-weak, var(--border-weak));
+}
+
+.buff-mcp-form-own-add {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.buff-mcp-form-own-add > :first-child {
+  flex: 1;
+}

@@ -20,6 +20,8 @@ import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Bus } from "@opencode/core/bus"
 import { ID, type Payload } from "@opencode/schema/event"
 import { Form } from "@opencode/core/form"
+import { BuffSecret } from "@opencode/core/buff/secret"
+import { fakeKV } from "./buff/fake-kv"
 import { Integration } from "@opencode/core/integration"
 import { Environment } from "@opencode/core/environment/index"
 import { EnvironmentUnavailable } from "@opencode/core/environment/unavailable"
@@ -314,6 +316,8 @@ function resourceMcpLayer(
               }),
             ]),
         Layer.succeed(Location.Service, Location.Service.of(location({ directory }))),
+        // Buff (#765): секреты форм — в памяти.
+        Layer.succeed(BuffSecret.Service, BuffSecret.make(fakeKV())),
         Layer.mock(Bus.Service, {
           subscribe: overrides?.subscribe ?? (() => Stream.never),
           publish: (definition, data) => {
@@ -1924,8 +1928,17 @@ testEffect(Layer.empty).live("keeps MCP config snapshots stable during an in-fli
 
 const shutdownIt = testEffect(
   AppNodeBuilder.build(
-    LayerNode.group([Bus.node, Integration.node, Credential.node, Form.node, Environment.node, Location.node]),
+    LayerNode.group([
+      Bus.node,
+      Integration.node,
+      Credential.node,
+      Form.node,
+      Environment.node,
+      Location.node,
+      BuffSecret.node,
+    ]),
     [
+      BuffSecret.node.replace(Layer.succeed(BuffSecret.Service, BuffSecret.make(fakeKV()))),
       Location.node.replace(
         Layer.succeed(
           Location.Service,

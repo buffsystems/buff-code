@@ -1,5 +1,6 @@
 export * as SessionRunnerLLM from "./llm.js"
 
+import { BuffAttachment } from "@opencode/schema/buff-attachment"
 import { Message } from "@opencode/ai"
 import { and, desc, eq, sql } from "drizzle-orm"
 import { Cause, Effect, Exit, FiberMap, Layer } from "effect"
@@ -244,6 +245,7 @@ const layer = Layer.effect(
             : transcript.messages,
           // Keep tool definitions on the final Step to preserve the provider's cached prefix.
           toolChoice: stepLimitReached ? "none" : undefined,
+          omitMedia: BuffAttachment.omittedMedia(loaded.messages),
           webSocket: "session",
         })
         const outcome = yield* steps.attempt({

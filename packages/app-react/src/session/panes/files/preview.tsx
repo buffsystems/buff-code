@@ -1,4 +1,4 @@
-// Buff (#451): the preview of a Markdown / Mermaid file (rendered, with a Preview / Source switch)
+// Buff (#451, #808): the preview of a Markdown / Mermaid / HTML file (rendered, with a Preview / Source switch)
 // and of a PDF or a video (embedded) — the Solid window's buff/file-preview.tsx.
 
 import { mimeOf, previewKind } from "@opencode/app/react-reuse/file-content"
@@ -19,7 +19,7 @@ export function FilePreview(props: { files: Files; path: string; source: string;
   const kind = previewKind(props.path)
   const [source, setSource] = useState(false)
   if (kind === "pdf" || kind === "video") return <Embedded files={props.files} path={props.path} kind={kind} />
-  if (kind !== "markdown" && kind !== "mermaid") return props.children
+  if (kind !== "markdown" && kind !== "mermaid" && kind !== "html") return props.children
   return (
     <div className="buff-preview" data-component="buff-preview">
       <div className="buff-preview-switch" role="tablist">
@@ -33,11 +33,31 @@ export function FilePreview(props: { files: Files; path: string; source: string;
       {source ? (
         props.children
       ) : (
-        <div className="buff-preview-markdown" data-component="buff-preview-markdown">
-          <Markdown text={kind === "mermaid" ? mermaid(props.source) : props.source} cacheKey={`buff-preview:${props.path}`} />
-        </div>
+        kind === "html" ? (
+          <Page path={props.path} source={props.source} />
+        ) : (
+          <div className="buff-preview-markdown" data-component="buff-preview-markdown">
+            <Markdown text={kind === "mermaid" ? mermaid(props.source) : props.source} cacheKey={`buff-preview:${props.path}`} />
+          </div>
+        )
       )}
     </div>
+  )
+}
+
+/**
+ * Buff (#808): a page drawn as the browser would — in a sandboxed frame: its scripts run, but it
+ * reaches neither the window nor its storage; a link opens in a new window.
+ */
+function Page(props: { path: string; source: string }) {
+  return (
+    <iframe
+      srcDoc={props.source}
+      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+      className="buff-preview-page"
+      data-component="buff-preview-page"
+      title={props.path}
+    />
   )
 }
 

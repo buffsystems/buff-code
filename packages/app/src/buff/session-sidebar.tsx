@@ -1,7 +1,8 @@
-import { createMemo, createResource, createSignal, For, Show, startTransition } from "solid-js"
+import { createMemo, createResource, createSignal, For, onCleanup, onMount, Show, startTransition } from "solid-js"
 import { createStore } from "solid-js/store"
 import type { SessionInfo } from "@opencode/client/promise"
 import { BuffSessionMarks as Marks } from "@opencode/schema/buff-session-marks"
+import { BuffSetup } from "@opencode/schema/buff-setup"
 import { Button } from "@opencode/ui/button"
 import { useDialog } from "@opencode/ui/context/dialog"
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from "@opencode/ui/dialog"
@@ -72,9 +73,43 @@ function createController(server: () => ServerConnection.Key | undefined) {
       id: session.id,
       title: sessionLabel(session, t),
       updated: session.time.updated,
+      // Режим «Настройка» (#765): свой раздел в колонке.
+      setup: BuffSetup.isSetup(session),
       session,
     })),
   )
+
+  const open = (session: SessionInfo) => {
+    const key = server()
+    const current = ctx()
+    if (!key || !current) return
+    void startTransition(() => {
+      tabs.select(tabs.addSessionTab({ server: key, sessionId: session.id }))
+      current.data.session.remember(session)
+      current.projects.open(session.location.directory)
+    })
+  }
+  /** Открыть сессию по номеру: окно её ещё не знает, когда она только что создана. */
+  const openByID = (sessionID: string) =>
+    ctx()
+      ?.sdk.api.session.get({ sessionID })
+      .then(open)
+      .catch((error: unknown) =>
+        showToast({ title: t("Setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
+      )
+  // Сессия настройки открыта моделью из этой переписки (#765) — показать её; список обновить в любом случае.
+  onMount(() => {
+    const stop = new AbortController()
+    onCleanup(() => stop.abort())
+    void (async () => {
+      const events = ctx()?.sdk.api.rpc(BuffSetup.Rpc).events.subscribe("opened", { signal: stop.signal })
+      if (!events) return
+      for await (const event of events) {
+        void refetchIndex()
+        if (event.data.from && ctx()?.data.session.get(event.data.from)) void openByID(event.data.session)
+      }
+    })().catch(() => undefined)
+  })
 
   /** Состояние сессии — вместе с её субагентами: запрос субагента ждёт ответа в основной. */
   const status = (sessionID: string) => {
@@ -102,16 +137,16 @@ function createController(server: () => ServerConnection.Key | undefined) {
     status,
     change: marks.change,
     refresh: () => void refetchIndex(),
-    open: (session: SessionInfo) => {
-      const key = server()
-      const current = ctx()
-      if (!key || !current) return
-      void startTransition(() => {
-        tabs.select(tabs.addSessionTab({ server: key, sessionId: session.id }))
-        current.data.session.remember(session)
-        current.projects.open(session.location.directory)
-      })
-    },
+    open,
+    /** Новая сессия режима «Настройка» (#765): ядро создаёт, окно открывает её вкладкой. */
+    setup: () =>
+      ctx()
+        ?.sdk.api.rpc(BuffSetup.Rpc)
+        .open({})
+        .then((result) => openByID(result.session))
+        .catch((error: unknown) =>
+          showToast({ title: t("Setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
+        ),
     rename: (session: SessionInfo, title: string) =>
       ctx()
         ?.sdk.api.session.update({ sessionID: session.id, title })
@@ -297,6 +332,22 @@ function Row(props: { session: SessionInfo; controller: Controller; current: boo
 function GroupTitle(props: { section: Marks.Section<unknown>; controller: Controller }) {
   const dialog = useDialog()
   const { t } = useBuffText()
+  if (props.section.kind === "setup")
+    return (
+      <span class="buff-sessions-heading buff-sessions-heading-row" data-component="buff-sessions-setup">
+        {t(props.section.title)}
+        <button
+          type="button"
+          class="buff-sessions-add"
+          data-action="buff-setup-new"
+          title={t("New setup")}
+          aria-label={t("New setup")}
+          onClick={() => void props.controller.setup()}
+        >
+          +
+        </button>
+      </span>
+    )
   return (
     <Show when={props.section.group} fallback={<span class="buff-sessions-heading">{t(props.section.title)}</span>}>
       {(group) => (
@@ -364,7 +415,13 @@ export function BuffSessionSidebar(props: { server: ServerConnection.Key | undef
               <GroupTitle section={section} controller={controller} />
               <Show
                 when={section.items.length}
-                fallback={<span class="buff-sessions-empty">{t("Empty — add a session from its menu.")}</span>}
+                fallback={
+                  <span class="buff-sessions-empty">
+                    {section.kind === "setup"
+                      ? t("Nothing connected yet — press + and ask to connect something.")
+                      : t("Empty — add a session from its menu.")}
+                  </span>
+                }
               >
                 <For each={section.items}>
                   {(item) => (

@@ -61,6 +61,8 @@ export const Created = Event.durable({
     title: Schema.String.pipe(optional),
     agent: Agent.ID.pipe(optional),
     model: Model.Ref.pipe(optional),
+    /** The session's context window cap from the start (#835); absent — the model's window. */
+    limit: Schema.Struct({ context: PositiveInt }).pipe(optional),
     /** Host-supplied annotations resolved at creation, including any inherited from a parent. */
     metadata: SessionMetadata.pipe(optional),
     permissions: Permission.Ruleset.pipe(optional),
@@ -90,6 +92,18 @@ export const ModelSelected = Event.durable({
   },
 })
 export type ModelSelected = typeof ModelSelected.Type
+
+/** The session's context window cap changed (#835, режимы ИИ); absent `limit` — back to the model's window. */
+export const ContextSelected = Event.durable({
+  type: "session.context.selected",
+  ...options,
+  schema: {
+    ...Base,
+    limit: Schema.Struct({ context: PositiveInt }).pipe(optional),
+    previous: Schema.Struct({ context: PositiveInt }).pipe(optional),
+  },
+})
+export type ContextSelected = typeof ContextSelected.Type
 
 export const Moved = Event.durable({
   type: "session.moved",
@@ -646,6 +660,7 @@ export const Definitions = Event.inventory(
   Created,
   AgentSelected,
   ModelSelected,
+  ContextSelected,
   Moved,
   Renamed,
   Permissions,

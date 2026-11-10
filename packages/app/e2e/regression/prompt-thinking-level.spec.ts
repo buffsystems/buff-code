@@ -53,11 +53,11 @@ test("shows thinking on hover or a non-default selection while preserving keyboa
   await page.goto(`/server/${base64Encode(server)}/session/${sessionID}`)
   const composer = page.locator('[data-component="composer"]')
   const input = composer.getByRole("textbox", { name: "Prompt", exact: true })
-  const control = composer.getByRole("button", { name: "Choose model variant" })
+  const control = composer.getByRole("button", { name: "Thinking mode", exact: true })
   await expectAppVisible(composer)
 
   await page.mouse.move(0, 0)
-  await expect(control).toHaveText("default")
+  await expect(control).toHaveText("Default")
   await expect(control).toHaveCSS("opacity", "0")
   await expect(control).toHaveCSS("pointer-events", "none")
 
@@ -70,7 +70,7 @@ test("shows thinking on hover or a non-default selection while preserving keyboa
 
   await input.hover()
   await control.click()
-  const high = page.getByRole("menuitemradio", { name: "high" })
+  const high = page.getByRole("menuitemradio", { name: /^High/ })
   await expect(high).toBeVisible()
   await page.mouse.move(0, 0)
   await expect(control).toHaveAttribute("aria-expanded", "true")
@@ -80,14 +80,14 @@ test("shows thinking on hover or a non-default selection while preserving keyboa
 
   await input.click()
   await page.mouse.move(0, 0)
-  await expect(control).toHaveText("high")
+  await expect(control).toHaveText("High")
   await expect(control).toHaveCSS("opacity", "1")
 
   await control.click()
-  await page.getByRole("menuitemradio", { name: "default", exact: true }).click()
+  await page.getByRole("menuitemradio", { name: /^Default/ }).click()
   await input.click()
   await page.mouse.move(0, 0)
-  await expect(control).toHaveText("default")
+  await expect(control).toHaveText("Default")
   await expect(control).toHaveCSS("opacity", "0")
 
   // The single-agent fixture has only Add, Buff's permission mode (#450) and Model before the
@@ -104,7 +104,7 @@ test("shows thinking on hover or a non-default selection while preserving keyboa
   await expect(control).toBeFocused()
   await expect(control).toHaveCSS("opacity", "1")
   await page.keyboard.press("Enter")
-  await expect(page.getByRole("menuitemradio", { name: "default", exact: true })).toBeFocused()
+  await expect(page.getByRole("menuitemradio", { name: /^Default/ })).toBeFocused()
   await expect(control).toHaveCSS("opacity", "1")
   await page.keyboard.press("Escape")
   await expect(control).toBeFocused()

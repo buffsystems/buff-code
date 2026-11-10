@@ -4,7 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { Context, Effect, Layer, Stream } from "effect"
 import type { Scope } from "effect"
-import { RefusalError, type PairingView, type PeerLog, type RelayConn } from "@buff/mobile-protocol"
+import { RefusalError, type PairingView, type PeerLog, type RelayConn, type Reply } from "@buff/mobile-protocol"
 import { connect as natsConnect } from "nats.ws"
 import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
@@ -176,9 +176,25 @@ const postJson = async (url: string, body: object) => {
 // События сессии частые (дельты текста, шаги инструментов): телефону — снимок не чаще раза в 300 мс.
 const SETTLE_MS = 300
 
+/** Публичные ссылки (#816) в службе телефона: ответы зрителю шлюза и команды телефона `shares.*`. */
+export interface ShareBridge {
+  serve(op: string, args: unknown): Promise<Reply>
+  phone(op: string, args: unknown): Promise<Reply>
+}
+
+const noShares = (): ShareBridge => ({
+  serve: async () => {
+    throw new RefusalError("share links are not served by this machine")
+  },
+  phone: async () => {
+    throw new RefusalError("share links are not served by this machine")
+  },
+})
+
 const make = Effect.gen(function* () {
   const bus = yield* Bus.Service
   let agent: MobileAgent | null = null
+  let shares: ShareBridge | null = null
   const watches = watchers()
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
   let api: MobileApi | null = null
@@ -253,6 +269,18 @@ const make = Effect.gen(function* () {
     cancel: (offerId: string): void => need().cancel(offerId),
     revoke: (device: string): Promise<void> => need().revoke(device),
     rename: (device: string, display: string): Promise<void> => need().rename(device, display),
+    /** Служба ссылок (#816) подключается сюда: зритель и телефон достают её через агента машины. */
+    shares: (bridge: ShareBridge | null): void => void (shares = bridge),
+    /** Шлюз для службы ссылок: команда в имени машины (связь поднимается сама) и её состояние. */
+    gateway: {
+      host: gatewayHost,
+      command: (command: string, body: object): Promise<Reply> =>
+        agent ? agent.command(command, body) : Promise.resolve({ ok: false, error: "relay: service not running" }),
+      connect: (): Promise<void> => (agent ? agent.connect() : Promise.resolve()),
+      connected: (): boolean => agent?.connected ?? false,
+      problem: (): string | null => agent?.status(0).problem ?? null,
+      running: (): boolean => agent !== null,
+    },
     /** Каталог с входом в Buff: служба узнаёт по нему дом машины, пока каталог открыт. */
     signIn: (read: () => Promise<SignedIn | undefined>): (() => void) => {
       signIns.add(read)
@@ -281,8 +309,14 @@ const make = Effect.gen(function* () {
             gatewayHost: host,
             display: () => os.hostname(),
             // Сбой команды телефона — в журнал службы: на телефон он уходит без подробностей.
+            // Зритель шлюза (#816) и команды ссылок с телефона идут в службу ссылок, не в API телефона.
             exec: (record, op, args) =>
-              run.run(record, op, args).catch((err: unknown) => {
+              (record.viewer
+                ? (shares ?? noShares()).serve(op, args)
+                : op.startsWith("shares.")
+                  ? (shares ?? noShares()).phone(op, args)
+                  : run.run(record, op, args)
+              ).catch((err: unknown) => {
                 if (!(err instanceof RefusalError)) log.error("mobile: command failed", { op, err: String(err) })
                 throw err
               }),

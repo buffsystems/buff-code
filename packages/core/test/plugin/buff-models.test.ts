@@ -47,7 +47,15 @@ function gateway(delayMs = 0) {
           object: "list",
           data: [
             org === "acme"
-              ? { id: "z-ai/glm-5.3-flash", object: "model", name: "OpenRouter (Сбалансированные модели)" }
+              ? {
+                  id: "z-ai/glm-5.3-flash",
+                  object: "model",
+                  name: "OpenRouter (Сбалансированные модели)",
+                  context_length: 400_000,
+                  max_output_tokens: 32_000,
+                  supports_reasoning: true,
+                  buff_defaults: { thinking: "high", context_tokens: 200_000 },
+                }
               : { id: "qwen/qwen3-coder", object: "model" },
           ],
         })
@@ -113,7 +121,7 @@ describe("BuffModels (#370)", () => {
   it.effect("the model list is read off an OpenAI-shaped answer, and nothing else", () =>
     Effect.sync(() => {
       expect(BuffModels.listedModels({ data: [{ id: "a" }, { id: "" }, { name: "b" }, null] })).toEqual([
-        { id: "a", name: "a", input: ["text"], output: ["text"] },
+        { id: "a", name: "a", input: ["text"], output: ["text"], limit: {}, reasoning: false, defaults: {} },
       ])
       expect(BuffModels.listedModels({ error: "нет" })).toEqual([])
     }),
@@ -124,8 +132,39 @@ describe("BuffModels (#370)", () => {
       expect(
         BuffModels.listedModels({ data: [{ id: "buff", name: "OpenRouter (Сбалансированные модели)" }, { id: "x", name: "" }] }),
       ).toEqual([
-        { id: "buff", name: "OpenRouter (Сбалансированные модели)", input: ["text"], output: ["text"] },
-        { id: "x", name: "x", input: ["text"], output: ["text"] },
+        { id: "buff", name: "OpenRouter (Сбалансированные модели)", input: ["text"], output: ["text"], limit: {}, reasoning: false, defaults: {} },
+        { id: "x", name: "x", input: ["text"], output: ["text"], limit: {}, reasoning: false, defaults: {} },
+      ])
+    }),
+  )
+
+  // Режимы ИИ (#838): окно, потолок вывода, признак reasoning и дефолты организации — из списка.
+  it.effect("a model's window, output ceiling, reasoning and the organisation's defaults are read off the list (#838)", () =>
+    Effect.sync(() => {
+      expect(
+        BuffModels.listedModels({
+          data: [
+            {
+              id: "full",
+              context_length: 400_000,
+              max_output_tokens: 32_000,
+              supports_reasoning: true,
+              buff_defaults: { thinking: "high", context_tokens: 200_000 },
+            },
+            { id: "bare", context_length: null, supports_reasoning: "yes", buff_defaults: { thinking: 1 } },
+          ],
+        }),
+      ).toEqual([
+        {
+          id: "full",
+          name: "full",
+          input: ["text"],
+          output: ["text"],
+          limit: { context: 400_000, output: 32_000 },
+          reasoning: true,
+          defaults: { thinking: "high", contextTokens: 200_000 },
+        },
+        { id: "bare", name: "bare", input: ["text"], output: ["text"], limit: {}, reasoning: false, defaults: {} },
       ])
     }),
   )
@@ -140,8 +179,8 @@ describe("BuffModels (#370)", () => {
           ],
         }),
       ).toEqual([
-        { id: "sees", name: "sees", input: ["text", "image"], output: ["text"] },
-        { id: "junk", name: "junk", input: ["text"], output: ["text", "image"] },
+        { id: "sees", name: "sees", input: ["text", "image"], output: ["text"], limit: {}, reasoning: false, defaults: {} },
+        { id: "junk", name: "junk", input: ["text"], output: ["text", "image"], limit: {}, reasoning: false, defaults: {} },
       ])
     }),
   )
@@ -200,6 +239,11 @@ describe("BuffModels (#370)", () => {
           )
           expect(model?.capabilities).toEqual({ tools: true, input: ["text"], output: ["text"] })
           expect(model?.name).toBe("OpenRouter (Сбалансированные модели)")
+          // #838: the organisation's default cap is the window Buff Code works in; the ceiling is
+          // the backend's; a thinking model offers the shared levels as variants.
+          expect(model?.limit).toEqual({ context: 200_000, output: 32_000 })
+          expect(model?.variants.map((v) => String(v.id))).toEqual(["none", "minimal", "low", "medium", "high", "xhigh", "max"])
+          expect(model?.variants.find((v) => v.id === "high")).toMatchObject({ settings: { reasoningEffort: "high" } })
           // The desktop's picker hides models released over half a year ago; the organisation's
           // model is current by definition — its admin chose it — so it must not read as 1970.
           expect(Date.now() - (model?.time.released ?? 0)).toBeLessThan(60_000)
@@ -218,11 +262,14 @@ describe("BuffModels (#370)", () => {
 
           // Another organisation — another route, another list.
           yield* rpc.set({ org: "retail", project: null, spaces: [] })
-          yield* eventually(
+          const other = yield* eventually(
             modelState.get(BuffModels.providerID, Model.ID.make("qwen/qwen3-coder")),
             (m) => m !== undefined,
           )
           expect(yield* modelState.get(BuffModels.providerID, Model.ID.make("z-ai/glm-5.3-flash"))).toBeUndefined()
+          // A list that says nothing of limits leaves the defaults; no reasoning — no variants.
+          expect(other?.limit).toEqual({ context: 200_000, output: 32_000 })
+          expect(other?.variants).toEqual([])
         }),
       ({ server }) => Effect.promise(() => server.stop(true)),
     ),

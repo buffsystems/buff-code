@@ -3,7 +3,7 @@ import { Agent } from "@opencode/schema/agent"
 import { Session } from "@opencode/schema/session"
 import { OpenAIResponses } from "@opencode/ai/protocols/openai-responses"
 import { describe, expect } from "bun:test"
-import { ConfigProvider, DateTime, Effect } from "effect"
+import { ConfigProvider, DateTime, Effect, Layer } from "effect"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { Location } from "@opencode/core/location"
@@ -21,6 +21,7 @@ import { SessionModelTransport } from "@opencode/core/session/model-transport"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
+import { tempGlobalLayer } from "../fixture/global"
 
 const it = testEffect(PluginTestLayer)
 
@@ -263,7 +264,7 @@ describe("OpenAIPlugin", () => {
             webSocket: "session",
           })
         }).pipe(
-          Effect.provide(SessionModelRequest.layer),
+          Effect.provide(SessionModelRequest.layer.pipe(Layer.provide(tempGlobalLayer))),
           Effect.provideService(SessionModelTransport.Service, transport),
         )
 

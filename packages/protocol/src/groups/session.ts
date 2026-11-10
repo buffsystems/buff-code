@@ -223,6 +223,7 @@ export const makeSessionGroup = <
           title: Schema.String.pipe(Schema.optional),
           agent: Agent.ID.pipe(Schema.optional),
           model: Model.Ref.pipe(Schema.optional),
+          limit: Session.ContextLimit.pipe(Schema.optional),
           location: Location.PublicRef.pipe(Schema.optional),
           metadata: Session.Metadata.pipe(Schema.optional),
           permissions: Permission.Ruleset.pipe(Schema.optional),
@@ -351,6 +352,22 @@ export const makeSessionGroup = <
             identifier: "session.switchModel",
             summary: "Switch session model",
             description: "Switch the model used by subsequent provider turns.",
+          }),
+        ),
+    )
+    .add(
+      HttpApiEndpoint.post("session.switchContextLimit", "/api/session/:sessionID/context-limit", {
+        params: { sessionID: Session.ID },
+        payload: Schema.Struct({ limit: Schema.NullOr(Session.ContextLimit) }),
+        success: HttpApiSchema.NoContent,
+        error: SessionNotFoundError,
+      })
+        .middleware(sessionLocationMiddleware)
+        .annotateMerge(
+          OpenApi.annotations({
+            identifier: "session.switchContextLimit",
+            summary: "Switch session context limit",
+            description: "Cap the context window of subsequent provider turns below the model's; null restores the model's window.",
           }),
         ),
     )

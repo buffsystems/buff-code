@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Cause, Clock, Duration, Effect, Exit, Fiber, Layer, Scope, Stream } from "effect"
+import { Cause, Clock, Deferred, Duration, Effect, Exit, Fiber, Layer, Scope, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { Credential } from "@opencode/core/credential"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
@@ -380,6 +380,43 @@ describe("Integration", () => {
       )
 
       const attempt = yield* integrations.oauth.connect({ integrationID, methodID })
+      yield* Effect.yieldNow
+      expect(yield* integrations.oauth.status({ integrationID, attemptID: attempt.attemptID })).toEqual({
+        status: "complete",
+        time: attempt.time,
+      })
+      expect(yield* credentials.list(integrationID)).toHaveLength(1)
+    }),
+  )
+
+  it.effect("a code the person brought completes an auto attempt through its own capture (#780)", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("openai")
+      const methodID = Integration.MethodID.make("browser")
+      const code = yield* Deferred.make<string>()
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "Browser" },
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize?state=st",
+              instructions: "Sign in",
+              enter: (text: string) => Deferred.succeed(code, text).pipe(Effect.asVoid),
+              callback: Deferred.await(code).pipe(
+                Effect.map((value) =>
+                  Credential.OAuth.make({ type: "oauth", methodID, access: value, refresh: "refresh", expires: 1 }),
+                ),
+              ),
+            }),
+        }),
+      )
+
+      const attempt = yield* integrations.oauth.connect({ integrationID, methodID })
+      yield* integrations.oauth.complete({ integrationID, attemptID: attempt.attemptID, code: "xyz" })
       yield* Effect.yieldNow
       expect(yield* integrations.oauth.status({ integrationID, attemptID: attempt.attemptID })).toEqual({
         status: "complete",

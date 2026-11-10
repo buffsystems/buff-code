@@ -97,6 +97,15 @@ export const MultiselectField = Schema.Struct({
 }).annotate({ identifier: "Form.MultiselectField" })
 export interface MultiselectField extends Schema.Schema.Type<typeof MultiselectField> {}
 
+// Buff (#765): секрет — пароль, ключ, токен. Значение уходит в хранилище Buff Code, в ответ формы
+// попадает только ссылка `secret:<id>` (см. `buff-secret.ts`): модель и транскрипт значения не видят.
+export const SecretField = Schema.Struct({
+  ...FieldBase,
+  type: Schema.Literal("secret"),
+  placeholder: Schema.String.pipe(optional),
+}).annotate({ identifier: "Form.SecretField" })
+export interface SecretField extends Schema.Schema.Type<typeof SecretField> {}
+
 export const ExternalField = Schema.Struct({
   key: Schema.String,
   type: Schema.Literal("external"),
@@ -112,9 +121,17 @@ export const Field = Schema.Union([
   IntegerField,
   BooleanField,
   MultiselectField,
+  SecretField,
   ExternalField,
 ]).pipe(Schema.toTaggedUnion("type"), Schema.annotate({ identifier: "Form.Field" }))
-export type Field = StringField | NumberField | IntegerField | BooleanField | MultiselectField | ExternalField
+export type Field =
+  | StringField
+  | NumberField
+  | IntegerField
+  | BooleanField
+  | MultiselectField
+  | SecretField
+  | ExternalField
 
 export const Fields = Schema.NonEmptyArray(Field).annotate({ identifier: "Form.Fields" })
 export type Fields = typeof Fields.Type

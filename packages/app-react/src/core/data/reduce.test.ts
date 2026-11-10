@@ -186,3 +186,30 @@ test("project, usage, permission and shell events update their maps", () => {
   )
   expect(replied.session.permission.ses_1).toEqual([])
 })
+
+// Окно контекста (#836): выбор потолка сессии меняет её лимит и оставляет служебную строку в ленте.
+test("a context limit choice updates the session and leaves a notice row in a loaded transcript", () => {
+  const chosen = fold(
+    loaded(),
+    event("session.context.selected", { sessionID: "ses_1", limit: { context: 200_000 } }),
+  )
+  expect(chosen.session.info.ses_1?.limit).toEqual({ context: 200_000 })
+  expect(chosen.session.message.ses_1?.at(-1)).toMatchObject({
+    type: "context-switched",
+    limit: { context: 200_000 },
+  })
+  const lifted = fold(
+    chosen,
+    event("session.context.selected", { sessionID: "ses_1", previous: { context: 200_000 } }),
+  )
+  expect(lifted.session.info.ses_1?.limit).toBeUndefined()
+  expect(lifted.session.message.ses_1?.at(-1)).toMatchObject({ type: "context-switched", previous: { context: 200_000 } })
+})
+
+test("a context limit choice for a session whose transcript is not loaded only updates the session", () => {
+  const state = emptyData("/repo")
+  const withInfo = { ...state, session: { ...state.session, info: { ses_1: session("ses_1") } } }
+  const next = reduceEvent(withInfo, event("session.context.selected", { sessionID: "ses_1", limit: { context: 64_000 } }))
+  expect(next.session.info.ses_1?.limit).toEqual({ context: 64_000 })
+  expect(next.session.message.ses_1).toBeUndefined()
+})

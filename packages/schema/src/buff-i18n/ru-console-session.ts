@@ -284,4 +284,8 @@ export const consoleSession = {
   "{minutes}m {seconds}s": "{minutes} мин {seconds} с",
   "{hours}h {minutes}m": "{hours} ч {minutes} мин",
   "{days}d {hours}h": "{days} д {hours} ч",
+  // #765: режим «Настройка» в консоли.
+  "Setup continues in a new session; this one is in the next tab.":
+    "Настройка продолжается в новой сессии; эта — в соседней вкладке.",
+  "Input is hidden": "Ввод скрыт",
 } as const

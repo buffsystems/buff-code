@@ -150,3 +150,24 @@
 .buff-sessions-dot[data-color="purple"] {
   background: var(--v2-purple-600);
 }
+
+/* Buff (#765): раздел «Настройка» — заголовок с кнопкой новой сессии режима. */
+.buff-sessions-heading-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.buff-sessions-add {
+  font-size: 14px;
+  line-height: 14px;
+  padding: 0 4px;
+  border-radius: 4px;
+  color: var(--v2-text-text-muted);
+}
+
+.buff-sessions-add:hover {
+  color: var(--v2-text-text-strong, var(--text-strong));
+  background: var(--v2-background-background-weak, var(--background-weak));
+}

@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -19,7 +20,8 @@ import { ArrowUp, ChevronDown, CornerDownLeft, Plus, Square } from "lucide-react
 import type { ReactNode } from "react"
 import { useI18n } from "../../../i18n/provider"
 
-export type SelectOption = { id: string; label: string }
+/** `hint` (#759): what the choice changes, a muted line under its label. */
+export type SelectOption = { id: string; label: string; hint?: string }
 
 function Hint(props: { title: string; keys?: string[] }) {
   return (
@@ -79,6 +81,8 @@ export function SelectControl(props: {
   current: string
   className?: string
   icon?: ReactNode
+  /** A heading over the choices, naming what they set. */
+  heading?: string
   onSelect(id: string): void
 }) {
   const label = props.options.find((option) => option.id === props.current)?.label ?? props.current
@@ -94,12 +98,22 @@ export function SelectControl(props: {
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent side="top" align="start" sideOffset={6}>
+        {props.heading && <DropdownMenuLabel>{props.heading}</DropdownMenuLabel>}
         <DropdownMenuRadioGroup value={props.current} onValueChange={props.onSelect}>
-          {props.options.map((option) => (
-            <DropdownMenuRadioItem key={option.id} value={option.id} className="capitalize">
-              {option.label}
-            </DropdownMenuRadioItem>
-          ))}
+          {props.options.map((option) =>
+            option.hint ? (
+              <DropdownMenuRadioItem key={option.id} value={option.id}>
+                <span className="composer__choice">
+                  <span>{option.label}</span>
+                  <span className="composer__choice-hint">{option.hint}</span>
+                </span>
+              </DropdownMenuRadioItem>
+            ) : (
+              <DropdownMenuRadioItem key={option.id} value={option.id} className="capitalize">
+                {option.label}
+              </DropdownMenuRadioItem>
+            ),
+          )}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -10,15 +10,22 @@ export const session = {
   "File for you": "Файл для вас",
   "Handing over the file…": "Передаю файл…",
   "Show in folder": "Показать в папке",
+  // #808: the file the agent handed over, opened from the console or previewed in the window.
+  "The file is on another computer — open it there or on the phone":
+    "Файл на другом компьютере — откройте его там или на телефоне",
   "{n} KB": "{n} КБ",
   "{n} MB": "{n} МБ",
-  "Larger than 20 MB — goes as a file; the model opens it with its tools.": "Больше 20 МБ — уйдёт файлом, модель откроет его инструментами.",
-  "The model does not read images itself — it opens the file with its tools.": "Модель не читает картинки сама — откроет файл инструментами.",
-  "The model does not read PDF itself — it opens the file with its tools.": "Модель не читает PDF сама — откроет файл инструментами.",
+  "Larger than 20 MB — goes as a file; the model opens it with its tools.":
+    "Больше 20 МБ — уйдёт файлом, модель откроет его инструментами.",
+  "The model does not read images itself — it opens the file with its tools.":
+    "Модель не читает картинки сама — откроет файл инструментами.",
+  "The model does not read PDF itself — it opens the file with its tools.":
+    "Модель не читает PDF сама — откроет файл инструментами.",
   "The model reads this file with its tools.": "Модель прочитает этот файл инструментами.",
   "Session undo and changes are off: they need git 2.35 or newer, this computer has {version}.":
     "Откат и изменения сессии отключены: нужен git 2.35 или новее, на этом компьютере {version}.",
-  "Session undo and changes are off: install git 2.35 or newer.": "Откат и изменения сессии отключены: установите git 2.35 или новее.",
+  "Session undo and changes are off: install git 2.35 or newer.":
+    "Откат и изменения сессии отключены: установите git 2.35 или новее.",
   new: "новый",
   modified: "изменён",
   deleted: "удалён",
@@ -31,13 +38,17 @@ export const session = {
   "behind {count}": "позади {count}",
   "Name the branch.": "Назовите ветку.",
   "A branch name does not start with a hyphen.": "Имя ветки не начинается с дефиса.",
-  "A branch name has no spaces, no backslash and none of ~ ^ : ? * [ — for example feature/login.": "В имени ветки не бывает пробелов и знаков ~ ^ : ? * [ \\ — например feature/login.",
+  "A branch name has no spaces, no backslash and none of ~ ^ : ? * [ — for example feature/login.":
+    "В имени ветки не бывает пробелов и знаков ~ ^ : ? * [ \\ — например feature/login.",
   "Branch «{branch}» already exists.": "Ветка «{branch}» уже есть.",
   "Write a commit message.": "Напишите сообщение коммита.",
   "Tick the files that go into the commit.": "Отметьте, какие файлы войдут в коммит.",
-  "The server has commits you do not have. Pull them first (git pull), then push again.": "На сервере есть коммиты, которых нет у вас. Сначала заберите их (git pull), затем отправьте снова.",
-  "The server did not accept the credentials. Check your access to the repository.": "Сервер не принял учётные данные. Проверьте доступ к репозиторию.",
-  "The repository has no origin remote — there is nowhere to push.": "У репозитория нет удалённого адреса origin — отправлять некуда.",
+  "The server has commits you do not have. Pull them first (git pull), then push again.":
+    "На сервере есть коммиты, которых нет у вас. Сначала заберите их (git pull), затем отправьте снова.",
+  "The server did not accept the credentials. Check your access to the repository.":
+    "Сервер не принял учётные данные. Проверьте доступ к репозиторию.",
+  "The repository has no origin remote — there is nowhere to push.":
+    "У репозитория нет удалённого адреса origin — отправлять некуда.",
   "The repository server is unreachable. Check the network.": "Сервер репозитория недоступен. Проверьте сеть.",
   "The working copy is clean — nothing to commit.": "Рабочая копия чистая — коммитить нечего.",
   "Commit {n} file?|Commit {n} files?": "Закоммитить {n} файл?|Закоммитить {n} файла?|Закоммитить {n} файлов?",
@@ -61,7 +72,8 @@ export const session = {
   "Goal · iteration {iteration} · {status}: {text}": "Цель · итерация {iteration} · {status}: {text}",
   "Write the goal after the command: /goal <what to achieve>.": "Напишите цель после команды: /goal <чего добиться>.",
   Plan: "План",
-  "Approve the plan and start working? Or write what to change.": "Утвердить план и начать работу? Или напишите, что поправить.",
+  "Approve the plan and start working? Or write what to change.":
+    "Утвердить план и начать работу? Или напишите, что поправить.",
   "Approve and start": "Утвердить и начать",
   "Plan mode turns off and the agent gets to work": "Режим плана выключится, агент приступит к работе",
   Approved: "Утверждён",
@@ -76,10 +88,13 @@ export const session = {
   "The answer is still coming": "Ответ ещё идёт",
   "No answer yet": "Ответа пока нет",
   "Side conversation {n}": "Побочный диалог {n}",
-  "A question before every file edit and every command. The agent may read and search on its own.": "Перед каждой правкой файла и каждой командой — вопрос. Читать и искать агент может сам.",
-  "The agent edits project files on its own; shell commands get a question first.": "Файлы проекта агент правит сам; перед командами оболочки — вопрос.",
+  "A question before every file edit and every command. The agent may read and search on its own.":
+    "Перед каждой правкой файла и каждой командой — вопрос. Читать и искать агент может сам.",
+  "The agent edits project files on its own; shell commands get a question first.":
+    "Файлы проекта агент правит сам; перед командами оболочки — вопрос.",
   "Full access": "Полный доступ",
-  "Edits and commands in the project — no questions. Outside the project and for .env files it still asks.": "Правки и команды в проекте — без вопросов. За пределы проекта и к файлам .env всё равно спросит.",
+  "Edits and commands in the project — no questions. Outside the project and for .env files it still asks.":
+    "Правки и команды в проекте — без вопросов. За пределы проекта и к файлам .env всё равно спросит.",
   Ask: "Спрашивать",
   "Edit on its own": "Править сам",
   "Custom rules": "Свои правила",
@@ -90,12 +105,31 @@ export const session = {
   "tool {tool} — {calls}": "инструмент {tool} — {calls}",
   "any calls": "любые вызовы",
   "«Always» remembers for this project: {what}.": "«Всегда» запомнит для этого проекта: {what}.",
-  "What to do instead — goes to the model, the turn continues": "Что сделать вместо этого — уйдёт модели, ход продолжится",
+  "What to do instead — goes to the model, the turn continues":
+    "Что сделать вместо этого — уйдёт модели, ход продолжится",
   "from a subagent": "от субагента",
   "Type: {type}": "Тип: {type}",
   "Response code: {status}": "Код ответа: {status}",
   "Message: {message}": "Сообщение: {message}",
   "response {status}: {message}": "ответ {status}: {message}",
+  // #757: модель отвергла запрос с файлами — карточка с тремя путями дальше.
+  "The model did not accept the request with the files {files} ({said}). It may not read this kind of file — choose how to continue.":
+    "Модель не приняла запрос с файлами {files} ({said}). Возможно, она не читает такие файлы — выберите, как продолжить.",
+  image: "картинка",
+  audio: "аудио",
+  video: "видео",
+  "The model cannot read {files} directly. Analyse them with code or command-line tools: extract the text, colours, structure — whatever the task needs — and continue the task.":
+    "Модель не может прочитать {files} напрямую. Разбери их кодом или инструментами командной строки: извлеки текст, цвета, структуру — всё, что нужно для задачи, — и продолжай задачу.",
+  "Continue the task without the files {files}.": "Продолжай задачу без файлов {files}.",
+  "/files-code — analyse the files with code": "/files-code — разобрать файлы кодом",
+  "/models — a model that reads them, then ↑": "/models — модель, которая их читает, затем ↑",
+  "/files-skip — continue without the files": "/files-skip — продолжить без файлов",
+  "Buff: analyse the files of the failed turn with code": "Buff: разобрать кодом файлы упавшего хода",
+  "Buff: continue without the files of the failed turn": "Buff: продолжить без файлов упавшего хода",
+  "The last turn did not fail on files.": "Последний ход упал не на файлах.",
+  "Could not send.": "Не удалось отправить.",
+  "Analyse with code": "Анализировать кодом",
+  "Continue without files": "Продолжить без файлов",
   "{provider} rejected the key ({said}). The problem is the provider key, not Buff Code and not the Buff Systems sign-in. Check that the key is for model requests (for OpenRouter — an API Key, not a Management Key) and replace it.":
     "{provider} отклонил ключ ({said}). Дело в ключе провайдера, а не в Buff Code и не во входе в Buff Systems. Проверьте, что ключ для запросов к моделям (у OpenRouter — API Key, не Management Key), и замените его.",
   "Your {provider} account has run out of funds or quota ({said}). Top it up with the provider or choose another model.":
@@ -114,12 +148,17 @@ export const session = {
   "{provider} rejected the request ({said}).": "{provider} отклонил запрос ({said}).",
   "Error in Buff Code ({said}). Copy the details and send them to support.":
     "Ошибка в Buff Code ({said}). Скопируйте подробности и передайте в поддержку.",
-  "You have no access to the organization {org}. Choose another organization or contact the administrator.": "У вас нет доступа к организации {org}. Выберите другую организацию или обратитесь к администратору.",
-  "No Buff organization and project are chosen for this folder. Choose the context and try again.": "Для этого каталога не выбраны организация и проект Buff. Выберите контекст и повторите.",
-  "The request did not reach the model: it is not available in this folder. Choose the Buff context and a model, then try again.": "Запрос не дошёл до модели: она недоступна в этом каталоге. Выберите контекст Buff и модель, затем повторите.",
-  "The organization has run out of funds. Top up the balance in the Buff cabinet and try again.": "Средства организации закончились. Пополните баланс в кабинете Buff и повторите.",
+  "You have no access to the organization {org}. Choose another organization or contact the administrator.":
+    "У вас нет доступа к организации {org}. Выберите другую организацию или обратитесь к администратору.",
+  "No Buff organization and project are chosen for this folder. Choose the context and try again.":
+    "Для этого каталога не выбраны организация и проект Buff. Выберите контекст и повторите.",
+  "The request did not reach the model: it is not available in this folder. Choose the Buff context and a model, then try again.":
+    "Запрос не дошёл до модели: она недоступна в этом каталоге. Выберите контекст Buff и модель, затем повторите.",
+  "The organization has run out of funds. Top up the balance in the Buff cabinet and try again.":
+    "Средства организации закончились. Пополните баланс в кабинете Buff и повторите.",
   "The Buff sign-in is no longer valid: {message}": "Вход в Buff больше не действует: {message}",
-  "No connection to the company connector. Check the network and try again.": "Нет связи с коннектором компании. Проверьте сеть и повторите.",
+  "No connection to the company connector. Check the network and try again.":
+    "Нет связи с коннектором компании. Проверьте сеть и повторите.",
   "The model did not answer. Repeat the request.": "Модель не ответила. Повторите запрос.",
   "Sign in again": "Войти заново",
   "Choose context": "Выбрать контекст",
@@ -139,16 +178,22 @@ export const session = {
   "/connect — replace the provider key": "/connect — заменить ключ провайдера",
   "/connect — connect the provider": "/connect — подключить провайдера",
   "Changed {n} file|Changed {n} files": "Изменён {n} файл|Изменено {n} файла|Изменено {n} файлов",
-  "Messages after this point will be removed from the conversation.": "Сообщения после этого места будут убраны из переписки.",
+  "Messages after this point will be removed from the conversation.":
+    "Сообщения после этого места будут убраны из переписки.",
   "Rewind the conversation": "Откат переписки",
-  "File snapshots are not kept here (the folder is not under git or snapshots are off) — the files stay as they are.": "Снимки файлов здесь не ведутся (каталог не под git или снимки выключены) — файлы останутся как есть.",
+  "File snapshots are not kept here (the folder is not under git or snapshots are off) — the files stay as they are.":
+    "Снимки файлов здесь не ведутся (каталог не под git или снимки выключены) — файлы останутся как есть.",
   "This turn did not change files.": "Файлы этот ход не менял.",
   "The rewind is safe": "Откат безопасен",
-  "The files return to their state before the turn. After the rewind everything can be brought back.": "Файлы вернутся к состоянию до хода. После отката можно вернуть всё как было.",
+  "The files return to their state before the turn. After the rewind everything can be brought back.":
+    "Файлы вернутся к состоянию до хода. После отката можно вернуть всё как было.",
   "There are edits made after the turn": "Есть правки, сделанные после хода",
-  "{n} file was changed after the turn — not by the agent. The rewind replaces it with its version from before the turn; those edits disappear from the working copy.|{n} files were changed after the turn — not by the agent. The rewind replaces them with their versions from before the turn; those edits disappear from the working copy.": "{n} файл изменён уже после хода — не агентом. Откат заменит его версией до хода, эти правки пропадут из рабочей копии.|{n} файла изменены уже после хода — не агентом. Откат заменит их версиями до хода, эти правки пропадут из рабочей копии.|{n} файлов изменены уже после хода — не агентом. Откат заменит их версиями до хода, эти правки пропадут из рабочей копии.",
-  "Turn rewound: the messages are removed from the conversation, the files did not change.": "Ход откачен: сообщения убраны из переписки, файлы не менялись.",
-  "Turn rewound: {n} file is back to its previous state.|Turn rewound: {n} files are back to their previous state.": "Ход откачен: {n} файл возвращён к прежнему состоянию.|Ход откачен: {n} файла возвращены к прежнему состоянию.|Ход откачен: {n} файлов возвращены к прежнему состоянию.",
+  "{n} file was changed after the turn — not by the agent. The rewind replaces it with its version from before the turn; those edits disappear from the working copy.|{n} files were changed after the turn — not by the agent. The rewind replaces them with their versions from before the turn; those edits disappear from the working copy.":
+    "{n} файл изменён уже после хода — не агентом. Откат заменит его версией до хода, эти правки пропадут из рабочей копии.|{n} файла изменены уже после хода — не агентом. Откат заменит их версиями до хода, эти правки пропадут из рабочей копии.|{n} файлов изменены уже после хода — не агентом. Откат заменит их версиями до хода, эти правки пропадут из рабочей копии.",
+  "Turn rewound: the messages are removed from the conversation, the files did not change.":
+    "Ход откачен: сообщения убраны из переписки, файлы не менялись.",
+  "Turn rewound: {n} file is back to its previous state.|Turn rewound: {n} files are back to their previous state.":
+    "Ход откачен: {n} файл возвращён к прежнему состоянию.|Ход откачен: {n} файла возвращены к прежнему состоянию.|Ход откачен: {n} файлов возвращены к прежнему состоянию.",
   "← changed after the turn": "← изменён после хода",
   "What to rewind": "Что откатить",
   "Only the conversation": "Только переписку",
@@ -186,7 +231,8 @@ export const session = {
   "HEAD is not on a branch": "HEAD не на ветке",
   "Pushing…": "Отправляю…",
   Push: "Отправить",
-  "There are uncommitted changes ({count}). On switching they stay in the working copy and end up in the new branch; if they get in the way, git refuses — then commit them first.": "Есть незакоммиченные изменения ({count}). При переходе они останутся в рабочей копии и окажутся в новой ветке; если они мешают переходу, git откажет — тогда сначала закоммитьте их.",
+  "There are uncommitted changes ({count}). On switching they stay in the working copy and end up in the new branch; if they get in the way, git refuses — then commit them first.":
+    "Есть незакоммиченные изменения ({count}). При переходе они останутся в рабочей копии и окажутся в новой ветке; если они мешают переходу, git откажет — тогда сначала закоммитьте их.",
   "current branch": "текущая",
   Switch: "Перейти",
   "New branch from the current state": "Новая ветка от текущего состояния",
@@ -202,8 +248,10 @@ export const session = {
   "The rules of this session are not set by a mode.": "Правила этой сессии заданы не режимом.",
   "Permission mode": "Режим разрешений",
   "Could not change the mode.": "Не удалось сменить режим.",
-  "Plan: the agent only reads and drafts a plan. Click to get back to work.": "План: агент только читает и составляет план. Нажмите, чтобы вернуться к работе.",
-  "Turn on the plan: the agent does not edit files, it drafts a plan.": "Включить план: агент не правит файлы, а составляет план.",
+  "Plan: the agent only reads and drafts a plan. Click to get back to work.":
+    "План: агент только читает и составляет план. Нажмите, чтобы вернуться к работе.",
+  "Turn on the plan: the agent does not edit files, it drafts a plan.":
+    "Включить план: агент не правит файлы, а составляет план.",
   "Request map": "Карта запросов",
   "Go to request {index}": "Перейти к запросу {index}",
   "Side conversation": "Побочный диалог",
@@ -212,19 +260,22 @@ export const session = {
   "To the main conversation": "В основной диалог",
   "The fragment is in the input of the main session.": "Фрагмент — в поле ввода основной сессии.",
   "Full screen": "Во весь экран",
-  "The side conversation sees the whole main session, but the main one does not see it. Ask here without derailing the main task.": "Побочный диалог видит всю основную сессию, а она его — нет. Спросите здесь, не сбивая основную задачу.",
+  "The side conversation sees the whole main session, but the main one does not see it. Ask here without derailing the main task.":
+    "Побочный диалог видит всю основную сессию, а она его — нет. Спросите здесь, не сбивая основную задачу.",
   "Tools: {tools}": "Инструменты: {tools}",
   // Сжатие сессии (#470): сводка для модели — под переключателем.
   "Summary for the model": "Сводка для модели",
   "Hide the summary for the model": "Скрыть сводку для модели",
   "Answering…": "Отвечает…",
-  "Ask in the side conversation… Enter — send, Shift+Enter — new line": "Спросите в побочном диалоге… Enter — отправить, Shift+Enter — новая строка",
+  "Ask in the side conversation… Enter — send, Shift+Enter — new line":
+    "Спросите в побочном диалоге… Enter — отправить, Shift+Enter — новая строка",
   Send: "Отправить",
   Stop: "Остановить",
   "changed after the turn": "изменён после хода",
   "Rewind the turn": "Откатить ход",
   "Rewind the turn?": "Откатить ход?",
-  "Could not check which files come back: {problem} The rewind is still possible.": "Не удалось проверить, какие файлы вернутся: {problem} Откат всё равно возможен.",
+  "Could not check which files come back: {problem} The rewind is still possible.":
+    "Не удалось проверить, какие файлы вернутся: {problem} Откат всё равно возможен.",
   Cancel: "Отмена",
   Rewind: "Откатить",
   "Rewind and overwrite the edits": "Откатить и затереть правки",
@@ -238,9 +289,12 @@ export const session = {
   "in progress": "в работе",
   waiting: "ждёт",
   "To-dos": "Дела",
-  "The ticked files are no longer among the changes — refresh the list.": "Отмеченных файлов среди изменений уже нет — обновите список.",
-  "HEAD is not on a branch — nothing to push. Create a branch.": "HEAD не на ветке — отправлять нечего. Создайте ветку.",
-  "Tick the files — the message is composed from their changes.": "Отметьте файлы — сообщение сочиняется по их изменениям.",
+  "The ticked files are no longer among the changes — refresh the list.":
+    "Отмеченных файлов среди изменений уже нет — обновите список.",
+  "HEAD is not on a branch — nothing to push. Create a branch.":
+    "HEAD не на ветке — отправлять нечего. Создайте ветку.",
+  "Tick the files — the message is composed from their changes.":
+    "Отметьте файлы — сообщение сочиняется по их изменениям.",
   "The model did not answer: {message}": "Модель не ответила: {message}",
   "Send the first message of the session: the commit message is composed in its context.":
     "Сначала отправьте первое сообщение сессии: сообщение коммита сочиняется в её контексте.",
@@ -248,10 +302,14 @@ export const session = {
     "Модель не предложила сообщение — напишите его сами или попробуйте ещё раз.",
   "The turn stopped with an error: {message}": "Ход прервался ошибкой: {message}",
   "Goal: {text}": "Цель: {text}",
-  "Session goal: the agent works in iterations until the check accepts the goal": "Цель сессии: агент работает итерациями, пока проверка не засчитает цель",
-  "The goal check reached no decision — the goal is paused; resume when ready. The check answered: {answer}": "Проверка цели не вынесла решения — цель на паузе; продолжите, когда будете готовы. Ответ проверки: {answer}",
-  "The goal check failed — the goal is paused; resume when ready. Reason: {cause}": "Проверка цели не прошла — цель на паузе; продолжите, когда будете готовы. Причина: {cause}",
-  "Side conversation: a branch of this session in a tab nearby — the main one does not change": "Побочный диалог: ответвление этой сессии во вкладке рядом — основная не меняется",
+  "Session goal: the agent works in iterations until the check accepts the goal":
+    "Цель сессии: агент работает итерациями, пока проверка не засчитает цель",
+  "The goal check reached no decision — the goal is paused; resume when ready. The check answered: {answer}":
+    "Проверка цели не вынесла решения — цель на паузе; продолжите, когда будете готовы. Ответ проверки: {answer}",
+  "The goal check failed — the goal is paused; resume when ready. Reason: {cause}":
+    "Проверка цели не прошла — цель на паузе; продолжите, когда будете готовы. Причина: {cause}",
+  "Side conversation: a branch of this session in a tab nearby — the main one does not change":
+    "Побочный диалог: ответвление этой сессии во вкладке рядом — основная не меняется",
   "Message not found.": "Сообщение не найдено.",
   Untitled: "Без названия",
   "In the conversation": "В переписке",
@@ -295,7 +353,8 @@ export const session = {
   "«{label}» finished": "«{label}» завершён",
   "«{label}» stopped": "«{label}» остановлен",
   "«{label}» — error": "«{label}» — ошибка",
-  "{n} unmodified line|{n} unmodified lines": "{n} строка без изменений|{n} строки без изменений|{n} строк без изменений",
+  "{n} unmodified line|{n} unmodified lines":
+    "{n} строка без изменений|{n} строки без изменений|{n} строк без изменений",
   "Expand all": "Развернуть всё",
   "No newline at end of file": "Нет перевода строки в конце файла",
   "Workflow guide": "Руководство по сценариям",
@@ -323,4 +382,83 @@ export const session = {
   "Questions dismissed": "Вопросы отклонены",
   "Plan closed without an answer": "План закрыт без ответа",
   "Interrupted: Buff Code was closed": "Прервано: Buff Code закрылся",
+  // субагенты в работе у поля ввода (#762)
+  "{n} subagent at work|{n} subagents at work": "{n} субагент в работе|{n} субагента в работе|{n} субагентов в работе",
+  "Starting…": "Запускается…",
+  // режим размышлений — варианты модели (#759)
+  "Thinking mode": "Режим размышлений",
+  Default: "По умолчанию",
+  "As the model and its provider are set up": "Как настроены модель и провайдер",
+  Off: "Выключены",
+  "Answers without thinking: the fastest": "Отвечает без размышлений — быстрее всего",
+  Minimal: "Минимальные",
+  "Barely thinks: quick answers": "Почти не думает — быстрые ответы",
+  Low: "Низкие",
+  "Thinks briefly: faster and cheaper": "Думает недолго — быстрее и дешевле",
+  Medium: "Средние",
+  "Thinks moderately: a balance of speed and quality": "Думает умеренно — баланс скорости и качества",
+  High: "Высокие",
+  "Thinks longer: better on hard tasks, slower": "Думает дольше — лучше на сложных задачах, медленнее",
+  "Very high": "Очень высокие",
+  "Thinks even longer: for very hard tasks": "Думает ещё дольше — для очень сложных задач",
+  Maximum: "Максимальные",
+  "Thinks as long as it can: the slowest and costliest": "Думает сколько может — медленнее и дороже всего",
+  On: "Включены",
+  "Thinks before answering": "Думает перед ответом",
+  // окно контекста — потолок на сессию (#836)
+  "Context window": "Окно контекста",
+  "Model maximum": "Максимум модели",
+  "The whole window the model has": "Всё окно, которое есть у модели",
+  Compact: "Компактный",
+  "Mid-size": "Средний",
+  "Cheaper and faster: the dialogue is compacted sooner": "Дешевле и быстрее — диалог уплотняется раньше",
+  "A balance of memory and cost": "Баланс памяти и стоимости",
+  Large: "Большой",
+  "Keeps long work in mind: costlier": "Держит в памяти долгую работу — дороже",
+  "Own size": "Свой размер",
+  "A size of your own, in tokens": "Свой размер, в токенах",
+  "Context limit: {limit}": "Лимит контекста: {limit}",
+  "Context limit in tokens": "Лимит контекста в токенах",
+  "From {min} to {max}": "От {min} до {max}",
+  Apply: "Применить",
+  "Default modes": "Режимы по умолчанию",
+  "Failed to change the context window": "Не удалось изменить окно контекста",
+  "Switch context window": "Сменить окно контекста",
+  "Select context window": "Выбор окна контекста",
+  "For a new session, until it names its own": "Для новой сессии, пока она не назовёт своё",
+  "How long the model thinks before answering": "Сколько модель думает перед ответом",
+  "How much of the dialogue the model keeps in mind before compaction":
+    "Сколько диалога модель держит в памяти до уплотнения",
+  // #765: режим «Настройка» — подтверждение перехода и команда /setup.
+  "Open a setup session «{title}»": "Открыть сессию настройки «{title}»",
+  "Task: {task}": "Задача: {task}",
+  "Setup: a new session where the agent connects itself to what you need":
+    "Настройка: новая сессия, где агент сам подключает себя к тому, что вам нужно",
+  // #765: инструменты подключений — подтверждения и форма входа.
+  "Save connection «{name}» for {where}": "Сохранить подключение «{name}» для: {where}",
+  "this project": "этот проект",
+  "all projects": "все проекты",
+  "Run: {command}": "Запуск: {command}",
+  "Environment: {names}": "Переменные окружения: {names}",
+  "Address: {url}": "Адрес: {url}",
+  "Headers: {names}": "Заголовки: {names}",
+  "Sign-in through the service (OAuth) when needed": "Вход через сервис (OAuth), когда потребуется",
+  "Uses secrets you entered: {count}": "Использует введённые вами секреты: {count}",
+  "Remove connection «{name}»": "Удалить подключение «{name}»",
+  "Its secrets are deleted too: {count}": "Его секреты тоже удаляются: {count}",
+  "File: {file}": "Файл: {file}",
+  "Sign in to «{name}»": "Вход в «{name}»",
+  "Open and sign in": "Откройте и войдите",
+  "Code the service showed you": "Код, который показал сервис",
+  "Comes by itself when you return to the app; or paste the address of the page you ended up on":
+    "Придёт сам, когда вернётесь в приложение; или вставьте адрес страницы, на которую вас отправили",
+  "Connection «{name}»": "Подключение «{name}»",
+  "How to use the «{name}» connection: its tools, limits and quirks":
+    "Как пользоваться подключением «{name}»: инструменты, ограничения, особенности",
+  // #765: переключатель режима «Настройка» и форма режима.
+  "Setup: the agent connects itself to what you need. Click to get back to work.":
+    "Настройка: агент сам подключает себя к тому, что вам нужно. Нажмите, чтобы вернуться к работе.",
+  "Turn on Setup: connect a service, an account or a folder to the agent.":
+    "Включить настройку: подключить к агенту сервис, аккаунт или папку.",
+  "Own answer": "Свой вариант",
 } as const

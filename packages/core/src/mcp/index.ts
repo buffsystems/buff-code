@@ -8,8 +8,23 @@ import { ephemeral } from "@opencode/schema/event"
 import type { Session } from "@opencode/schema/session"
 import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
-import { Cause, Context, Effect, Exit, FiberSet, Latch, Layer, Schema, Scope, Semaphore, Stream, Types } from "effect"
+import {
+  Cause,
+  Context,
+  Effect,
+  Exit,
+  FiberSet,
+  Latch,
+  Layer,
+  Result,
+  Schema,
+  Scope,
+  Semaphore,
+  Stream,
+  Types,
+} from "effect"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
+import { BuffSecret } from "../buff/secret.js"
 import { Credential } from "../credential.js"
 import { Bus } from "../bus.js"
 import { Environment } from "../environment/index.js"
@@ -153,6 +168,17 @@ export const layer = (options?: Options) =>
       const forms = yield* Form.Service
       const integration = yield* Integration.Service
       const credentials = yield* Credential.Service
+      const secrets = yield* BuffSecret.Service
+      const resolveSecrets = (config: Mcp.ServerConfig) =>
+        Effect.gen(function* () {
+          const values = yield* Effect.forEach(BuffSecret.referenced(config), (id) =>
+            secrets.get(id).pipe(Effect.map((value) => [id, value] as const)),
+          )
+          const lookup = new Map(values)
+          const resolved = BuffSecret.substitute(config, (id) => lookup.get(id))
+          if (resolved instanceof BuffSecret.MissingError) return yield* Effect.fail(resolved)
+          return resolved
+        })
       const root = yield* Effect.scope
       const fork = yield* FiberSet.makeRuntime<never, void, never>()
 
@@ -195,10 +221,10 @@ export const layer = (options?: Options) =>
             editor.method.update({
               integrationID,
               method: { id: methodID, type: "oauth", label: name },
-              authorize: () =>
+              authorize: (answer) =>
                 Effect.gen(function* () {
                   const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-                  return yield* McpOAuth.authorize({ name, config: remote, integrationID, methodID }).pipe(
+                  return yield* McpOAuth.authorize({ name, config: remote, integrationID, methodID, answer }).pipe(
                     Effect.provideService(Credential.Service, credentials),
                   )
                 }),
@@ -398,11 +424,21 @@ export const layer = (options?: Options) =>
           entry.scope = scope
           const authProvider = yield* connectProvider(entry)
           const { McpClient } = yield* Effect.promise(() => import("./client.js"))
+          // Buff (#765): `{secret:<id>}` раскрывается здесь, для процесса и запроса — не в файле.
+          const resolved = yield* resolveSecrets(entry.config).pipe(Effect.result)
+          if (Result.isFailure(resolved)) {
+            yield* Scope.close(scope, Exit.void)
+            entry.scope = undefined
+            entry.status = { status: "failed", error: resolved.failure.message }
+            yield* bus.publish(McpEvent.StatusChanged, { server: name })
+            return
+          }
+          const config = resolved.success
           // List tools as part of connect so a failure here marks the server failed rather than
           // leaving it connected with a silently empty tool list and no path to recover.
           const load = McpClient.connect(
             name,
-            entry.config,
+            config,
             location.directory,
             authProvider,
             elicitation,
@@ -413,9 +449,9 @@ export const layer = (options?: Options) =>
             Effect.provideService(Environment.Service, environment),
             Scope.provide(scope),
           )
-          const result = yield* (
-            entry.config.type === "remote" ? endpointLoads.withLock(entry.config.url)(load) : load
-          ).pipe(Effect.exit)
+          const result = yield* (config.type === "remote" ? endpointLoads.withLock(config.url)(load) : load).pipe(
+            Effect.exit,
+          )
           if (Exit.isSuccess(result)) {
             entry.client = result.value.connection
             entry.tools = result.value.tools.map((tool) => toTool(name, entry, tool))
@@ -763,7 +799,7 @@ export function configured(options?: Options) {
   return makeLocationNode({
     service: Service,
     layer: layer(options),
-    deps: [Location.node, Environment.node, Bus.node, Form.node, Integration.node, Credential.node],
+    deps: [Location.node, Environment.node, Bus.node, Form.node, Integration.node, Credential.node, BuffSecret.node],
   })
 }
 

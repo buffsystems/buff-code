@@ -5,6 +5,7 @@ import { Schema } from "effect"
 import { createSimpleContext } from "@opencode/ui/context"
 import { useDialog } from "@opencode/ui/context/dialog"
 import { usePlatform } from "@/runtime/platform/platform"
+import { useLanguage } from "@/runtime/i18n/language"
 import { useSettings } from "@/settings/model"
 import { persisted } from "@/runtime/persistence/storage"
 import { Persistence } from "@/runtime/persistence/schema"
@@ -64,7 +65,16 @@ function parseHighlight(value: unknown): Highlight | undefined {
   return { title, description, media }
 }
 
-function parseRelease(value: unknown): ParsedRelease | undefined {
+// A group may name its language («ru», «en»): the window shows its own, else English; a group
+// without a language is shown in every language.
+function inLanguage(groups: Record<string, unknown>[], locale: string) {
+  const lang = (group: Record<string, unknown>) => getText(group.lang)?.toLowerCase()
+  const own = groups.filter((group) => lang(group) === locale)
+  const english = groups.filter((group) => lang(group) === "en")
+  return [...groups.filter((group) => !lang(group)), ...(own.length ? own : english)]
+}
+
+function parseRelease(value: unknown, locale: string): ParsedRelease | undefined {
   if (!isRecord(value)) return
   const tag = getText(value.tag) ?? getText(value.tag_name) ?? getText(value.name)
 
@@ -72,9 +82,7 @@ function parseRelease(value: unknown): ParsedRelease | undefined {
     return { tag, highlights: [] }
   }
 
-  const highlights = value.highlights.flatMap((group) => {
-    if (!isRecord(group)) return []
-
+  const highlights = inLanguage(value.highlights.filter(isRecord), locale).flatMap((group) => {
     const source = getText(group.source)
     if (!source) return []
     if (!source.toLowerCase().includes("desktop")) return []
@@ -91,15 +99,16 @@ function parseRelease(value: unknown): ParsedRelease | undefined {
   return { tag, highlights }
 }
 
-function parseChangelog(value: unknown): ParsedRelease[] | undefined {
-  if (Array.isArray(value)) {
-    return value.map(parseRelease).filter((release): release is ParsedRelease => release !== undefined)
-  }
-
-  if (!isRecord(value)) return
-  if (!Array.isArray(value.releases)) return
-
-  return value.releases.map(parseRelease).filter((release): release is ParsedRelease => release !== undefined)
+function parseChangelog(value: unknown, locale: string): ParsedRelease[] | undefined {
+  const list = Array.isArray(value)
+    ? value
+    : isRecord(value) && Array.isArray(value.releases)
+      ? value.releases
+      : undefined
+  if (!list) return
+  return list
+    .map((release) => parseRelease(release, locale))
+    .filter((release): release is ParsedRelease => release !== undefined)
 }
 
 function sliceHighlights(input: { releases: ParsedRelease[]; current?: string; previous?: string }) {
@@ -134,8 +143,13 @@ function dedupeKey(highlight: Highlight) {
   return [highlight.title, highlight.description, highlight.media?.type ?? "", highlight.media?.src ?? ""].join("\n")
 }
 
-function loadReleaseHighlights(value: unknown, current?: string, previous?: string) {
-  const releases = parseChangelog(value)
+export function loadReleaseHighlights(
+  value: unknown,
+  current: string | undefined,
+  previous: string | undefined,
+  locale: string,
+) {
+  const releases = parseChangelog(value, locale)
   if (!releases?.length) return []
   return sliceHighlights({ releases, current, previous })
 }
@@ -147,6 +161,7 @@ export const { use: useHighlights, provider: HighlightsProvider } = createSimple
     const platform = usePlatform()
     const dialog = useDialog()
     const settings = useSettings()
+    const language = useLanguage()
     const [store, setStore, _, ready] = persisted("highlights.v1", HighlightsStore, { version: undefined })
 
     const [range, setRange] = createStore({
@@ -187,7 +202,7 @@ export const { use: useHighlights, provider: HighlightsProvider } = createSimple
         .then((response) => (response.ok ? (response.json() as Promise<unknown>) : undefined))
         .then((json) => {
           if (!json) return
-          const highlights = loadReleaseHighlights(json, platform.version, previous)
+          const highlights = loadReleaseHighlights(json, platform.version, previous, language.locale())
           if (controller.signal.aborted) return
 
           if (highlights.length === 0) {

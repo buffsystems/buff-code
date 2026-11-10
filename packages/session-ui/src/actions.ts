@@ -24,6 +24,10 @@ export type SessionTurnFailure = {
   type: string
   message: string
   status?: number
+  /** Buff (#757): файлы запроса, который модель отвергла. */
+  attachments?: ReadonlyArray<{ readonly name?: string; readonly mime: string }>
+  /** Buff (#757): модель, которая их отвергла, — её не предлагают снова. */
+  modelID?: string
 }
 
 export type SessionUserActions = {

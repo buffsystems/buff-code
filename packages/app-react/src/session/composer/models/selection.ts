@@ -75,6 +75,12 @@ export function configuredModel(config: ConfigEntry[] | undefined) {
   return { providerID, modelID: parts.join("/"), variant: undefined }
 }
 
+/** The thinking level the location's config names for a new session (#836), if any. */
+export function configuredThinking(config: ConfigEntry[] | undefined) {
+  const entry = config?.findLast((item) => item.type === "document" && item.info.thinking !== undefined)
+  return entry?.type === "document" ? entry.info.thinking : undefined
+}
+
 export function resolveSelection(input: SelectionInput) {
   const agents = input.agents.filter((item) => item.mode !== "subagent" && !item.hidden)
   const visible = input.showCustomAgents || hasCustomAgent(agents)
@@ -144,7 +150,7 @@ export function resolveSelection(input: SelectionInput) {
   const variant = resolveModelVariant({
     variants,
     selected: selected(),
-    configured: configuredVariant(),
+    configured: configuredVariant() ?? configuredThinking(input.config),
     preferred: model ? input.prefs.variant({ providerID: model.provider.id, modelID: model.id }) : undefined,
   })
   const latest = latestModels(models)

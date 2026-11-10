@@ -7,7 +7,7 @@ import { formatServerError } from "@opencode/app/react-reuse/server-errors"
 import type { SessionMessageUser } from "@opencode/client/promise"
 import type { SessionTurnFailure } from "@opencode/session-ui/actions"
 import { BuffTurn } from "@opencode/schema/buff-turn"
-import { turnFailure } from "@opencode/schema/buff-turn-failure"
+import { fileFollowUp, readsFormats, turnFailure, type TurnFiles } from "@opencode/schema/buff-turn-failure"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { Server } from "../../core/servers"
@@ -18,6 +18,10 @@ import { useBuffBillingDialog } from "../../buff/billing/billing"
 import { useBuffContextChoice } from "../../buff/context/choice"
 import { useProviderCatalog } from "../../providers/catalog/use-catalog"
 import { openConnectProvider } from "../../providers/connect/open"
+import type { CatalogModel } from "../../providers/models/catalog"
+import { openManageModels } from "../../providers/models/manage"
+import { ModelDialog } from "../composer/models/model-picker"
+import { useModelSelection } from "../composer/models/use-selection"
 import { writeClipboard } from "./parts/text"
 
 function FileRow(props: { file: BuffTurn.File; onOpen?: (path: string) => void }) {
@@ -188,6 +192,10 @@ export function TurnFailure(props: {
   sessionID: string
   failure: SessionTurnFailure
   onRetry: () => void | Promise<void>
+  /** #757: an answer to a refusal with files — a prepared message that stops sending their format. */
+  onFollowUp: (input: ReturnType<typeof fileFollowUp>) => void | Promise<void>
+  /** #757: the same message again on another model. */
+  onRetryWith: (model: { providerID: string; modelID: string }) => void | Promise<void>
 }) {
   const i18n = useI18n()
   const t = i18n.buff.t
@@ -199,6 +207,7 @@ export function TurnFailure(props: {
   const providerID = props.failure.providerID
   const provider = catalog.catalog.all.get(providerID)?.name
   const failure = turnFailure(props.failure, providerID, t, provider)
+  const selection = useModelSelection({ server: props.server, directory: props.directory, sessionID: props.sessionID })
   const copy = async () => {
     if (!(await writeClipboard(failure.details))) return
     showToast({ title: t("Copied"), description: t("The error details are in the clipboard") })
@@ -211,15 +220,58 @@ export function TurnFailure(props: {
     const current = await context.rpc.get(undefined, { location: { directory: props.directory } }).catch(() => null)
     await context.choose(current)
   }
+  // #757: only models that read every format of the files; the choice runs the same message again.
+  const switchModel = (files: TurnFiles) =>
+    dialog.show((close) => (
+      <ModelDialog
+        handle={selection}
+        title={t("Switch model")}
+        only={(model: CatalogModel) =>
+          !(model.provider.id === providerID && model.id === props.failure.modelID) &&
+          readsFormats(
+            Object.entries(model.capabilities.input).flatMap(([kind, on]) => (on ? [kind] : [])),
+            files.formats,
+          )
+        }
+        onChosen={(model) => void props.onRetryWith(model)}
+        onManage={() => openManageModels(dialog, { server: props.server, directory: props.directory })}
+        onClose={close}
+      />
+    ))
+  const files = failure.files
   return (
     <div data-kind="session-error-card">
       <Callout tone="crit">
         <div className="flex w-full min-w-0 flex-col gap-2">
           <div className="min-w-0">{failure.text}</div>
           <div className="flex flex-wrap items-center gap-1">
-            <Button size="sm" variant="outline" data-action="turn-retry" onClick={() => void props.onRetry()}>
-              {t("Retry")}
-            </Button>
+            {files ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-action="turn-files-analyze"
+                  onClick={() => void props.onFollowUp(fileFollowUp("analyze", files, t))}
+                >
+                  {t("Analyse with code")}
+                </Button>
+                <Button size="sm" variant="outline" data-action="turn-files-model" onClick={() => switchModel(files)}>
+                  {t("Switch model")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-action="turn-files-without"
+                  onClick={() => void props.onFollowUp(fileFollowUp("without-files", files, t))}
+                >
+                  {t("Continue without files")}
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" data-action="turn-retry" onClick={() => void props.onRetry()}>
+                {t("Retry")}
+              </Button>
+            )}
             {failure.action && (
               <Button size="sm" variant="outline" data-action="turn-fix" onClick={() => void fix()}>
                 {t(fixes[failure.action])}

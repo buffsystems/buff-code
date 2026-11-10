@@ -34,6 +34,8 @@ import type {
   SessionSwitchAgentOutput,
   SessionSwitchModelInput,
   SessionSwitchModelOutput,
+  SessionSwitchContextLimitInput,
+  SessionSwitchContextLimitOutput,
   SessionUpdateInput,
   SessionUpdateOutput,
   SessionMoveInput,
@@ -554,6 +556,7 @@ export function make(options: ClientOptions) {
               title: input?.["title"],
               agent: input?.["agent"],
               model: input?.["model"],
+              limit: input?.["limit"],
               location: input?.["location"],
               metadata: input?.["metadata"],
               permissions: input?.["permissions"],
@@ -651,6 +654,18 @@ export function make(options: ClientOptions) {
             method: "POST",
             path: `/api/session/${encodeURIComponent(input.sessionID)}/model`,
             body: { model: input["model"] },
+            successStatus: 204,
+            declaredStatuses: [400, 401, 404],
+            empty: true,
+          },
+          requestOptions,
+        ),
+      switchContextLimit: (input: SessionSwitchContextLimitInput, requestOptions?: RequestOptions) =>
+        request<SessionSwitchContextLimitOutput>(
+          {
+            method: "POST",
+            path: `/api/session/${encodeURIComponent(input.sessionID)}/context-limit`,
+            body: { limit: input["limit"] },
             successStatus: 204,
             declaredStatuses: [400, 401, 404],
             empty: true,
@@ -2139,12 +2154,12 @@ export function make(options: ClientOptions) {
           { method: "GET", path: `/api/config/shell`, successStatus: 200, declaredStatuses: [400, 401], empty: false },
           requestOptions,
         ),
-      update: (input: ConfigUpdateInput, requestOptions?: RequestOptions) =>
+      update: (input?: ConfigUpdateInput, requestOptions?: RequestOptions) =>
         request<ConfigUpdateOutput>(
           {
             method: "PATCH",
             path: `/api/experimental/config`,
-            body: { shell: input["shell"] },
+            body: { shell: input?.["shell"], thinking: input?.["thinking"], context: input?.["context"] },
             successStatus: 204,
             declaredStatuses: [400, 401],
             empty: true,

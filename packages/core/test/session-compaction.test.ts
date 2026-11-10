@@ -219,6 +219,18 @@ it.effect("auto compaction estimates current content against the buffered prompt
     expect(compaction.required(input(79_999, contextLimited))).toBe(false)
     expect(compaction.required(input(80_000, contextLimited))).toBe(true)
 
+    // Режимы ИИ (#835): a session's own cap narrows the window below the model's — never widens it.
+    const capped = (tokens: number, cap: number) => {
+      const selected = input(tokens, { context: 400_000, output: 10_000 })
+      const session = { ...selected.session, limit: { context: cap } }
+      return { ...selected, session, context: { ...selected.context, session } }
+    }
+    expect(compaction.required(capped(79_999, 100_000))).toBe(false)
+    expect(compaction.required(capped(80_000, 100_000))).toBe(true)
+    // a cap above the model's window changes nothing: 400k − the 20k buffer
+    expect(compaction.required(capped(379_999, 1_000_000))).toBe(false)
+    expect(compaction.required(capped(380_000, 1_000_000))).toBe(true)
+
     const outputLimited = { context: 100_000, output: 30_000 }
     expect(compaction.required(input(69_999, outputLimited))).toBe(false)
     expect(compaction.required(input(70_000, outputLimited))).toBe(true)

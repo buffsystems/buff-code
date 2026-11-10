@@ -416,3 +416,37 @@
     background-color: var(--muted);
   }
 }
+
+/* The working subagents' icon with their count (#762). */
+.subagents-icon {
+  position: relative;
+  display: inline-flex;
+}
+.subagents-icon__badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* A choice with what it changes (#759): the thinking mode's label and its hint. */
+.composer__choice {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 320px;
+}
+.composer__choice-hint {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.35;
+}

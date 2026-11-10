@@ -266,3 +266,13 @@ test("имя для входа на сервер — buff, а не «opencode» 
   const { legacyUsernames } = await import("./brand-scan")
   expect(legacyUsernames().map((hit) => `${hit.path}:${hit.line}: ${hit.text}`)).toEqual([])
 })
+
+test("переход на сквозную нумерацию — обновление, а не откат (#848)", async () => {
+  // 0.24.0 после 2.0.11-buff.N меньше по semver: консоль обновляется на любую другую версию, окно —
+  // с разрешённым «откатом», rpm — с epoch. Убрать любое из трёх — установленные копии застрянут.
+  const { action } = await import("../../packages/cli/src/services/updater-action")
+  expect(action("2.0.11-buff.40", "0.24.0", "auto")).toBe("auto")
+  expect(action("0.24.0", "0.24.0", "auto")).toBe("none")
+  expect(read("packages/desktop/src/main/updater/platform.ts")).toContain("updateClient.allowDowngrade = true")
+  expect(read("packages/desktop/electron-builder.config.ts")).toContain('fpm: ["--epoch", "1", metainfoFpm(appId)]')
+})

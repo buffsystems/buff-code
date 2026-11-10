@@ -121,12 +121,14 @@ interface Listed {
   readonly title?: string
   /** Когда сессия менялась, мс. */
   readonly updated: number
+  /** Сессия режима «Настройка» (#765): у режима свой список, в общие разделы она не попадает. */
+  readonly setup?: boolean
 }
 
 export interface Section<Item> {
   readonly key: string
   readonly title: string
-  readonly kind: "pinned" | "group" | "time" | "project"
+  readonly kind: "setup" | "pinned" | "group" | "time" | "project"
   readonly group?: Group
   readonly items: readonly Item[]
 }
@@ -156,9 +158,11 @@ export function sections<Item extends Listed>(
   const shown = sessions.filter(
     (item) => !out.has(item.id) && (!needle || (item.title ?? "").toLowerCase().includes(needle)),
   )
-  const byID = new Map(shown.map((item) => [item.id, item]))
+  // Режим «Настройка» — своим разделом первым: он виден и пустым, это вход в режим (#765).
+  const setup = newestFirst(shown.filter((item) => item.setup))
+  const byID = new Map(shown.filter((item) => !item.setup).map((item) => [item.id, item]))
   const pinned = marks.pinned.flatMap((id) => (byID.has(id) ? [byID.get(id)!] : []))
-  const taken = new Set(pinned.map((item) => item.id))
+  const taken = new Set([...setup, ...pinned].map((item) => item.id))
   const groups = marks.groups.map((group): Section<Item> => {
     const items = newestFirst(shown.filter((item) => !taken.has(item.id) && marks.membership[item.id] === group.id))
     for (const item of items) taken.add(item.id)
@@ -166,6 +170,7 @@ export function sections<Item extends Listed>(
   })
   const rest = newestFirst(shown.filter((item) => !taken.has(item.id)))
   const head = [
+    ...(!needle || setup.length ? [{ key: "setup", title: "Setup", kind: "setup" as const, items: setup }] : []),
     ...(pinned.length ? [{ key: "pinned", title: "Pinned", kind: "pinned" as const, items: pinned }] : []),
     ...groups.filter((section) => !needle || section.items.length),
   ]

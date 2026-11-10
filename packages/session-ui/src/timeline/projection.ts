@@ -6,6 +6,7 @@ import type {
   SessionMessageUser,
   SessionStatus,
 } from "@opencode/client/promise"
+import { BuffSendFile } from "@opencode/schema/buff-send-file"
 import { Option, Schema } from "effect"
 import { createMemo, mapArray, type Accessor } from "solid-js"
 import { currentContentDefaultOpen, currentToolFailed, currentToolHasLoadedFiles } from "../message/current-tool-state"
@@ -292,7 +293,12 @@ export namespace Timeline {
             detail,
             new Set(
               messages
-                .filter((message) => message.type === "compaction" || message.type === "model-switched")
+                .filter(
+                  (message) =>
+                    message.type === "compaction" ||
+                    message.type === "model-switched" ||
+                    message.type === "context-switched",
+                )
                 .map((message) => message.id),
             ),
           )
@@ -387,6 +393,9 @@ export namespace Timeline {
               message: lastAssistant.error.message,
               ...("status" in lastAssistant.error && typeof lastAssistant.error.status === "number"
                 ? { status: lastAssistant.error.status }
+                : {}),
+              ...(lastAssistant.error.attachments?.length
+                ? { attachments: lastAssistant.error.attachments, modelID: lastAssistant.model.id }
                 : {}),
             },
           }),
@@ -712,7 +721,8 @@ function groupContent(
   return groups
 }
 
-const BUFF_CARDS = new Set(["plan_exit", "todo_update"])
+// Buff (#808): файл, отданный агентом, — тоже своя карточка: в свёрнутой группе его не видно.
+const BUFF_CARDS = new Set(["plan_exit", "todo_update", BuffSendFile.TOOL])
 
 function toolGroupType(
   content: Extract<Content, { type: "tool" }>,
@@ -721,7 +731,7 @@ function toolGroupType(
   hasContextGroup: boolean,
   detail?: TimelineDetail,
 ) {
-  // Buff (#463): план на утверждение и список дел — свои карточки, не в общей группе «Used N».
+  // Buff (#463, #808): план, список дел и отданный файл — свои карточки, не в общей группе «Used N».
   if (BUFF_CARDS.has(content.name)) return undefined
   if (detail) {
     if (content.name === "question" && !currentToolFailed(content)) return undefined

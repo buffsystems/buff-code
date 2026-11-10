@@ -192,6 +192,7 @@ export type SessionCreateInput = {
   readonly title?: string | undefined
   readonly agent?: Agent.ID | undefined
   readonly model?: Model.Ref | undefined
+  readonly limit?: Session.ContextLimit | undefined
   readonly location?: Location.PublicRef | undefined
   readonly metadata?: Session.Metadata | undefined
   readonly permissions?: Permission.Ruleset | undefined
@@ -237,6 +238,15 @@ export type SessionSwitchModelOutput = void
 export type SessionSwitchModelOperation<E = never> = (
   input: SessionSwitchModelInput,
 ) => Effect.Effect<SessionSwitchModelOutput, E>
+
+export type SessionSwitchContextLimitInput = {
+  readonly sessionID: Session.ID
+  readonly limit: Session.ContextLimit | null
+}
+export type SessionSwitchContextLimitOutput = void
+export type SessionSwitchContextLimitOperation<E = never> = (
+  input: SessionSwitchContextLimitInput,
+) => Effect.Effect<SessionSwitchContextLimitOutput, E>
 
 export type SessionUpdateInput = {
   readonly sessionID: Session.ID
@@ -439,6 +449,7 @@ export type SessionLogOutput =
             readonly title?: string | undefined
             readonly agent?: Agent.ID | undefined
             readonly model?: Model.Ref | undefined
+            readonly limit?: { readonly context: number } | undefined
             readonly metadata?: Session.Metadata | undefined
             readonly permissions?: Permission.Ruleset | undefined
             readonly version: string
@@ -478,6 +489,24 @@ export type SessionLogOutput =
             readonly sessionID: Session.ID
             readonly model: Model.Ref
             readonly previous?: Model.Ref | undefined
+          }
+        }
+      | {
+          readonly id: Event.ID
+          readonly created: number
+          readonly metadata?: { readonly [x: string]: unknown } | undefined
+          readonly type: "session.context.selected"
+          readonly durable: { readonly aggregateID: string; readonly seq: Event.Seq; readonly version: Event.Version }
+          readonly location?:
+            | {
+                readonly directory: AbsolutePath
+                readonly workspaceID?: (string & Brand.Brand<"Workspace.ID">) | undefined
+              }
+            | undefined
+          readonly data: {
+            readonly sessionID: Session.ID
+            readonly limit?: { readonly context: number } | undefined
+            readonly previous?: { readonly context: number } | undefined
           }
         }
       | {
@@ -686,7 +715,14 @@ export type SessionLogOutput =
             | undefined
           readonly data: {
             readonly sessionID: Session.ID
-            readonly error: { readonly type: string; readonly message: string; readonly status?: number | undefined }
+            readonly error: {
+              readonly type: string
+              readonly message: string
+              readonly status?: number | undefined
+              readonly attachments?:
+                | ReadonlyArray<{ readonly name?: string | undefined; readonly mime: string }>
+                | undefined
+            }
           }
         }
       | {
@@ -878,7 +914,14 @@ export type SessionLogOutput =
           readonly data: {
             readonly sessionID: Session.ID
             readonly assistantMessageID: SessionMessage.ID
-            readonly error: { readonly type: string; readonly message: string; readonly status?: number | undefined }
+            readonly error: {
+              readonly type: string
+              readonly message: string
+              readonly status?: number | undefined
+              readonly attachments?:
+                | ReadonlyArray<{ readonly name?: string | undefined; readonly mime: string }>
+                | undefined
+            }
             readonly finish?: "content-filter" | undefined
             readonly rawFinish?: string | undefined
             readonly providerState?: SessionMessage.ProviderState | undefined
@@ -1088,7 +1131,14 @@ export type SessionLogOutput =
             readonly sessionID: Session.ID
             readonly assistantMessageID: SessionMessage.ID
             readonly id: string
-            readonly error: { readonly type: string; readonly message: string; readonly status?: number | undefined }
+            readonly error: {
+              readonly type: string
+              readonly message: string
+              readonly status?: number | undefined
+              readonly attachments?:
+                | ReadonlyArray<{ readonly name?: string | undefined; readonly mime: string }>
+                | undefined
+            }
             readonly content?:
               | readonly [
                   (
@@ -1133,7 +1183,14 @@ export type SessionLogOutput =
             readonly assistantMessageID: SessionMessage.ID
             readonly attempt: number
             readonly at: number
-            readonly error: { readonly type: string; readonly message: string; readonly status?: number | undefined }
+            readonly error: {
+              readonly type: string
+              readonly message: string
+              readonly status?: number | undefined
+              readonly attachments?:
+                | ReadonlyArray<{ readonly name?: string | undefined; readonly mime: string }>
+                | undefined
+            }
           }
         }
       | {
@@ -1214,7 +1271,14 @@ export type SessionLogOutput =
           readonly data: {
             readonly sessionID: Session.ID
             readonly reason: "auto" | "manual"
-            readonly error: { readonly type: string; readonly message: string; readonly status?: number | undefined }
+            readonly error: {
+              readonly type: string
+              readonly message: string
+              readonly status?: number | undefined
+              readonly attachments?:
+                | ReadonlyArray<{ readonly name?: string | undefined; readonly mime: string }>
+                | undefined
+            }
             readonly inputID?: SessionMessage.ID | undefined
             readonly cost?: (number & Brand.Brand<"Money.USD">) | undefined
             readonly tokens?:
@@ -1396,6 +1460,7 @@ export interface SessionApi<E = never> {
   readonly fork: SessionForkOperation<E>
   readonly switchAgent: SessionSwitchAgentOperation<E>
   readonly switchModel: SessionSwitchModelOperation<E>
+  readonly switchContextLimit: SessionSwitchContextLimitOperation<E>
   readonly update: SessionUpdateOperation<E>
   readonly move: SessionMoveOperation<E>
   readonly prompt: SessionPromptOperation<E>
@@ -1448,6 +1513,7 @@ export type MessageListInput = {
   readonly type?:
     | "agent-switched"
     | "model-switched"
+    | "context-switched"
     | "location-switched"
     | "user"
     | "synthetic"
@@ -2299,9 +2365,13 @@ export type ConfigShellsOutput = ReadonlyArray<{
 }>
 export type ConfigShellsOperation<E = never> = () => Effect.Effect<ConfigShellsOutput, E>
 
-export type ConfigUpdateInput = { readonly shell: string | null }
+export type ConfigUpdateInput = {
+  readonly shell?: string | null | undefined
+  readonly thinking?: string | null | undefined
+  readonly context?: number | null | undefined
+}
 export type ConfigUpdateOutput = void
-export type ConfigUpdateOperation<E = never> = (input: ConfigUpdateInput) => Effect.Effect<ConfigUpdateOutput, E>
+export type ConfigUpdateOperation<E = never> = (input?: ConfigUpdateInput) => Effect.Effect<ConfigUpdateOutput, E>
 
 export interface ConfigApi<E = never> {
   readonly get: ConfigGetOperation<E>

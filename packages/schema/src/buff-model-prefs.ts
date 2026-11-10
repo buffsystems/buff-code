@@ -36,7 +36,7 @@ export interface Candidate {
   readonly providerID: string
   readonly modelID: string
   readonly family?: string | undefined
-  /** Дата выпуска, мс эпохи; нет или не число — дата неизвестна. */
+  /** Дата выпуска, мс эпохи; нет, не число или 0 — дата неизвестна. */
   readonly released?: number | undefined
 }
 
@@ -45,7 +45,9 @@ export const key = (model: { providerID: string; modelID: string }) => `${model.
 // Как в окне: полгода средними месяцами, а не календарными.
 const SIX_MONTHS = 6 * 30.436875 * 24 * 60 * 60 * 1000
 
-const dated = (model: Candidate) => typeof model.released === "number" && Number.isFinite(model.released)
+// 0 и меньше — дата неизвестна (#763): схема пишет released: 0 моделям без даты, например своего провайдера.
+const dated = (model: Candidate) =>
+  typeof model.released === "number" && Number.isFinite(model.released) && model.released > 0
 
 /** Новейшая модель каждого семейства у провайдера, вышедшая за полгода: видна без отметки. */
 export function latest(models: readonly Candidate[], now: number): Set<string> {

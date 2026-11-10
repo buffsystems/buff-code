@@ -2,6 +2,7 @@ export * as BuffOutbox from "./outbox.js"
 
 import { sql } from "drizzle-orm"
 import { Effect } from "effect"
+import { BuffSecret } from "@opencode/schema/buff-secret"
 import type { Database } from "../database/database.js"
 
 /**
@@ -18,6 +19,10 @@ import type { Database } from "../database/database.js"
  * Строка сессии помечается провайдером своего хода (#562): у разработчика ходы своего
  * провайдера в Buff не уходят — отбирает их отправитель по этой метке. Метка ставится в момент
  * записи: модель сессии позже может смениться, а ход остаётся тем, чем был.
+ *
+ * Секреты человека (#765) в очередь не попадают вовсе: строки `kv` с ключом хранилища секретов
+ * триггеры пропускают, а уже стоящие в очереди — удаляются при установке. Значение секрета
+ * живёт только на этой машине.
  */
 
 type Db = Database.Interface["db"]
@@ -41,7 +46,7 @@ export type Row = {
 }
 
 /** Версия триггеров: входит в подпись, так что её смена переставляет их у всех установок. */
-const VERSION = "2"
+const VERSION = "3"
 
 const q = (name: string) => `"${name.replaceAll('"', '""')}"`
 
@@ -84,6 +89,12 @@ export function provider(table: string, columns: string[], alias: "NEW" | "OLD")
   return known(...message, sessionProvider(own("session_id")))
 }
 
+/** Строки, которые очередь не берёт никогда: секреты человека в `kv` (#765). */
+function guard(table: string, columns: string[], alias: "NEW" | "OLD"): string {
+  if (table !== "kv" || !columns.includes("key")) return ""
+  return `WHEN ${alias}.${q("key")} NOT LIKE ${lit(BuffSecret.STORE_PREFIX + "%")} `
+}
+
 /** Три триггера таблицы — чистая функция от имени, колонок и ключа, чтобы её можно было проверить. */
 export function triggers(table: string, columns: string[], pk: string[]): { name: string; sql: string }[] {
   const insert = `INSERT INTO ${q(TABLE)} (tbl, op, key, row, provider) VALUES ('${table}', `
@@ -94,7 +105,8 @@ export function triggers(table: string, columns: string[], pk: string[]): { name
   ].map(([op, alias]) => ({
     name: `buff_outbox_${table}_${op}`,
     sql:
-      `CREATE TRIGGER ${q(`buff_outbox_${table}_${op}`)} AFTER ${op.toUpperCase()} ON ${q(table)} BEGIN ` +
+      `CREATE TRIGGER ${q(`buff_outbox_${table}_${op}`)} AFTER ${op.toUpperCase()} ON ${q(table)} ` +
+      `${guard(table, columns, alias as "NEW" | "OLD")}BEGIN ` +
       `${insert}'${op}', ${keyOf(alias as "NEW" | "OLD", pk)}, ${jsonOf(alias as "NEW" | "OLD", columns)}, ` +
       `${provider(table, columns, alias as "NEW" | "OLD")}); END`,
   }))
@@ -116,6 +128,12 @@ export const install = Effect.fn("BuffOutbox.install")(function* (db: Db, option
   if (!queue.some((c) => c.name === "provider"))
     yield* db.run(sql.raw(`ALTER TABLE ${q(TABLE)} ADD COLUMN provider TEXT`))
   yield* db.run(sql.raw(`CREATE TABLE IF NOT EXISTS ${q(META)} (tbl TEXT PRIMARY KEY, signature TEXT NOT NULL)`))
+  // Секреты, попавшие в очередь до этой версии триггеров, уходить не должны.
+  yield* db.run(
+    sql.raw(
+      `DELETE FROM ${q(TABLE)} WHERE tbl = 'kv' AND json_extract(key, '$[0]') LIKE ${lit(BuffSecret.STORE_PREFIX + "%")}`,
+    ),
+  )
   const tables = (yield* db.all<{ name: string }>(
     sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`,
   ))

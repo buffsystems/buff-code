@@ -20,5 +20,6 @@
   "repository": "https://github.com/buffsystems/buff-code",
   "installScript": "https://buff.systems/install",
   "offlineModelCatalog": true,
-  "release": 40
+  "version": "0.24.0",
+  "release": 41
 }

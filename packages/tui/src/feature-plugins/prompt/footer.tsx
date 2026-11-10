@@ -48,6 +48,7 @@ export function PromptFooter(props: {
       props.context.data.session.message.list(props.sessionID),
       props.context.data.location.model.list(session.location),
       session.revert?.messageID,
+      session.limit?.context,
     )
     const cost = props.context.data.session.cost(props.sessionID)
     return [

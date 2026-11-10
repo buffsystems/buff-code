@@ -132,6 +132,7 @@ export const consoleMini = {
   Paste: "Вставить",
   "Interrupt session": "Прервать сессию",
   "Queue prompt": "Поставить запрос в очередь",
+  "Send prompt now": "Отправить сейчас",
   "Previous prompt history": "Предыдущий запрос из истории",
   "Next prompt history": "Следующий запрос из истории",
   "Shell mode": "Режим терминала",

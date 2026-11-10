@@ -4,9 +4,10 @@ import type {
   SessionMessageAssistantReasoning,
 } from "@opencode/client/promise"
 import { reasoningHeading } from "@opencode/session-ui/timeline/projection"
-import { Check, Copy, RotateCcw, type LucideIcon } from "lucide-react"
+import { Check, Copy, RotateCcw, Share2, type LucideIcon } from "lucide-react"
 import { useEffect, useState, type MouseEvent } from "react"
 import { useI18n } from "../../../i18n/provider"
+import { useTimeline } from "../context"
 import { PacedMarkdown } from "../markdown/markdown"
 import { BasicTool, Shimmer } from "./basic-tool"
 
@@ -30,10 +31,10 @@ export async function writeClipboard(text: string) {
   )
 }
 
-const icons: Record<"check" | "copy" | "reset", LucideIcon> = { check: Check, copy: Copy, reset: RotateCcw }
+const icons: Record<"check" | "copy" | "reset" | "share", LucideIcon> = { check: Check, copy: Copy, reset: RotateCcw, share: Share2 }
 
 export function MessageActionButton(props: {
-  icon: "check" | "copy" | "reset"
+  icon: "check" | "copy" | "reset" | "share"
   label: string
   disabled?: boolean
   onClick: () => void
@@ -92,6 +93,7 @@ export function AssistantText(props: {
   const i18n = useI18n()
   const duration = useDuration()
   const [copied, markCopied] = useCopied()
+  const share = useTimeline().actions.share
   if (!props.text) return null
   const type = props.message.error?.type.toLowerCase()
   const interrupted = !!type && (type.includes("abort") || type.includes("interrupt"))
@@ -131,6 +133,9 @@ export function AssistantText(props: {
             label={label}
             onClick={() => void writeClipboard(props.text).then((done) => done && markCopied())}
           />
+          {share && (
+            <MessageActionButton icon="share" label={i18n.buff.t("Share this message")} onClick={() => share(props.message.id)} />
+          )}
           {meta && (
             <span data-slot="text-part-meta" className="timeline-meta__text">
               {meta}

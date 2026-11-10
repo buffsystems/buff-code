@@ -1,5 +1,6 @@
 export * as SessionCompaction from "./compaction.js"
 
+import { BuffAttachment } from "@opencode/schema/buff-attachment"
 import {
   AIError,
   InvalidProviderOutputError,
@@ -489,6 +490,7 @@ export const layer = Layer.effect(
           ...transcript.messages,
           ...(input.instructionUpdate ? [Message.system(input.instructionUpdate)] : []),
         ],
+        omitMedia: BuffAttachment.omittedMedia(messages),
         webSocket,
       })
     }
@@ -752,7 +754,9 @@ export const layer = Layer.effect(
       )
         return false
       const limit = input.resolved.limit
-      const context = limit.context
+      // The session's own cap (#835) narrows the window below the model's, never above it.
+      const cap = input.context.session.limit?.context
+      const context = cap && cap > 0 && limit.context > 0 ? Math.min(limit.context, cap) : limit.context
       if (context <= 0) return false
       const output = Math.min(limit.output, OUTPUT_TOKEN_MAX)
       const promptCeiling = Math.min(

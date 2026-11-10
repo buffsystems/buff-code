@@ -13,6 +13,7 @@ import { useServerData } from "../react/core"
 import { showToast } from "../shell/notifications/toast"
 import { useSettings, useSettingsModel } from "../shell/settings-context"
 import { useSession } from "./context"
+import { ShareDialog } from "./share/share-dialog"
 
 export function useSessionCommands() {
   const i18n = useI18n()
@@ -101,6 +102,17 @@ export function useSessionCommands() {
           },
         ]
       : []),
+    // Buff (#817): a public link to this dialog at the gateway.
+    {
+      id: "session.share",
+      title: i18n.buff.t("Share…"),
+      description: i18n.buff.t("A public link to this dialog, with a password and an expiry if you like"),
+      category: sessionCategory,
+      slash: "share",
+      disabled: messages === 0,
+      onSelect: () =>
+        dialog.show((close) => <ShareDialog server={session.server} sessionID={session.sessionID} onClose={close} />),
+    },
     {
       id: "session.copyID",
       title: i18n.t("command.session.copyID"),

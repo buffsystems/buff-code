@@ -3,7 +3,7 @@ export * as Config from "./config.js"
 import { Schema } from "effect"
 import { ephemeral, inventory } from "./event.js"
 import { Permission } from "./permission.js"
-import { AbsolutePath, optional } from "./schema.js"
+import { AbsolutePath, optional, NonNegativeInt } from "./schema.js"
 import { ConfigAgent } from "./config/agent.js"
 import { ConfigMedia } from "./config/media.js"
 import { ConfigCompaction } from "./config/compaction.js"
@@ -34,6 +34,12 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   default_agent: Schema.String.pipe(optional).annotate({
     description: "Default primary agent to use when no session agent is selected",
+  }),
+  thinking: Schema.String.pipe(optional).annotate({
+    description: "Default thinking level (model variant id) for a new session when it names none",
+  }),
+  context: NonNegativeInt.pipe(optional).annotate({
+    description: "Default context window cap in tokens for a new session; 0 or absent — the model's whole window",
   }),
   update: Schema.Literals(["disable", "notify", "auto"]).pipe(optional).annotate({
     description: "Disable updates, notify when one is available, or install updates automatically",
@@ -110,7 +116,9 @@ export class Info extends Schema.Class<Info>("Config.Info")({
 }) {}
 
 export const Patch = Schema.Struct({
-  shell: Schema.NullOr(Schema.String),
+  shell: Schema.NullOr(Schema.String).pipe(optional),
+  thinking: Schema.NullOr(Schema.String).pipe(optional),
+  context: Schema.NullOr(NonNegativeInt).pipe(optional),
 }).annotate({ identifier: "Config.Patch" })
 export interface Patch extends Schema.Schema.Type<typeof Patch> {}
 

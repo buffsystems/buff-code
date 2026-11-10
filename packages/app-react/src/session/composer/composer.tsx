@@ -7,6 +7,8 @@ import { composerPlaceholder } from "@opencode/app/react-reuse/composer-placehol
 import { setCursorPosition, getCursorPosition } from "@opencode/app/react-reuse/composer-dom"
 import type { ComposerSuggestion } from "@opencode/app/react-reuse/composer-types"
 import { Skill } from "@opencode/schema/skill"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
+import { BuffVariant } from "@opencode/schema/buff-variant"
 import { useEffect, useMemo, useRef, type ReactNode } from "react"
 import { formatKeybindParts, formatKeybind } from "../../commands/keybind"
 import { useCommandRegistration, useCommands } from "../../commands/provider"
@@ -18,6 +20,8 @@ import { useI18n } from "../../i18n/provider"
 import { useCore, useServerData } from "../../react/core"
 import { showToast } from "../../shell/notifications/toast"
 import { createAttachments, type Attachments } from "./attachments/attachments"
+import type { ContextLimitChoice } from "./context-limit"
+import { askContextLimit } from "./context-limit-dialog"
 import { uploadFile } from "./attachments/uploads"
 import type { ComposerDraft } from "./draft/draft"
 import { createComposerController, type ComposerController, type ComposerQueue } from "./editor/controller"
@@ -45,6 +49,8 @@ export type ComposerProps = {
   context?: { remove(item: ContextItem): void; clear(items: ContextItem[]): void; open(item: ContextItem): void }
   /** Buff's permission mode, shown before the model. */
   beforeModel?: ReactNode
+  /** #836: the session's context cap — the control beside the thinking mode. */
+  contextLimit?: ContextLimitChoice
   borderUnderlay?: boolean
   onEditor?(editor: HTMLElement | undefined): void
 }
@@ -342,6 +348,22 @@ export function Composer(props: ComposerProps) {
 
   const parts = (id: string, fallback: string) => formatKeybindParts(commands.keybind(id) ?? fallback, i18n.t)
   const selection = handle.selection
+  const contextLimit = props.contextLimit
+  const modelWindow = selection.model?.limit.context
+  const context = contextLimit && {
+    options: BuffContextWindow.options(modelWindow, contextLimit.current, i18n.buff.t),
+    current: String(contextLimit.current),
+    onSelect: (id: string) => {
+      if (id === BuffContextWindow.CUSTOM) {
+        void askContextLimit(dialog, { initial: contextLimit.current, max: modelWindow }).then((value) => {
+          if (value !== undefined) contextLimit.select(value)
+        })
+        return
+      }
+      const value = BuffContextWindow.parse(id)
+      if (value !== undefined) contextLimit.select(value)
+    },
+  }
   const followUp = props.working || (props.queue?.count() ?? 0) > 0
   const placeholder = composerPlaceholder(
     controller.interaction.get().mode,
@@ -367,10 +389,16 @@ export function Composer(props: ComposerProps) {
           : undefined
       }
       variant={{
-        options: ["default", ...selection.variants].map((value) => ({ id: value, label: value })),
+        // #759: the thinking mode in words — a label and what it changes, not the bare id.
+        options: ["default", ...selection.variants].map((value) => ({
+          id: value,
+          label: BuffVariant.label(value, i18n.buff.t),
+          hint: BuffVariant.hint(value, i18n.buff.t),
+        })),
         current: selection.variant ?? "default",
         onSelect: (value) => handle.setVariant(value === "default" ? undefined : value),
       }}
+      context={context}
       modelControls={
         <>
           {props.beforeModel}

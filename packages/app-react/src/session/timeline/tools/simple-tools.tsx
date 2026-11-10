@@ -12,6 +12,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react"
 import { createMarkdownImages } from "../markdown/images"
 import { previewImages, usePreviewImage, useReadImage } from "../markdown/image-preview"
 import { isLocalServer } from "../../../core/servers"
+import { sideActions } from "../../panes/side-actions"
 import { useI18n } from "../../../i18n/provider"
 import { usePlatform } from "../../../platform/context"
 import { useTimeline } from "../context"
@@ -419,7 +420,7 @@ export function TodoTool(props: ToolProps) {
   )
 }
 
-/** Buff (#708): a file the agent handed over — its name and size; on this computer, Open and Show in folder. */
+/** Buff (#708, #808): a file the agent handed over — its name and size; Preview in the window; on this computer, Open and Show in folder. */
 export function SendFileTool(props: ToolProps) {
   const i18n = useI18n()
   const platform = usePlatform()
@@ -441,18 +442,22 @@ export function SendFileTool(props: ToolProps) {
       {sent && (
         <div data-component="buff-send-file" className="tool-send-file">
           <span className="tool-send-file__path">{sent.note ? `${sent.note} — ${sent.file}` : sent.file}</span>
-          {local && (
-            <div className="tool-plan__actions">
+          <div className="tool-plan__actions">
+            {/* #808: shown in the window's own viewer — wherever the service runs. */}
+            <Button size="sm" variant="ghost" data-action="buff-file-preview" onClick={() => sideActions()?.openFile(sent.file)}>
+              {i18n.buff.t("Preview")}
+            </Button>
+            {local && (
               <Button size="sm" variant="ghost" data-action="buff-file-open" onClick={() => void platform.openPath?.(full)}>
                 {i18n.buff.t("Open")}
               </Button>
-              {platform.revealPath && (
-                <Button size="sm" variant="ghost" data-action="buff-file-reveal" onClick={() => void platform.revealPath?.(full)}>
-                  {i18n.buff.t("Show in folder")}
-                </Button>
-              )}
-            </div>
-          )}
+            )}
+            {local && platform.revealPath && (
+              <Button size="sm" variant="ghost" data-action="buff-file-reveal" onClick={() => void platform.revealPath?.(full)}>
+                {i18n.buff.t("Show in folder")}
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </BasicTool>

@@ -1,4 +1,4 @@
-import { turnFailure, type TurnError } from "@opencode/schema/buff-turn-failure"
+import { turnFailure, type TurnError, type TurnFiles } from "@opencode/schema/buff-turn-failure"
 import { t } from "./locale"
 
 /**
@@ -14,6 +14,13 @@ const FIX = {
   "connect-provider": "/connect — connect the provider",
 } as const
 
+// #757: модель отвергла запрос с файлами — разобрать их кодом, сменить модель или продолжить без них.
+const FILES = [
+  "/files-code — analyse the files with code",
+  "/models — a model that reads them, then ↑",
+  "/files-skip — continue without the files",
+] as const
+
 /** `provider` — имя провайдера для людей (#562); без него — его идентификатор. */
 export function consoleTurnFailure(
   error: TurnError,
@@ -21,7 +28,23 @@ export function consoleTurnFailure(
   provider?: string,
 ): { text: string; hint: string } {
   const failure = turnFailure(error, providerID, t, provider)
+  if (failure.files) return { text: failure.text, hint: FILES.map((line) => t(line)).join(" · ") }
   return { text: failure.text, hint: failure.action ? `${t(FIX[failure.action])} · ${t(AGAIN)}` : t(AGAIN) }
+}
+
+/** Файлы, на которых упал последний ход сессии (#757): по ним работают /files-code и /files-skip. */
+export function filesFailure(
+  messages: readonly {
+    readonly id?: string
+    readonly type: string
+    readonly model?: { readonly providerID: string }
+    readonly error?: TurnError
+  }[],
+): TurnFiles | undefined {
+  // Служба ставит свои отметки после хода (idle и т. п.): последним считается сообщение человека или модели.
+  const last = messages.findLast((message) => message.type === "assistant" || message.type === "user")
+  if (last?.type !== "assistant" || !last.error) return undefined
+  return turnFailure(last.error, last.model?.providerID ?? "", t).files
 }
 
 /**

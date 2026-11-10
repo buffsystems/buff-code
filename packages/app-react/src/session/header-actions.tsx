@@ -3,6 +3,7 @@
 // Context tab through the panes' contract — and room for the review toggle floating over the corner.
 
 import { IconButton, ProgressCircle, Tooltip } from "@buff/ui/react"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { useMemo, type ReactNode } from "react"
 import { useBuffSessionCost } from "../buff/billing/billing"
@@ -44,7 +45,7 @@ function ContextUsage() {
     const model = location?.model?.find(
       (item) => item.providerID === last.model.providerID && item.id === last.model.id,
     )
-    const limit = model?.limit.context
+    const limit = BuffContextWindow.effective(model?.limit.context, info?.limit?.context)
     return { total, percent: limit ? Math.round((total / limit) * 100) : undefined }
   })()
   const cost = buffCost ? buffCost.text || "—" : usd.format(info?.cost ?? 0)

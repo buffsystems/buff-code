@@ -61,6 +61,8 @@ export type OAuthAuthorization = {
   | {
       readonly mode: "auto"
       readonly callback: Effect.Effect<Credential.OAuth, unknown>
+      /** Buff (#765): код, который человек принёс сам (с телефона) — вместо ответа браузера на loopback. */
+      readonly enter?: (code: string) => Effect.Effect<void, unknown>
     }
   | {
       readonly mode: "code"
@@ -731,14 +733,29 @@ const layer = Layer.effect(
         connect: connectOAuth,
         status: Effect.fn("Integration.oauth.status")(function* (input) {
           const attempt = (yield* SynchronizedRef.get(attempts)).get(input.attemptID)
-          if (!attempt || attempt.integrationID !== input.integrationID)
-            return yield* new AttemptNotFoundError(input)
+          if (!attempt || attempt.integrationID !== input.integrationID) return yield* new AttemptNotFoundError(input)
           if (attempt.status === "failed") {
             return { status: attempt.status, message: attempt.message ?? "Authorization failed", time: attempt.time }
           }
           return { status: attempt.status, time: attempt.time }
         }),
         complete: Effect.fn("Integration.oauth.complete")(function* (input) {
+          // Buff (#765): код, принесённый человеком, — до захвата попытки: неверный код её не завершает.
+          // Попытка «auto» уже завершается своим захватом (#780): код отдан — дальше она дойдёт сама.
+          if (input.code !== undefined) {
+            const pending = (yield* SynchronizedRef.get(attempts)).get(input.attemptID)
+            if (
+              pending?.integrationID === input.integrationID &&
+              pending.status === "pending" &&
+              pending.authorization.mode === "auto" &&
+              pending.authorization.enter
+            ) {
+              yield* pending.authorization
+                .enter(input.code)
+                .pipe(Effect.mapError((cause) => new AuthorizationError({ cause })))
+              return
+            }
+          }
           const attempt = yield* SynchronizedRef.modify(attempts, (current) => {
             const match = current.get(input.attemptID)
             if (!match || match.integrationID !== input.integrationID) return [undefined, current]
@@ -777,8 +794,7 @@ const layer = Layer.effect(
         connect: connectCommand,
         status: Effect.fn("Integration.command.status")(function* (input) {
           const attempt = (yield* SynchronizedRef.get(commandAttempts)).get(input.attemptID)
-          if (!attempt || attempt.integrationID !== input.integrationID)
-            return yield* new AttemptNotFoundError(input)
+          if (!attempt || attempt.integrationID !== input.integrationID) return yield* new AttemptNotFoundError(input)
           if (attempt.status === "pending") {
             return {
               status: attempt.status,

@@ -1,4 +1,5 @@
 import type { ModelInfo, SessionMessageAssistant, SessionMessageInfo } from "@opencode/client"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import { Locale } from "./locale"
 
 type SessionNode = {
@@ -55,10 +56,12 @@ export function lastAssistantWithUsage(messages: ReadonlyArray<SessionMessageInf
   )
 }
 
+/** The session's context use: tokens and the percent of the limit in force — the model's window cut by the session's cap (#837). */
 export function contextUsage(
   messages: ReadonlyArray<SessionMessageInfo>,
   models: ReadonlyArray<ModelInfo> | undefined,
   boundary?: string,
+  cap?: number,
 ) {
   const last = lastAssistantWithUsage(messages, boundary)
   if (!last) return
@@ -66,10 +69,26 @@ export function contextUsage(
     last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
   if (tokens <= 0) return
   const model = models?.find((model) => model.providerID === last.model.providerID && model.id === last.model.id)
+  const limit = BuffContextWindow.effective(model?.limit.context, cap)
   return {
     tokens,
-    percent: model?.limit.context ? Math.round((tokens / model.limit.context) * 100) : undefined,
+    percent: limit ? Math.round((tokens / limit) * 100) : undefined,
   }
+}
+
+/** The prompt's cap label (#837): the cap in short, only when it is below the model's window. */
+export function contextCapLabel(cap: number | undefined, modelWindow: number | undefined) {
+  if (!cap) return undefined
+  if (modelWindow !== undefined && cap >= modelWindow) return undefined
+  return BuffContextWindow.format(cap)
+}
+
+/** The timeline row for a changed context cap (#837): the limit now in force, in words. */
+export function contextSwitchText(
+  message: { limit?: { context: number } },
+  t: (text: string, params?: Record<string, string | number>) => string,
+) {
+  return t("Context limit: {limit}", { limit: BuffContextWindow.label(message.limit?.context, undefined, t) })
 }
 
 export function formatContextUsage(tokens: number, percent?: number) {
