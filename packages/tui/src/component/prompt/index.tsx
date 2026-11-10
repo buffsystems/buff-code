@@ -1262,6 +1262,7 @@ export function Prompt(props: PromptProps) {
           variant,
         },
         limit: local.contextLimit.draft(),
+        metadata: { origin: "console" },
       })
       sessionID = created.id
       session = data.session.get(created.id)

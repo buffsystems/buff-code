@@ -87,6 +87,11 @@ const str = (args: Record<string, unknown>, key: string): string => {
   return v.trim()
 }
 
+/** Где начата сессия (#861): телефон, терминал (TUI) или окно — у прочих сессий метки нет. */
+export function sessionOrigin(value: unknown): "phone" | "console" | "window" {
+  return value === "phone" || value === "console" ? value : "window"
+}
+
 export interface MobileApi {
   run(record: DeviceRecord, op: string, args: unknown): Promise<Reply>
   /** Что телефону знать о сессии сейчас: последние сообщения, идёт ли ход, чего ждёт агент. */
@@ -209,7 +214,7 @@ export function mobileApi(
           title: x.title ?? "",
           created: x.time.created,
           updated: x.time.updated,
-          origin: x.metadata?.origin === "phone" ? "phone" : "window",
+          origin: sessionOrigin(x.metadata?.origin),
           running: active.has(x.id),
           // Режим «Настройка» (#765): сессии режима — своей группой на телефоне.
           ...(x.agent ? { agent: x.agent } : {}),
@@ -369,6 +374,12 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
         call("GET", "/api/vcs", { query: where }).catch(() => ({ data: {} })),
       ])
       return { files: clip(data<unknown[]>(diff) ?? []), vcs: data<unknown>(vcs) ?? {} }
+    },
+    // MCP-серверы машины там, где идёт сессия (#861): подробности сессии на телефоне, как в окне.
+    "mcp.list": async (args) => {
+      const where = { "location[directory]": await directoryOf(str(args, "session")) }
+      const servers = data<{ name: string; status: { status: string } }[]>(await call("GET", "/api/mcp", { query: where })) ?? []
+      return { servers: servers.map((x) => ({ name: x.name, ok: x.status.status === "connected" })) }
     },
     "files.list": async (args) => {
       const where = await directoryOf(str(args, "session"))

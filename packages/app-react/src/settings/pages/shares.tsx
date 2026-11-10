@@ -210,7 +210,7 @@ function LinkCard(props: {
   const expiry = expiryLabel(row.expiresAt, props.locale)
   const meta = [
     row.source === null ? t("Deleted session") : row.source,
-    row.kind === "messages" ? t("{count} messages", { count: row.messages }) : t("Whole dialog"),
+    row.kind === "messages" ? t("Messages: {count}", { count: row.messages }) : t("Whole dialog"),
     row.hasPass ? t("With password") : t("No password"),
     expiry ? t("Expires {when}", { when: expiry }) : t("Never expires"),
     ...(row.tools ? [t("With tool calls")] : []),

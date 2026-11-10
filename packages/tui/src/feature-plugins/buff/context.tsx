@@ -3,7 +3,7 @@ import type { Context } from "@opencode/plugin/tui/context"
 import { BuffContext } from "@opencode/schema/buff-context"
 import { BuffFirstRun } from "@opencode/schema/buff-first-run"
 import { ownModel } from "@opencode/schema/buff-context-flow"
-import { createSignal, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show } from "solid-js"
 import { DialogIntegration } from "../../component/dialog-integration"
 import { chooseOrg, chooseProject, chooseSpaces, launchStep, preselectProject, type Ask } from "./choose"
 import { followDirectory } from "./follow"
@@ -52,6 +52,8 @@ function Commands(props: {
   /** Starts following other clients' switches; answers how to stop. */
   init: () => () => void
   load: (directory: string) => void
+  /** Buff got signed in some other way than our own dialog (/connect): the line catches up. */
+  signedIn: () => void
 }) {
   const command = (step: Exclude<Step, "all">, title: string) => ({
     id: `buff.context.${step}`,
@@ -73,6 +75,12 @@ function Commands(props: {
   // server connection (a test server could not even stop).
   onMount(() => onCleanup(props.init()))
   followDirectory(() => props.context.location?.directory, props.load)
+  const buffConnected = createMemo(
+    () =>
+      (props.context.data.location.integration.list(props.context.location)?.find((x) => x.id === "buff")?.connections
+        .length ?? 0) > 0,
+  )
+  createEffect(on(buffConnected, (now, before) => now && before === false && props.signedIn(), { defer: true }))
   return null
 }
 
@@ -202,6 +210,13 @@ export default Plugin.define({
         if (step === "choose") await choose("all")
       })().catch(() => undefined)
     }
+    // Вход через /connect (#861), а не через наш диалог: строка состояния перестаёт говорить «не вошли»,
+    // выбранный контекст перечитывается. Выбор не открывается — его откроет /org или наш диалог.
+    const signedIn = () => {
+      if (!signedOut()) return
+      setSignedOut(false)
+      void rpc.get(undefined, at()).then(setChoice, () => undefined)
+    }
     const init = () => {
       const abort = new AbortController()
       void (async () => {
@@ -214,7 +229,7 @@ export default Plugin.define({
     }
     context.ui.slot({
       append: "app",
-      render: () => <Commands context={context} choose={choose} init={init} load={load} />,
+      render: () => <Commands context={context} choose={choose} init={init} load={load} signedIn={signedIn} />,
     })
   },
 })

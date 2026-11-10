@@ -77,3 +77,8 @@ test("one settings model per window storage: a change in Settings reaches every 
   expect(seen).toEqual([true])
   expect(windowSettings(() => memoryStorage())).not.toBe(shown)
 })
+
+test("a message sent while the agent works waits in the queue by default (#810, #859)", () => {
+  expect(DEFAULT_SETTINGS.general.followUpBehavior).toBe("queue")
+  expect(readSettings("{}").general.followUpBehavior).toBe("queue")
+})

@@ -176,7 +176,7 @@ export const DEFAULT_SETTINGS: Settings = {
     mobileTitlebarPosition: "top",
     mobileDiffWrap: true,
     terminalPlacement: "side",
-    followUpBehavior: "steer",
+    followUpBehavior: "queue",
     experimentalBrowser: false,
   },
   sessionSummary: { projectExpanded: true, serverExpanded: true },

@@ -37,7 +37,7 @@ function Commands(props: { context: Context }) {
     const text = await context.ui.dialog.prompt({ title: t("What to fix?"), description: lead })
     context.ui.dialog.clear()
     if (!text?.trim()) return
-    const target = session ?? (await context.client.session.create({ title, location: { directory: directory() } })).id
+    const target = session ?? (await context.client.session.create({ title, location: { directory: directory() }, metadata: { origin: "console" } })).id
     await context.client.session.prompt({ sessionID: target, text: lead + text.trim() })
     openSession(target)
   }

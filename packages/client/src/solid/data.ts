@@ -1491,6 +1491,8 @@ export function createData(config: CreateDataInput) {
         permissions?: { action: string; resource: string; effect: "allow" | "deny" | "ask" }[]
         // Buff (#837): the session's context cap from the start.
         limit?: { context: number }
+        // Buff (#861): where the session was started (the phone shows it).
+        metadata?: Record<string, string>
       }) {
         const { projectID, ...payload } = input
         const id = payload.id ?? SessionID.create()

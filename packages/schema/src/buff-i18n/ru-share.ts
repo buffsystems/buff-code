@@ -57,7 +57,7 @@ export const share = {
   Expired: "Истекла",
   "Not yet published": "Ещё не опубликована",
   "Deleted session": "Сессия удалена",
-  "{count} messages": "Сообщений: {count}",
+  "Messages: {count}": "Сообщений: {count}",
   "With password": "С паролем",
   "No password": "Без пароля",
   "Expires {when}": "До {when}",

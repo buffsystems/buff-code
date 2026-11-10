@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   Field,
+  IconButton,
   Input,
 } from "@buff/ui/react"
 import { loadHomeSessionIndex, mergeHomeSessionIndex } from "@opencode/app/react-reuse/home-session-index"
@@ -19,9 +20,12 @@ import { BuffMobile } from "@opencode/schema/buff-mobile"
 import { BuffSessionMarks } from "@opencode/schema/buff-session-marks"
 import type { SessionInfo } from "@opencode/client/promise"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { formatServerError } from "@opencode/app/react-reuse/server-errors"
+import { sessionRows, type Row } from "./rows"
+import { followSetupOpened, openSetupSession } from "./setup"
 import { TranscriptSearchResult, useOpenTranscriptResult, useTranscriptSearch } from "./transcript-search"
-import { ChevronDown, ChevronRight, Smartphone } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { ChevronDown, ChevronRight, Plus, Smartphone } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { DataState } from "../../core/data/state"
 import { serverKey, type Server } from "../../core/servers"
 import { useDialog } from "../../dialog/dialogs"
@@ -37,7 +41,6 @@ import { useServerByKey } from "../server-data"
 import { useCurrentTab, useTabs } from "../tabs/provider"
 import { tabServer } from "../tabs/tabs"
 
-type Row = { id: string; title: string; updated: number; session: SessionInfo }
 
 const folder = (session: SessionInfo) => session.location.directory.split("/").filter(Boolean).pop() ?? ""
 const projectOf = (row: Row) => row.session.location.directory
@@ -81,13 +84,8 @@ function ServerSessionList(props: { server: Server; current?: string }) {
   const live = useServerData(props.server, (state) => state.session.info)
   const rows = useMemo(
     () =>
-      mergeHomeSessionIndex(index.data ?? [], Object.values(live)).map(
-        (session): Row => ({
-          id: session.id,
-          title: sessionLabel(session, i18n.buff.t),
-          updated: session.time.updated ?? session.time.created,
-          session,
-        }),
+      sessionRows(mergeHomeSessionIndex(index.data ?? [], Object.values(live)), (session) =>
+        sessionLabel(session, i18n.buff.t),
       ),
     [index.data, live, i18n],
   )
@@ -98,6 +96,21 @@ function ServerSessionList(props: { server: Server; current?: string }) {
   const search = useTranscriptSearch(props.server, query)
   const openResult = useOpenTranscriptResult(props.server)
   const archived = BuffSessionMarks.archive(rows, marks)
+  const openSession = useOpenSession(props.server)
+  const latest = useRef({ refresh: index.refetch, show: openSession })
+  latest.current = { refresh: index.refetch, show: openSession }
+  // #860: a setup session the model opened from a session of this window shows as a tab.
+  useEffect(() => {
+    if (!connected) return
+    const stop = new AbortController()
+    void followSetupOpened(props.server.api(), {
+      signal: stop.signal,
+      known: (sessionID) => !!props.server.data.state.get().session.info[sessionID],
+      refresh: () => void latest.current.refresh(),
+      show: (session) => latest.current.show(session),
+    }).catch(() => undefined)
+    return () => stop.abort()
+  }, [connected, props.server])
   return (
     <div data-component="buff-sessions" className="mt-4 flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex shrink-0 flex-col gap-1.5 px-1">
@@ -121,10 +134,14 @@ function ServerSessionList(props: { server: Server; current?: string }) {
                 onToggle={() => fold(section.key)}
               />
             ) : (
-              <SectionTitle section={section} server={props.server} />
+              <SectionTitle section={section} server={props.server} onOpen={openSession} />
             )}
             {section.kind === "project" && folded.has(section.key) && !query ? null : section.items.length === 0 ? (
-              <span className="ui-note px-1.5 text-xs">{i18n.buff.t("Empty — add a session from its menu.")}</span>
+              <span className="ui-note px-1.5 text-xs">
+                {section.kind === "setup"
+                  ? i18n.buff.t("Nothing connected yet — press + and ask to connect something.")
+                  : i18n.buff.t("Empty — add a session from its menu.")}
+              </span>
             ) : (
               section.items.map((row) => (
                 <SessionRow
@@ -196,6 +213,15 @@ function useMarkChange(server: Server) {
       )
 }
 
+/** Show a session as a tab of its server. */
+function useOpenSession(server: Server) {
+  const tabs = useTabs()
+  return (session: SessionInfo) => {
+    server.data.session.remember(session)
+    tabs.select(tabs.addSessionTab({ server: tabServer(server.key), sessionId: session.id }))
+  }
+}
+
 function SessionRow(props: {
   row: Row
   server: Server
@@ -206,8 +232,8 @@ function SessionRow(props: {
   inProject?: boolean
 }) {
   const i18n = useI18n()
-  const tabs = useTabs()
   const dialog = useDialog()
+  const openSession = useOpenSession(props.server)
   const change = useMarkChange(props.server)
   const autoApprove = useShellSettings((settings) => settings.autoApprove)
   const id = props.row.id
@@ -220,10 +246,7 @@ function SessionRow(props: {
   const phone = BuffMobile.phoneOrigin(props.row.session.metadata)
   const pinned = props.marks.pinned.includes(id)
   const group = props.marks.membership[id]
-  const open = () => {
-    props.server.data.session.remember(props.row.session)
-    tabs.select(tabs.addSessionTab({ server: tabServer(props.server.key), sessionId: id }))
-  }
+  const open = () => openSession(props.row.session)
   const rename = (title: string) =>
     props.server
       .api()
@@ -378,11 +401,16 @@ function ProjectTitle(props: { section: BuffSessionMarks.Section<Row>; folded: b
   )
 }
 
-function SectionTitle(props: { section: BuffSessionMarks.Section<Row>; server: Server }) {
+function SectionTitle(props: {
+  section: BuffSessionMarks.Section<Row>
+  server: Server
+  onOpen: (session: SessionInfo) => void
+}) {
   const i18n = useI18n()
   const dialog = useDialog()
   const change = useMarkChange(props.server)
   const group = props.section.group
+  if (props.section.kind === "setup") return <SetupTitle server={props.server} onOpen={props.onOpen} />
   if (!group) return <span className="ui-eyebrow px-1.5">{i18n.buff.t(props.section.title)}</span>
   return (
     <ContextMenu
@@ -420,6 +448,29 @@ function SectionTitle(props: { section: BuffSessionMarks.Section<Row>; server: S
         </span>
       )}
     </ContextMenu>
+  )
+}
+
+/** The Setup section's heading (#775/#860): its «+» opens a new setup session. */
+function SetupTitle(props: { server: Server; onOpen: (session: SessionInfo) => void }) {
+  const i18n = useI18n()
+  const t = i18n.buff.t
+  const add = () =>
+    openSetupSession(props.server.api(), props.onOpen).catch((error: unknown) =>
+      showToast({ title: t("Setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
+    )
+  return (
+    <span data-component="buff-sessions-setup" className="ui-eyebrow flex items-center justify-between px-1.5">
+      {t("Setup")}
+      <IconButton
+        data-action="buff-setup-new"
+        icon={Plus}
+        size="xs"
+        title={t("New setup")}
+        aria-label={t("New setup")}
+        onClick={() => void add()}
+      />
+    </span>
   )
 }
 

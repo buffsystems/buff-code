@@ -109,7 +109,7 @@ async function pickMessages(
           title: `${picked.has(m.id) ? "☑" : "☐"} ${m.role === "user" ? t("You") : t("Assistant")}: ${m.text}`,
           value: m.id,
         })),
-        { title: t("Done"), value: DONE, description: t("{count} messages", { count: picked.size }) },
+        { title: t("Done"), value: DONE, description: t("Messages: {count}", { count: picked.size }) },
       ],
     })
     if (answer === undefined) return undefined

@@ -1,5 +1,38 @@
 [
   {
+    "tag": "0.24.1",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Вход через /connect виден сразу",
+            "description": "Строка состояния терминала перестаёт говорить «не вошли» сразу после входа в Buff через /connect, без перезапуска."
+          },
+          {
+            "title": "Телефон видит больше",
+            "description": "В подробностях сессии на телефоне — MCP-серверы машины, а сессии из терминала помечены как терминальные."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "Sign-in through /connect shows at once",
+            "description": "The terminal's status line stops saying \"not signed in\" right after a Buff sign-in through /connect, no restart needed."
+          },
+          {
+            "title": "The phone sees more",
+            "description": "Session details on the phone list the machine's MCP servers, and sessions from the terminal are marked as such."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "tag": "0.24.0",
     "highlights": [
       {

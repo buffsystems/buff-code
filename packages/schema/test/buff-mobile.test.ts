@@ -16,7 +16,6 @@ describe("приложение Buff для телефона", () => {
       { store: "app-store", name: "App Store", url: "https://buff.systems/mobile/app-store" },
       { store: "google-play", name: "Google Play", url: "https://buff.systems/mobile/google-play" },
       { store: "rustore", name: "RuStore", url: "https://buff.systems/mobile/rustore" },
-      { store: "appgallery", name: "AppGallery", url: "https://buff.systems/mobile/appgallery" },
       { store: "apk", name: "APK", url: "https://buff.systems/mobile/android-apk" },
     ])
     expect(BuffMobile.appLinks("dev.buff.systems")[0]?.url).toBe("https://dev.buff.systems/mobile/app-store")

@@ -17,7 +17,7 @@ import {
   type SealedPush,
 } from "@buff/mobile-protocol"
 import { MobileAgent } from "../../src/buff/mobile/agent"
-import { mobileApi, BuffMobileText, type Call } from "../../src/buff/mobile/api"
+import { mobileApi, BuffMobileText, sessionOrigin, type Call } from "../../src/buff/mobile/api"
 import { fileStore } from "../../src/buff/mobile/store"
 
 const record: DeviceRecord = {
@@ -332,6 +332,38 @@ describe("api", () => {
     await api.run(record, "session.new", base)
     expect(sent.map((b) => b.agent)).toEqual(["review", "plan", undefined])
     await expect(api.run(record, "session.new", { ...base, agent: "explore" })).rejects.toBeInstanceOf(RefusalError)
+  })
+
+  test("a session's MCP servers where it runs, connected or not (#861)", async () => {
+    const asked: Array<Record<string, unknown> | undefined> = []
+    const api = mobileApi(async (_method, route, options) => {
+      if (route === "/api/session/s1") return { data: { location: { directory: "/work/shop" } } }
+      if (route === "/api/mcp") {
+        asked.push(options?.query)
+        return {
+          data: [
+            { name: "buff", status: { status: "connected" } },
+            { name: "repos", status: { status: "failed", error: "boom" } },
+          ],
+        }
+      }
+      return { data: {} }
+    })
+    expect(await api.run(record, "mcp.list", { session: "s1" })).toEqual({
+      ok: true,
+      servers: [
+        { name: "buff", ok: true },
+        { name: "repos", ok: false },
+      ],
+    })
+    expect(asked).toEqual([{ "location[directory]": "/work/shop" }])
+  })
+
+  test("where a session was begun: the phone, the console (TUI), else the window (#861)", () => {
+    expect(sessionOrigin("phone")).toBe("phone")
+    expect(sessionOrigin("console")).toBe("console")
+    expect(sessionOrigin(undefined)).toBe("window")
+    expect(sessionOrigin("desktop")).toBe("window")
   })
 
   test("a project's sessions as the window lists them: no subagents, no archive, where begun, running", async () => {
