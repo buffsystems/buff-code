@@ -248,6 +248,15 @@
   .permission-mode[data-mode="full"] .permission-mode__select {
     color: var(--warning);
   }
+  /* The work mode (#894): Work, Plan, Setup as one switch. */
+  .permission-mode__work {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1px;
+  }
   .permission-mode__plan {
     border: 1px solid transparent;
     border-radius: var(--radius-sm);

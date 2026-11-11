@@ -5,6 +5,7 @@ import { cli } from "./ru-cli.js"
 import { cliErrors } from "./ru-cli-errors.js"
 import { cliHelp } from "./ru-cli-help.js"
 import { cliWizard } from "./ru-cli-wizard.js"
+import { desktop } from "./ru-desktop.js"
 import { consoleApp } from "./ru-console-app.js"
 import { consolePrompt } from "./ru-console-prompt.js"
 import { consoleConfig } from "./ru-console-config.js"
@@ -38,6 +39,7 @@ export const AREAS: Readonly<Record<string, Catalog>> = {
   consoleMini,
   phone,
   share,
+  desktop,
 }
 
 export const RU: Catalog = Object.assign({}, ...Object.values(AREAS))

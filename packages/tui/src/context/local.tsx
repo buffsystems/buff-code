@@ -71,12 +71,22 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         current: undefined as string | undefined,
         draftBySession: {} as Record<string, { agent?: string } | undefined>,
       })
+      // #894: this console's own switches still on their way — which agents it asked for (their
+      // acknowledgments are its own) and the request in flight (a send waits for it, not repeats it).
+      const requested = new Map<string, Set<string>>()
+      const switching = new Map<string, { agent: string; done: Promise<unknown> }>()
       onCleanup(event.on("session.deleted", (evt) => setAgentStore("draftBySession", evt.data.sessionID, undefined)))
       onCleanup(
         event.on("session.agent.selected", (evt) => {
           // Keep an entry after acknowledgment: CLI defaults must not override a user's later choice.
-          if (agentStore.draftBySession[evt.data.sessionID]?.agent === evt.data.agent)
-            setAgentStore("draftBySession", evt.data.sessionID, { agent: undefined })
+          // #894: the session's agent on the server is the truth. A switch made elsewhere (the
+          // window, the phone) replaces the draft instead of being forced back by the next send; a
+          // late acknowledgment of this console's own earlier switch does not undo a later choice.
+          const sessionID = evt.data.sessionID
+          const own = requested.get(sessionID)?.delete(evt.data.agent) === true
+          const draft = agentStore.draftBySession[sessionID]
+          if (draft && (draft.agent === evt.data.agent || !own))
+            setAgentStore("draftBySession", sessionID, { agent: undefined })
         }),
       )
       const colors = createMemo(() => {
@@ -112,11 +122,29 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             const changed = this.current()?.id !== id
             if (changed) model.remember()
             setAgentStore("current", id)
-            if (route.data.type === "session") setAgentStore("draftBySession", route.data.sessionID, { agent: id })
+            if (route.data.type === "session") {
+              const sessionID = route.data.sessionID
+              setAgentStore("draftBySession", sessionID, { agent: id })
+              // #894: the mode is switched at once, not with the next send — the console, the window
+              // and the phone show the mode the session is in.
+              if (changed && data.session.get(sessionID)) {
+                requested.set(sessionID, (requested.get(sessionID) ?? new Set()).add(id))
+                const done = client.api.session.switchAgent({ sessionID, agent: id }).catch(() => undefined)
+                switching.set(sessionID, { agent: id, done })
+                void done.finally(() => {
+                  if (switching.get(sessionID)?.done === done) switching.delete(sessionID)
+                })
+              }
+            }
             // Retain both selections while agent and model commits arrive separately.
             const selected = changed && route.data.type === "session" ? model.current() : undefined
             if (selected) model.set(selected)
           })
+        },
+        /** This console's switch of the session to `id` still on its way (#894): a send waits for it. */
+        switching(sessionID: string, id: string): Promise<unknown> | undefined {
+          const pending = switching.get(sessionID)
+          return pending?.agent === id ? pending.done : undefined
         },
         move(direction: 1 | -1) {
           batch(() => {

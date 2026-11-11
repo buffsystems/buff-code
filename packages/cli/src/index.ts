@@ -2,7 +2,7 @@
 
 import "./buff-env"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import { Commands } from "./commands/commands"
 import { Runtime } from "./framework/runtime"
 import { Observability } from "@opencode/util/observability"
@@ -15,6 +15,7 @@ import { Config } from "./config"
 import { Npm } from "@opencode/util/npm"
 import { Heap } from "./heap"
 import { CpuProfile } from "./cpu-profile"
+import { serviceFatalLine } from "./service-fatal"
 
 if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
   const { askpass } = await import("./ssh-askpass")
@@ -103,7 +104,15 @@ Effect.gen(function* () {
     Effect.logError("cli process failed", {
       cause,
       args: process.argv.slice(2),
-    }).pipe(Effect.andThen(Effect.failCause(cause))),
+    }).pipe(
+      Effect.andThen(
+        Effect.sync(() => {
+          const line = serviceFatalLine(process.argv.slice(2), Cause.squash(cause))
+          if (line) process.stderr.write(line)
+        }),
+      ),
+      Effect.andThen(Effect.failCause(cause)),
+    ),
   ),
   Effect.annotateLogs({ role: "cli" }),
   Effect.provide(Config.layer),

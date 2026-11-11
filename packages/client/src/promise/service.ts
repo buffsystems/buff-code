@@ -39,6 +39,9 @@ export async function ensure(options: EnsureOptions = {}): Promise<Endpoint> {
   let announced = false
   let lastSpawn = 0
   let spawnDelay = timing.spawnDelay
+  // The last contender's own failure (#880): a timeout names it — «the port is in use» — rather
+  // than leaving the person with «timed out» while the next contender hangs.
+  let lastFailure: Error | undefined
 
   const announce = (reason: "missing" | "version-mismatch", previousVersion?: string) => {
     if (announced) return
@@ -57,7 +60,13 @@ export async function ensure(options: EnsureOptions = {}): Promise<Endpoint> {
 
   try {
     while (true) {
-      if (Date.now() >= deadline) throw new Error("Timed out waiting for the background service to start")
+      if (Date.now() >= deadline)
+        throw new Error(
+          lastFailure
+            ? `Timed out waiting for the background service to start: ${lastFailure.message}`
+            : "Timed out waiting for the background service to start",
+          lastFailure ? { cause: lastFailure } : undefined,
+        )
       const registration = await registered(options.file, timing.requestTimeout)
       if (registration.timedOut && registration.info !== undefined) {
         timeouts = {
@@ -101,6 +110,7 @@ export async function ensure(options: EnsureOptions = {}): Promise<Endpoint> {
           spawnDelay = Math.min(spawnDelay * 2, timing.maxSpawnDelay)
         }
         finished.forEach((item) => contenders.delete(item))
+        if (failure !== undefined) lastFailure = failure
         if (failure !== undefined && contenders.size === 0) throw failure
         // Keep one candidate plus one lock probe so a pre-lock stall cannot block recovery.
         if (contenders.size < 2 && Date.now() - lastSpawn >= spawnDelay) {

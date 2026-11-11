@@ -7,6 +7,7 @@ import { api } from "../renderer/api"
 import { startDeepLinks } from "../renderer/startup/deep-links"
 import { getLastActiveUrl, setLastActiveUrl } from "../renderer/window/route-storage"
 import { createDesktopPlatform } from "./platform"
+import { showStartupError } from "./startup-error"
 import { createWindowZoom } from "./zoom"
 
 const root = document.getElementById("root")
@@ -32,7 +33,8 @@ let revealed = false
 
 // The bundled server answers once the main process has started it; its credentials are added to
 // requests by the main process, so the renderer only knows its address.
-void api.awaitInitialization().then((sidecar) =>
+void api.awaitInitialization().then(
+  (sidecar) =>
   mountApp(root, {
     platform,
     servers: [
@@ -58,4 +60,9 @@ void api.awaitInitialization().then((sidecar) =>
       void api.themeReady()
     },
   }),
+  // A server that never comes (#880): its reason in place of the splash, not the splash forever.
+  (error) => {
+    showStartupError(root, error, navigator.language)
+    void api.themeReady()
+  },
 )

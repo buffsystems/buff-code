@@ -56,7 +56,11 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
   // afterwards for its side effects (terminal handoff completion), off the renderer's path.
   const early = mode === "initial" && !isolated ? yield* Effect.promise(sidecarProbe) : undefined
   if (early) yield* Effect.sync(() => void ensure().catch(() => undefined))
-  const service = early ?? (yield* Effect.tryPromise(ensure))
+  // The service's own failure — exit code and its stderr («the port is in use…») — reaches the
+  // window as it is (#880), not as Effect's «An error occurred in Effect.tryPromise».
+  const service =
+    early ??
+    (yield* Effect.tryPromise({ try: ensure, catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))) }))
   if (service.auth?.type !== "basic") throw new Error("V2 CLI background service did not provide authentication")
   const url = new URL(service.url)
   if (url.hostname === "0.0.0.0") url.hostname = "127.0.0.1"

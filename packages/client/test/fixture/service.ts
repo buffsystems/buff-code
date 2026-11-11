@@ -7,6 +7,18 @@ if (mode === "stderr-failed") {
   process.stderr.write("x".repeat(16_384) + "\nactionable startup failure\n")
   process.exit(1)
 }
+// #880: the first start fails with words (a busy port); the ones after it hang without registering.
+if (mode === "fail-then-stuck") {
+  const marker = registration + ".failed-once"
+  if (!(await Bun.file(marker).exists())) {
+    await writeFile(marker, "")
+    await Bun.sleep(300)
+    process.stderr.write("Managed service port 49374 is already in use by another process\n")
+    process.exit(1)
+  }
+  await Bun.sleep(60_000)
+  process.exit(0)
+}
 if (mode === "record-start") {
   await writeFile(registration + ".started", "")
   process.exit(1)

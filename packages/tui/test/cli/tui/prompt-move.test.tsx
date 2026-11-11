@@ -92,6 +92,8 @@ test.each([false, true])("selecting a workspace opens Home without moving a sess
   try {
     await fixture.move.open()
     await fixture.app.waitForFrame((frame) => frame.includes("Рабочие деревья") && frame.includes(linked))
+    // The filter takes the keys once it has the focus (as the refresh test waits): typing earlier is lost.
+    await fixture.app.waitFor(() => fixture.app.renderer.currentFocusedEditor instanceof InputRenderable)
     await fixture.app.mockInput.typeText("linked")
     await fixture.app.waitForFrame((frame) => frame.includes(linked) && !frame.includes(clone))
     fixture.app.mockInput.pressEnter()
@@ -113,6 +115,8 @@ test("removal sends project ownership and the destination without a configuratio
   try {
     await fixture.move.open()
     await fixture.app.waitForFrame((frame) => frame.includes("Рабочие деревья") && frame.includes(linked))
+    // The filter takes the keys once it has the focus (as the refresh test waits): typing earlier is lost.
+    await fixture.app.waitFor(() => fixture.app.renderer.currentFocusedEditor instanceof InputRenderable)
     await fixture.app.mockInput.typeText("linked")
     await fixture.app.waitForFrame((frame) => frame.includes(linked) && !frame.includes(clone))
     fixture.app.mockInput.pressKey("d", { ctrl: true })

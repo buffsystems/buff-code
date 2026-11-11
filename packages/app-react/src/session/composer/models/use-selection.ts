@@ -172,11 +172,25 @@ export function useModelSelection(input: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastPrompt, session?.model, input.sessionID, savedLoaded])
 
+  /** Picks a send applied and still waits to see confirmed by the server. */
+  const pending = useRef(new Map<string, SelectionState>())
+  // #894: the session's agent on the server is the truth. A kept pick with another agent is stale
+  // — left by this window before agents were switched at once, or made elsewhere (the phone, the
+  // console) — and would be forced back onto the session by the next send.
+  useEffect(() => {
+    const sessionID = input.sessionID
+    if (!sessionID || !session?.agent || !savedLoaded) return
+    const kept = saved.store.get().session[sessionID]
+    const next = followServerAgent(kept, session.agent, pending.current.get(sessionID))
+    if (next !== kept) saved.set((state) => ({ ...state, session: { ...state.session, [sessionID]: next } }))
+    // The server's agent decides; the kept pick is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.agent, input.sessionID, savedLoaded])
+
   const latest = useRef({ selection, pick })
   latest.current = { selection, pick }
 
   // Once the server's session carries the pick a send applied, the local pick is dropped.
-  const pending = useRef(new Map<string, SelectionState>())
   useEffect(() => {
     const reconcile = (sessionID: string) => {
       const expected = pending.current.get(sessionID)
@@ -247,7 +261,16 @@ export function useModelSelection(input: {
       setAgent(name: string) {
         const { selection, pick } = latest.current
         const next = chooseAgent(selection, pick, name)
-        if (next !== pick) write(next)
+        if (next === pick) return
+        write(next)
+        // #894: in a session the agent is switched at once, not with the next send — what the
+        // window shows is what the session is in, for this window, the console and the phone.
+        const sessionID = input.sessionID
+        if (!sessionID || !next?.agent || !input.server.data.state.get().session.info[sessionID]) return
+        void input.server
+          .api()
+          .session.switchAgent({ sessionID, agent: next.agent })
+          .catch(() => undefined)
       },
       cycleAgent(direction: 1 | -1) {
         const name = cycleAgent(latest.current.selection, direction)

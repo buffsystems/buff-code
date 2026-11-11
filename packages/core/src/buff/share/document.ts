@@ -20,6 +20,10 @@ export interface StoredMessage {
   files?: { data?: string; mime?: string; name?: string }[]
   content?: StoredContent[]
   time?: { created?: number | string }
+  /** Ход, упавший с ошибкой. */
+  error?: { message?: string }
+  /** Служебная запись: кто её написал и короткий итог (цель, сценарий). */
+  metadata?: { source?: string; summary?: string }
 }
 
 export type StoredContent =
@@ -34,8 +38,12 @@ export type StoredContent =
         input?: unknown
         content?: { type: string; text?: string }[]
         error?: { message?: string }
+        metadata?: Record<string, unknown>
       }
     }
+
+/** Вызов субагента (#753): его собственная сессия — в метаданных вызова. */
+const SUBAGENT_TOOL = "subagent"
 
 /** Сколько символов входа и выхода инструмента попадает в документ. */
 const TOOL_CLIP = 8_000
@@ -70,6 +78,43 @@ export function buildDocument(
     items: slice,
     next: last && start + slice.length < items.length ? last.id : null,
   }
+}
+
+const NOTICE_SOURCES = new Set(["buff-goal", "buff-workflow"])
+
+/** Файл, который агент передал человеку (#708): запись `sent` в метаданных вызова, когда она полная. */
+function sentOf(c: Extract<StoredContent, { type: "tool" }>) {
+  const sent = c.state.metadata?.sent as Record<string, unknown> | undefined
+  if (!sent || typeof sent.file !== "string" || typeof sent.name !== "string") return null
+  if (typeof sent.mime !== "string" || typeof sent.bytes !== "number") return null
+  return {
+    path: sent.file,
+    name: sent.name,
+    mime: sent.mime,
+    size: sent.bytes,
+    ...(typeof sent.note === "string" && sent.note ? { note: sent.note } : {}),
+  }
+}
+
+/** Переданный файл в ссылке: `<id сообщения>:s<номер части>` — рядом с вложениями `<id>:<номер>`. */
+const sentId = (message: string, index: number): string => `${message}:s${index}`
+
+/**
+ * Переданный агентом файл по его id (#892): путь внутри каталога сессии и что о нём известно;
+ * null — нет такого (или сообщение не выбрано ссылкой). Байты читает владелец ссылки с диска.
+ */
+export function sentFile(
+  record: ShareRecord,
+  messages: StoredMessage[],
+  file: string,
+): { path: string; name: string; mime: string; size: number } | null {
+  const m = /^(.+):s(\d+)$/.exec(file)
+  if (!m) return null
+  const [, message, index] = m
+  if (record.messages.length && !record.messages.includes(message!)) return null
+  const part = messages.find((x) => x.id === message)?.content?.[Number(index)]
+  const sent = part?.type === "tool" ? sentOf(part) : null
+  return sent ? { path: sent.path, name: sent.name, mime: sent.mime, size: sent.size } : null
 }
 
 /** Файл ссылки — вложение сообщения: `<id сообщения>:<номер>`. */
@@ -123,12 +168,34 @@ function toItem(m: StoredMessage, tools: boolean): ShareItem | null {
   }
   if (m.type === "assistant") {
     const parts: SharePart[] = []
-    for (const c of m.content ?? []) {
+    ;(m.content ?? []).forEach((c, index) => {
       if (c.type === "text" && c.text) parts.push({ kind: "text", text: c.text })
       else if (c.type === "reasoning" && tools && c.text) parts.push({ kind: "reasoning", text: c.text })
-      else if (c.type === "tool" && tools) parts.push(toolPart(c))
-    }
+      else if (c.type === "tool") {
+        // A file handed to the person (#892) is content of the dialog, not a step: it shows with or
+        // without tools, as the window and the phone show it — a card, not the call behind it.
+        const sent = sentOf(c)
+        if (sent)
+          parts.push({
+            kind: "file",
+            file: { id: sentId(m.id, index), name: sent.name, mime: sent.mime, size: sent.size },
+            ...(sent.note ? { note: sent.note } : {}),
+          })
+        else if (tools) parts.push(toolPart(c))
+      }
+    })
+    // A failed turn (#892) says so, as in the window.
+    if (m.error?.message) parts.push({ kind: "notice", label: m.error.message, tone: "error" })
     return parts.length ? { id: m.id, role: "assistant", at, parts } : null
+  }
+  // The goal and workflows write notices for the person (#892); other synthetic records are not shown.
+  if (m.type === "synthetic" && m.description && NOTICE_SOURCES.has(m.metadata?.source ?? "")) {
+    const notice: SharePart = {
+      kind: "notice",
+      label: m.description,
+      ...(m.metadata?.summary ? { summary: m.metadata.summary } : {}),
+    }
+    return { id: m.id, role: "system", at, parts: [notice] }
   }
   // Служебные записи (сжатие, смена модели, системные вставки) читателю не нужны — кроме
   // описания, которое окно само показывает человеку.
@@ -140,6 +207,8 @@ function toItem(m: StoredMessage, tools: boolean): ShareItem | null {
 
 function toolPart(c: Extract<StoredContent, { type: "tool" }>): SharePart {
   const status = c.state.status === "completed" ? "done" : c.state.status === "error" ? "error" : "running"
+  // A subagent's call names its own session (#893): the page opens it with `sub`.
+  const child = c.state.metadata?.sessionID
   const input =
     c.state.input === undefined
       ? undefined
@@ -158,6 +227,7 @@ function toolPart(c: Extract<StoredContent, { type: "tool" }>): SharePart {
     status,
     ...(input ? { input } : {}),
     ...(output ? { output: clip(output) } : {}),
+    ...(c.name === SUBAGENT_TOOL && typeof child === "string" && child ? { session: child } : {}),
   }
 }
 

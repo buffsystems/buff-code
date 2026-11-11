@@ -74,6 +74,7 @@ import { useWorkingDirectoryActions } from "../../ui/working-directory-actions"
 import { truncateFilePath } from "../../ui/file-path"
 import { PromptMetadataRow } from "./metadata"
 import { n, t } from "../../feature-plugins/buff/locale"
+import { BuffSetup } from "@opencode/schema/buff-setup"
 
 export type PromptProps = {
   sessionID?: string
@@ -1301,6 +1302,10 @@ export function Prompt(props: PromptProps) {
         await data.session.sync(target)
         session = data.session.get(target)
       }
+      // #894: the mode was switched at once when it was picked — a switch still on its way is
+      // waited for, not sent again.
+      const pending = local.agent.switching(target, agent.id)
+      if (pending) return void (await pending)
       if (session?.agent !== agent.id) {
         await client.api.session.switchAgent({ sessionID: target, agent: agent.id })
       }
@@ -1597,6 +1602,19 @@ export function Prompt(props: PromptProps) {
     return promptDisplay().agentColor ?? theme.border.base
   })
   const agentLabel = createMemo(() => (store.mode === "shell" ? t("Shell") : promptDisplay().agentLabel))
+  // The work mode (#894): Work, Plan, Setup as one visible switch; shift+tab moves along it.
+  const workModes = createMemo(() => {
+    if (store.mode === "shell" || !promptDisplay().agentLabel) return undefined
+    const current = local.agent.current()?.id
+    const has = (id: string) => local.agent.list().some((agent) => agent.id === id)
+    if (!current || (!has("plan") && !has(BuffSetup.AGENT))) return undefined
+    const working = current !== "plan" && current !== BuffSetup.AGENT
+    return [
+      { label: working && current !== "build" ? Locale.titlecase(current) : t("Work"), active: working },
+      ...(has("plan") ? [{ label: t("Plan"), active: current === "plan" }] : []),
+      ...(has(BuffSetup.AGENT) ? [{ label: t("Setup"), active: current === BuffSetup.AGENT }] : []),
+    ]
+  })
   const animateMetadata = !revealedPromptMetadata.has(local)
   const metadataAnimationsEnabled = () => animationsEnabled() && animateMetadata
   const agentMetaAlpha = createFadeIn(() => !!agentLabel(), metadataAnimationsEnabled)
@@ -1863,6 +1881,7 @@ export function Prompt(props: PromptProps) {
               <PromptMetadataRow
                 mode={store.mode}
                 agent={agentLabel()}
+                modes={workModes()}
                 auto={local.permission.mode === "autoaccept"}
                 model={promptDisplay().modelLabel}
                 provider={promptDisplay().providerLabel}

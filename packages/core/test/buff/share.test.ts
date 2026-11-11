@@ -4,8 +4,8 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, stat } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { RefusalError, SHARE_FILE, SHARE_VIEW, type ShareDocument } from "@buff/mobile-protocol"
-import { buildDocument, fileChunk, type StoredMessage } from "../../src/buff/share/document"
+import { RefusalError, SHARE_FILE, SHARE_VIEW, type ShareDocument, type ShareFileChunk } from "@buff/mobile-protocol"
+import { buildDocument, fileChunk, sentFile, type StoredMessage } from "../../src/buff/share/document"
 import { ShareLinks, type LinkPorts } from "../../src/buff/share/links"
 import {
   fileShareStore,
@@ -51,6 +51,41 @@ const messages: StoredMessage[] = [
     ],
   },
 ]
+
+// #892: what the window and the phone show as cards and lines of their own.
+const handed: StoredMessage[] = [
+  {
+    id: "a9",
+    type: "assistant",
+    time: { created: 1 },
+    content: [
+      {
+        type: "tool",
+        id: "t9",
+        name: "send_file",
+        state: {
+          status: "completed",
+          input: { path: "/work/out/TEXT.md", note: "Готовый текст" },
+          content: [{ type: "text", text: "Sent to the user: out/TEXT.md" }],
+          metadata: {
+            sent: { file: "out/TEXT.md", name: "TEXT.md", mime: "text/markdown", bytes: 2048, note: "Готовый текст" },
+          },
+        },
+      },
+      { type: "text", text: "Файл готов." },
+    ],
+  },
+  {
+    id: "g1",
+    type: "synthetic",
+    description: "Цель достигнута",
+    metadata: { source: "buff-goal", summary: "Тесты зелёные" },
+    time: { created: 2 },
+  },
+  { id: "y1", type: "synthetic", description: "Shell output", metadata: { source: "shell" }, time: { created: 3 } },
+  { id: "a10", type: "assistant", time: { created: 4 }, content: [], error: { message: "Модель недоступна" } },
+]
+const handedMessages = handed
 
 const record = (over: Partial<ShareRecord> = {}): ShareRecord => ({
   id: ID,
@@ -120,6 +155,74 @@ describe("document", () => {
     })
   })
 
+  test("a subagent call names its own session (#893); other calls and a call without one do not", () => {
+    const call = (id: string, name: string, metadata?: Record<string, unknown>): StoredMessage => ({
+      id,
+      type: "assistant",
+      time: { created: 1 },
+      content: [
+        {
+          type: "tool",
+          id: `t-${id}`,
+          name,
+          state: { status: "completed", input: { description: "Тесты" }, ...(metadata ? { metadata } : {}) },
+        },
+      ],
+    })
+    const doc = buildDocument(
+      record({ tools: true }),
+      [
+        call("a", "subagent", { sessionID: "ses_child" }),
+        call("b", "subagent"),
+        call("c", "bash", { sessionID: "ses_x" }),
+      ],
+      { limit: 50 },
+      "Сессия",
+    )
+    expect(doc.items.map((i) => (i.parts[0] as { session?: string }).session)).toEqual([
+      "ses_child",
+      undefined,
+      undefined,
+    ])
+  })
+
+  test("a file the agent handed over is a file of the document — with its note, whether tools show or not (#892)", () => {
+    for (const tools of [false, true]) {
+      const doc = buildDocument(record({ tools }), handed, { limit: 50 }, "Сессия")
+      expect(doc.items[0]!.parts).toEqual([
+        {
+          kind: "file",
+          file: { id: "a9:s0", name: "TEXT.md", mime: "text/markdown", size: 2048 },
+          note: "Готовый текст",
+        },
+        { kind: "text", text: "Файл готов." },
+      ])
+    }
+  })
+
+  test("a goal or workflow notice and a failed turn are lines of the document; other service records are not (#892)", () => {
+    const doc = buildDocument(record(), handed, { limit: 50 }, "Сессия")
+    expect(doc.items.map((i) => [i.id, i.role])).toEqual([
+      ["a9", "assistant"],
+      ["g1", "system"],
+      ["a10", "assistant"],
+    ])
+    expect(doc.items[1]!.parts).toEqual([{ kind: "notice", label: "Цель достигнута", summary: "Тесты зелёные" }])
+    expect(doc.items[2]!.parts).toEqual([{ kind: "notice", label: "Модель недоступна", tone: "error" }])
+  })
+
+  test("a handed file is found by its id for reading; a message outside the selection has none (#892)", () => {
+    expect(sentFile(record(), handed, "a9:s0")).toEqual({
+      path: "out/TEXT.md",
+      name: "TEXT.md",
+      mime: "text/markdown",
+      size: 2048,
+    })
+    expect(sentFile(record({ messages: ["g1"] }), handed, "a9:s0")).toBeNull()
+    expect(sentFile(record(), handed, "a9:s1")).toBeNull()
+    expect(sentFile(record(), handed, "a9:0")).toBeNull()
+  })
+
   test("selected messages only, in session order; the session title stands in for an empty one", () => {
     const doc = buildDocument(record({ messages: ["u2", "a1"], title: "" }), messages, { limit: 50 }, "Сессия")
     expect(doc.kind).toBe("messages")
@@ -156,7 +259,9 @@ describe("links", () => {
       revoked: [],
       up: true,
     }
-    const sessions = new Map<string, { title: string; active?: boolean }>([["s1", { title: "Сессия" }]])
+    const sessions = new Map<string, { title: string; active?: boolean; parent?: string }>([
+      ["s1", { title: "Сессия" }],
+    ])
     let now = 10_000
     const ports: LinkPorts = {
       store: memShareStore(),
@@ -250,6 +355,65 @@ describe("links", () => {
     await expect(r.links.serve(SHARE_VIEW, { id: "bad" })).rejects.toBeInstanceOf(RefusalError)
     await expect(r.links.serve("session.prompt", {})).rejects.toBeInstanceOf(RefusalError)
     await expect(r.links.serve(SHARE_VIEW, { id: ID, limit: -1 })).rejects.toBeInstanceOf(RefusalError)
+  })
+
+  // #893: a subagent's own session reads through the link of its parent — whole sessions with tools only.
+  test("a subagent's session is read with `sub`: a descendant of the shared session, while the link shows tools", async () => {
+    const child: StoredMessage[] = [
+      { id: "cu", type: "user", text: "Напиши тесты", time: { created: 1 } },
+      { id: "ca", type: "assistant", time: { created: 2 }, content: [{ type: "text", text: "Готово" }] },
+    ]
+    const r = rig({ messages: async (session) => (session === "s1" ? messages : child) })
+    r.sessions.set("child", { title: "Тесты округления", parent: "s1" })
+    r.sessions.set("grandchild", { title: "Внук", parent: "child" })
+    r.sessions.set("stranger", { title: "Чужая" })
+    await r.links.create({ session: "s1", title: "Разбор", tools: true })
+    const doc = (await r.links.serve(SHARE_VIEW, { id: ID, sub: "child" })).document as ShareDocument
+    expect(doc.title).toBe("Тесты округления")
+    expect(doc.kind).toBe("session")
+    expect(doc.sub).toBe("child")
+    expect(((await r.links.serve(SHARE_VIEW, { id: ID })).document as ShareDocument).sub).toBeUndefined()
+    expect(doc.items.map((i) => i.id)).toEqual(["cu", "ca"])
+    expect(((await r.links.serve(SHARE_VIEW, { id: ID, sub: "grandchild" })).document as ShareDocument).title).toBe(
+      "Внук",
+    )
+    // Not of this session, unknown, or the session itself — there is no such page.
+    for (const sub of ["stranger", "nope", "s1"])
+      expect(await r.links.serve(SHARE_VIEW, { id: ID, sub })).toEqual({ ok: true, refused: "missing" })
+    // The link's rules stand: without tools the subagents are not shown at all.
+    await r.links.update(ID, { tools: false })
+    expect(await r.links.serve(SHARE_VIEW, { id: ID, sub: "child" })).toEqual({ ok: true, refused: "missing" })
+  })
+
+  test("a handed file is read from the session's folder in chunks; a file that is gone is refused (#892)", async () => {
+    const bytes = Buffer.alloc(100 * 1024, 5)
+    const asked: [string, string][] = []
+    const r = rig({
+      messages: async () => handedMessages,
+      read: async (session, file) => (
+        asked.push([session, file]),
+        file === "out/TEXT.md" ? new Uint8Array(bytes) : null
+      ),
+    })
+    await r.links.create({ session: "s1", title: "Разбор" })
+    const first = (await r.links.serve(SHARE_FILE, { id: ID, file: "a9:s0" })).chunk as ShareFileChunk
+    expect(first.file).toEqual({ id: "a9:s0", name: "TEXT.md", mime: "text/markdown", size: 100 * 1024 })
+    expect(first.next).toBe(96 * 1024)
+    const rest = (await r.links.serve(SHARE_FILE, { id: ID, file: "a9:s0", from: first.next! })).chunk as ShareFileChunk
+    expect(rest.next).toBeNull()
+    expect(Buffer.from(first.data, "base64").length + Buffer.from(rest.data, "base64").length).toBe(100 * 1024)
+    expect(asked[0]).toEqual(["s1", "out/TEXT.md"])
+    await expect(r.links.serve(SHARE_FILE, { id: ID, file: "a9:s1" })).rejects.toBeInstanceOf(RefusalError)
+    const gone = rig({ messages: async () => handedMessages, read: async () => null })
+    await gone.links.create({ session: "s1", title: "Разбор" })
+    await expect(gone.links.serve(SHARE_FILE, { id: ID, file: "a9:s0" })).rejects.toBeInstanceOf(RefusalError)
+  })
+
+  test("a link of selected messages does not open subagents' sessions", async () => {
+    const r = rig()
+    r.sessions.set("child", { title: "Тесты", parent: "s1" })
+    await r.links.create({ session: "s1", title: "Выбранное", messages: ["u1", "a1"], tools: true })
+    expect(await r.links.serve(SHARE_VIEW, { id: ID, sub: "child" })).toEqual({ ok: true, refused: "missing" })
   })
 
   test("a deleted source ends its links; a revocation the gateway missed waits and is retried", async () => {

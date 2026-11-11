@@ -97,7 +97,7 @@ export type AppLink = { readonly store: AppStore; readonly name: string; readonl
 
 /**
  * Where to get the Buff app (#704): the gateway's site pages — each sends to the store's page, or to
- * the newest APK on GitHub (`buff-<version>.apk` of the buff-community releases), or to the
+ * the newest APK on GitHub (`buff-<version>.apk` of the buff-mobile releases), or to the
  * site's download section while a store is not published yet. Buff Code keeps no store addresses.
  * No AppGallery: Huawei does not register developers now — the owner dropped it (#861).
  */

@@ -10,6 +10,8 @@ import {
   parseShareViewArgs,
   ProtocolError,
   RefusalError,
+  SHARE_FILE_CHUNK,
+  type ShareFileChunk,
   SHARE_FILE,
   SHARE_VIEW,
   type PeerLog,
@@ -17,7 +19,7 @@ import {
   type ShareRefusal,
 } from "@buff/mobile-protocol"
 import { BuffLocale } from "../locale.js"
-import { buildDocument, fileChunk, type StoredMessage } from "./document.js"
+import { buildDocument, fileChunk, sentFile, type StoredMessage } from "./document.js"
 import { hashPassword, verifyPassword, type ShareRecord, type ShareStore } from "./store.js"
 
 export interface LinkPorts {
@@ -28,9 +30,12 @@ export interface LinkPorts {
   publish(id: string, expiresAt: number | null): Promise<boolean>
   revoke(id: string): Promise<boolean>
   /** Сессия, как её знает сервер; null — её больше нет. */
-  session(id: string): Promise<{ title: string; active?: boolean } | null>
+  /** `parent` — сессия, чей субагент её вёл (#893). */
+  session(id: string): Promise<{ title: string; active?: boolean; parent?: string } | null>
   /** Все сообщения сессии по порядку. */
   messages(session: string): Promise<StoredMessage[]>
+  /** Байты файла из каталога сессии (#892: файл, переданный агентом); null — его нет или он вне каталога. */
+  read?(session: string, file: string): Promise<Uint8Array | null>
   /** Эпоха, мс. */
   now(): number
   newId?: () => string
@@ -187,6 +192,7 @@ export class ShareLinks {
       const a = parsed(parseShareViewArgs, args)
       const opened = await this.open(a.id, a.pass)
       if ("refused" in opened) return refused(opened.refused)
+      if (a.sub) return this.subagent(opened.record, a.sub, { after: a.after, limit: a.limit, tail: a.tail })
       const messages = await this.p.messages(opened.record.session)
       return {
         ok: true,
@@ -203,11 +209,60 @@ export class ShareLinks {
       const a = parsed(parseShareFileArgs, args)
       const opened = await this.open(a.id, a.pass)
       if ("refused" in opened) return refused(opened.refused)
-      const chunk = fileChunk(opened.record, await this.p.messages(opened.record.session), a.file, a.from)
+      const messages = await this.p.messages(opened.record.session)
+      const chunk =
+        fileChunk(opened.record, messages, a.file, a.from) ??
+        (await this.sentChunk(opened.record, messages, a.file, a.from))
       if (!chunk) throw new RefusalError(BuffLocale.t("No such file"))
       return { ok: true, chunk }
     }
     throw new RefusalError(`not available to the share viewer: ${op}`)
+  }
+
+  /** Часть файла, который агент передал человеку (#892): с диска, из каталога сессии. */
+  private async sentChunk(
+    record: ShareRecord,
+    messages: StoredMessage[],
+    file: string,
+    from: number,
+  ): Promise<ShareFileChunk | null> {
+    const sent = sentFile(record, messages, file)
+    const bytes = sent && this.p.read ? await this.p.read(record.session, sent.path) : null
+    if (!sent || !bytes) return null
+    const part = bytes.subarray(from, from + SHARE_FILE_CHUNK)
+    return {
+      file: { id: file, name: sent.name, mime: sent.mime, size: bytes.length },
+      data: Buffer.from(part).toString("base64"),
+      from,
+      next: from + part.length < bytes.length ? from + part.length : null,
+    }
+  }
+
+  /**
+   * Сессия субагента по ссылке на его родителя (#893): читается только у ссылки на всю сессию,
+   * показывающей инструменты, и только потомок этой сессии — иначе такой страницы нет.
+   */
+  private async subagent(
+    record: ShareRecord,
+    sub: string,
+    page: { after?: string; limit: number; tail?: boolean },
+  ): Promise<Reply> {
+    if (record.messages.length || !record.tools) return refused("missing")
+    const child = await this.p.session(sub)
+    if (!child || !(await this.descends(child.parent, record.session))) return refused("missing")
+    const whole = { ...record, messages: [], title: "" }
+    const document = buildDocument(whole, await this.p.messages(sub), page, child.title, child.active ?? false)
+    // The answer names whose session it is: behind an old gateway the viewer would get the parent's.
+    return { ok: true, document: { ...document, sub } }
+  }
+
+  /** Ведёт ли цепочка родителей к сессии ссылки; глубина ограничена — цикла в данных не ждём, но и не верим. */
+  private async descends(parent: string | undefined, root: string): Promise<boolean> {
+    for (let id = parent, depth = 0; id && depth < 8; depth++) {
+      if (id === root) return true
+      id = (await this.p.session(id))?.parent
+    }
+    return false
   }
 
   /** Правила ссылки по порядку: есть ли, снята ли, включена ли, не истекла ли, пароль, жив ли источник. */

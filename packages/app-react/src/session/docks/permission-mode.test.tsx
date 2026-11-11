@@ -30,33 +30,55 @@ async function mount(agent: string, names: string[]) {
   const view = renderSessionSlot(<Control handle={pick.handle} />)
   cleanup.push(view.unmount)
   await settle()
-  const button = view.element.querySelector<HTMLButtonElement>('[data-action="buff-setup-toggle"]')
-  return { button, picked: pick.picked }
+  const group = view.element.querySelector<HTMLElement>('[data-component="buff-work-mode"]')
+  const option = (value: string) => group?.querySelector<HTMLButtonElement>(`[data-work="${value}"]`) ?? null
+  return { group, option, picked: pick.picked }
 }
 
-test("the Setup toggle sits beside Plan: it turns on the setup agent (#860)", async () => {
-  const { button, picked } = await mount("build", ["build", "plan", "setup"])
-  expect(button?.hidden).toBe(false)
-  expect(button?.dataset.active).toBe("false")
-  act(() => button?.click())
-  expect(picked).toEqual(["setup"])
+// #894: the work mode is one visible switch — Work, Plan, Setup — the one in force is marked, and
+// every mode is one click away from any other. Setup used to be a lone toggle beside Plan.
+test("the work mode is one switch of three; the mode in force is the checked one", async () => {
+  const { group, option } = await mount("build", ["build", "plan", "setup"])
+  expect(group?.getAttribute("role")).toBe("radiogroup")
+  expect(group?.dataset.mode).toBe("work")
+  expect(["work", "plan", "setup"].map((value) => option(value)?.getAttribute("aria-checked"))).toEqual(["true", "false", "false"])
 })
 
-test("in Setup the toggle is on and leads back to the working agent, not to Plan", async () => {
-  const { button, picked } = await mount("setup", ["setup", "plan", "build"])
-  expect(button?.dataset.active).toBe("true")
-  act(() => button?.click())
+test("from Work, Setup turns on the setup agent and Plan the plan agent", async () => {
+  const { option, picked } = await mount("build", ["build", "plan", "setup"])
+  act(() => option("setup")?.click())
+  act(() => option("plan")?.click())
+  expect(picked).toEqual(["setup", "plan"])
+})
+
+test("in Setup the switch shows Setup; Work leads back to the working agent, Plan to Plan", async () => {
+  const { group, option, picked } = await mount("setup", ["setup", "plan", "build"])
+  expect(group?.dataset.mode).toBe("setup")
+  expect(option("setup")?.getAttribute("aria-checked")).toBe("true")
+  act(() => option("work")?.click())
+  act(() => option("plan")?.click())
+  expect(picked).toEqual(["build", "plan"])
+})
+
+test("leaving Plan for Work never lands in Setup; the mode in force is not picked again", async () => {
+  const { option, picked } = await mount("plan", ["setup", "plan", "build"])
+  act(() => option("plan")?.click())
+  act(() => option("work")?.click())
   expect(picked).toEqual(["build"])
 })
 
-test("leaving Plan never lands in Setup", async () => {
-  const { picked, button } = await mount("plan", ["setup", "plan", "build"])
-  const plan = button?.parentElement?.querySelector<HTMLButtonElement>('[data-action="buff-plan-toggle"]')
-  act(() => plan?.click())
-  expect(picked).toEqual(["build"])
+test("a custom working agent reads as Work", async () => {
+  const { group, option, picked } = await mount("review", ["review", "plan", "setup"])
+  expect(group?.dataset.mode).toBe("work")
+  act(() => option("setup")?.click())
+  act(() => option("work")?.click())
+  expect(picked[0]).toBe("setup")
 })
 
-test("without the setup agent the toggle is hidden", async () => {
-  const { button } = await mount("build", ["build", "plan"])
-  expect(button?.hidden).toBe(true)
+test("without the setup or the plan agent its option is not offered", async () => {
+  const { option } = await mount("build", ["build", "plan"])
+  expect(option("setup")).toBeNull()
+  expect(option("plan")).not.toBeNull()
+  const bare = await mount("build", ["build"])
+  expect(bare.group).toBeNull()
 })

@@ -69,19 +69,41 @@ const make = Effect.gen(function* () {
             revoke: async (id) => (await mobile.gateway.command("share_revoke", { id })).ok,
             session: async (id) => {
               try {
-                const info = data<{ title?: string } | null>(await call("GET", `/api/session/${id}`))
+                const info = data<{ title?: string; parentID?: string } | null>(await call("GET", `/api/session/${id}`))
                 if (!info) return null
                 // Whether a turn runs on it now (#823): the same list the window and the phone read.
                 const active =
                   data<Record<string, unknown>>(await call("GET", "/api/session/active").catch(() => ({ data: {} }))) ??
                   {}
-                return { title: info.title ?? "", active: id in active }
+                return {
+                  title: info.title ?? "",
+                  active: id in active,
+                  ...(info.parentID ? { parent: info.parentID } : {}),
+                }
               } catch (err) {
                 if (err instanceof RefusalError) return null
                 throw err
               }
             },
             messages: (session) => allMessages(call, session),
+            // A file the agent handed over (#892): from the session's folder, as the phone reads it —
+            // the server refuses a path outside that folder.
+            read: async (session, file) => {
+              const info = data<{ location?: { directory?: string } } | null>(
+                await call("GET", `/api/session/${session}`),
+              )
+              const directory = info?.location?.directory
+              const clean = file.replace(/^\.?\/+/, "")
+              if (!directory || clean.split("/").includes("..")) return null
+              const target = new URL(`/api/fs/read/${clean.split("/").map(encodeURIComponent).join("/")}`, server.url)
+              target.searchParams.set("location[directory]", directory)
+              const res = await fetch(target, {
+                headers: {
+                  authorization: `Basic ${Buffer.from(`${BuffServerAuth.USERNAME}:${server.password}`).toString("base64")}`,
+                },
+              }).catch(() => null)
+              return res?.ok ? new Uint8Array(await res.arrayBuffer()) : null
+            },
             now: () => Date.now(),
             log,
           })

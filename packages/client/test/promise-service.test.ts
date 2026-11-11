@@ -158,3 +158,16 @@ test("signals the registered service process", async () => {
   expect(await Bun.file(registration + ".signal").text()).toBe("SIGTERM")
   expect(await Bun.file(registration).exists()).toBe(false)
 })
+
+test("a timeout names the last startup failure while another contender hangs (#880)", async () => {
+  await using fixture = await serviceFixture()
+  const error = await ensure({
+    file: fixture.registration,
+    version: "test",
+    command: fixture.command("fail-then-stuck"),
+  }).catch((error: unknown) => error)
+  expect(error).toBeInstanceOf(Error)
+  if (!(error instanceof Error)) throw error
+  expect(error.message).toContain("Timed out waiting for the background service to start")
+  expect(error.message).toContain("is already in use")
+}, 15_000)

@@ -61,9 +61,13 @@ test("custom commands commit the captured agent, model and variant before execut
   })
   try {
     await setup.ready
-    await setup.waitForFrame((frame) => frame.includes("Build · first model"))
+    // #894: the row shows the work mode as one switch — the mode in force is bracketed.
+    await setup.waitForFrame((frame) => frame.includes("[Работа] План · first model"))
     setup.mockInput.pressKey("F6")
-    await setup.waitForFrame((frame) => frame.includes("Plan ·"))
+    await setup.waitForFrame((frame) => frame.includes("[План] ·"))
+    // #894: the mode is switched on the server at once, not with the next send.
+    await setup.waitFor(() => mutations.length > 0)
+    expect(mutations).toEqual([{ type: "agent", body: { agent: "plan" } }])
     setup.mockInput.pressKey("F8")
     await setup.waitForFrame(
       (frame) => frame.includes("Выбор модели") && setup.renderer.currentFocusedRenderable instanceof InputRenderable,
@@ -72,21 +76,24 @@ test("custom commands commit the captured agent, model and variant before execut
     await setup.renderOnce()
     setup.mockInput.pressEnter()
     // Buff (#562): окно вариантов само не открывается — вариант выбирают явно.
-    await setup.waitForFrame((frame) => frame.includes("Plan · second model") && !frame.includes("Выбор варианта"))
+    await setup.waitForFrame((frame) => frame.includes("[План] · second model") && !frame.includes("Выбор варианта"))
     setup.mockInput.pressKey("F7")
     await setup.waitForFrame(
       (frame) =>
-        frame.includes("Plan · second model Demo · low") &&
+        frame.includes("[План] · second model Demo · low") &&
         setup.renderer.currentFocusedRenderable instanceof TextareaRenderable,
     )
     await setup.mockInput.typeText("/review selected input")
     setup.mockInput.pressEscape()
+    await waitForFrame(setup, (frame) => frame.includes("selected input"))
     setup.mockInput.pressEnter()
-    await setup.waitFor(() => mutations.length > 0)
+    // The command is taken (the input is empty again); its switch of the agent is the one already
+    // on its way — it is waited for, not sent again.
+    await waitForFrame(setup, (frame) => !frame.includes("selected input"))
     expect(mutations).toEqual([{ type: "agent", body: { agent: "plan" } }])
 
     // A later local edit must not change the in-flight command's selection.
-    await waitForFrame(setup, (frame) => frame.includes("Plan · second model Demo · low"))
+    await waitForFrame(setup, (frame) => frame.includes("[План] · second model Demo · low"))
     setup.mockInput.pressKey("F7")
     await waitForFrame(setup, (frame) => frame.includes("high"))
     agent.resolve(new Response(null, { status: 204 }))

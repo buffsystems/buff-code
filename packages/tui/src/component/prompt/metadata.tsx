@@ -1,6 +1,6 @@
 import { RGBA, TextAttributes } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
-import { createMemo, Show } from "solid-js"
+import { createMemo, For, Show } from "solid-js"
 import { useTheme } from "../../context/theme"
 import { Locale } from "../../util/locale"
 import { stringWidth } from "../../util/string-width"
@@ -8,6 +8,11 @@ import { stringWidth } from "../../util/string-width"
 export function PromptMetadataRow(props: {
   mode: "normal" | "shell"
   agent?: string
+  /**
+   * The work mode (#894): Work, Plan, Setup — shown as one switch with the mode in force marked,
+   * in place of the lone agent name, when the row has room for it.
+   */
+  modes?: readonly { label: string; active: boolean }[]
   auto: boolean
   model: string
   provider: string
@@ -28,6 +33,7 @@ export function PromptMetadataRow(props: {
       width: Math.max(0, dimensions().width - (dimensions().width < 44 ? 9 : 13)),
       terminalWidth: dimensions().width,
       agent: props.agent ?? "",
+      modes: props.modes?.map(modeText).join(" "),
       auto: props.auto,
       model: props.model,
       provider: props.provider,
@@ -42,8 +48,26 @@ export function PromptMetadataRow(props: {
         when={(props.mode === "shell" || props.agent) && (layout().agent || layout().model)}
         fallback={<box height={1} />}
       >
-        <Show when={layout().agent}>
-          {(agent) => <text fg={fade(props.highlight, props.agentAlpha)}>{agent()}</text>}
+        <Show
+          when={props.mode === "normal" && props.modes && layout().modes}
+          fallback={
+            <Show when={layout().agent}>
+              {(agent) => <text fg={fade(props.highlight, props.agentAlpha)}>{agent()}</text>}
+            </Show>
+          }
+        >
+          <box flexDirection="row" gap={1} flexShrink={0}>
+            <For each={props.modes}>
+              {(item) => (
+                <text
+                  fg={fade(item.active ? props.highlight : theme.text.muted, props.agentAlpha)}
+                  attributes={item.active ? TextAttributes.BOLD : undefined}
+                >
+                  {modeText(item)}
+                </text>
+              )}
+            </For>
+          </box>
         </Show>
         <Show when={props.mode === "normal" && layout().auto}>
           <text fg={fade(theme.text.muted, props.agentAlpha)}>auto</text>
@@ -97,12 +121,17 @@ export function PromptMetadataRow(props: {
   )
 }
 
+/** The mode in force is bracketed as well as coloured: a terminal without colours still tells it. */
+const modeText = (item: { label: string; active: boolean }) => (item.active ? `[${item.label}]` : item.label)
+
 function fade(color: RGBA, alpha: number) {
   return RGBA.fromValues(color.r, color.g, color.b, color.a * alpha)
 }
 
 type Layout = {
   agent?: string
+  /** The work-mode switch shown in place of the agent name. */
+  modes?: boolean
   auto?: boolean
   model: string
   provider?: string
@@ -110,10 +139,12 @@ type Layout = {
   limit?: string
 }
 
-function promptMetadataLayout(input: {
+export function promptMetadataLayout(input: {
   width: number
   terminalWidth: number
   agent: string
+  /** The work-mode switch as text, when there is one: «Work Plan Setup». */
+  modes?: string
   auto?: boolean
   model: string
   provider: string
@@ -135,6 +166,13 @@ function promptMetadataLayout(input: {
     { agent, model: input.model, variant: input.variant, limit: input.limit },
     { agent, model: input.model, variant: input.variant },
   ]
+  // The work mode (#894) takes the agent's place when the row still fits with it.
+  if (agent && input.modes) {
+    const wide = candidates.find(
+      (candidate) => stringWidth(text({ ...candidate, agent: input.modes })) <= input.width,
+    )
+    if (wide) return { ...wide, modes: true }
+  }
   const fit = candidates.find((candidate) => stringWidth(text(candidate)) <= input.width)
   if (fit) return fit
 

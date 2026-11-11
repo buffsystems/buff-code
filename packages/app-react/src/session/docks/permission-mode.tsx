@@ -20,6 +20,14 @@ import "./docks.css"
 
 const PLAN = "plan"
 
+/** The work mode (#894): what the agent is doing — working, drafting a plan, or setting itself up. */
+type WorkMode = "work" | "plan" | "setup"
+const WORK_MODES = [
+  { value: "work", label: "Work", hint: "Work: the agent does the task — reads, edits and runs by the permission mode." },
+  { value: "plan", label: "Plan", hint: "Plan: the agent does not edit files, it drafts a plan." },
+  { value: "setup", label: "Setup", hint: "Setup: the agent connects itself to a service, an account or a folder you need." },
+] as const
+
 /** The rules a new session is created with, by the remembered mode. */
 export function newSessionPermissions(agent: string | undefined) {
   return Mode.rules(preferredMode.get(), agent === PLAN)
@@ -65,12 +73,15 @@ export function PermissionModeControl(props: { selection: ModelSelectionHandle; 
     if (planByDefault() && !plan) props.selection.setAgent(PLAN)
   }, [started, hasPlan, exists, plan, props.selection])
 
-  const togglePlan = () => {
-    const next = !plan
-    props.selection.setAgent(next ? PLAN : working)
-    apply(mode ?? remembered, next)
+  // The work mode (#894): one visible switch — Work, Plan, Setup; the agent of the mode is picked,
+  // and the permission rules follow Plan in and out.
+  const work: WorkMode = plan ? "plan" : setup ? "setup" : "work"
+  const works = WORK_MODES.filter((item) => item.value === "work" || (item.value === "plan" ? hasPlan : hasSetup))
+  const pickWork = (next: WorkMode) => {
+    if (next === work) return
+    props.selection.setAgent(next === "plan" ? PLAN : next === "setup" ? BuffSetup.AGENT : working)
+    if (plan || next === "plan") apply(mode ?? remembered, next === "plan")
   }
-  const toggleSetup = () => props.selection.setAgent(setup ? working : BuffSetup.AGENT)
 
   return (
     <div className="permission-mode" data-component="buff-permission-mode" data-mode={mode ?? "custom"}>
@@ -86,32 +97,32 @@ export function PermissionModeControl(props: { selection: ModelSelectionHandle; 
         }}
         className="permission-mode__select"
       />
-      <button
-        type="button"
-        className="permission-mode__plan"
-        data-action="buff-plan-toggle"
-        data-active={plan}
-        hidden={!hasPlan}
-        title={plan ? t("Plan: the agent only reads and drafts a plan. Click to get back to work.") : t("Turn on the plan: the agent does not edit files, it drafts a plan.")}
-        onClick={togglePlan}
-      >
-        {t("Plan")}
-      </button>
-      <button
-        type="button"
-        className="permission-mode__plan"
-        data-action="buff-setup-toggle"
-        data-active={setup}
-        hidden={!hasSetup}
-        title={
-          setup
-            ? t("Setup: the agent connects itself to what you need. Click to get back to work.")
-            : t("Turn on Setup: connect a service, an account or a folder to the agent.")
-        }
-        onClick={toggleSetup}
-      >
-        {t("Setup")}
-      </button>
+      {works.length > 1 && (
+        <div
+          role="radiogroup"
+          aria-label={t("Work mode")}
+          className="permission-mode__work"
+          data-component="buff-work-mode"
+          data-mode={work}
+        >
+          {works.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              role="radio"
+              aria-checked={work === item.value}
+              className="permission-mode__plan"
+              data-action="buff-work-mode"
+              data-work={item.value}
+              data-active={work === item.value}
+              title={t(item.hint)}
+              onClick={() => pickWork(item.value)}
+            >
+              {t(item.label)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,46 @@
 [
   {
+    "tag": "0.24.2",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Режим работы — один переключатель",
+            "description": "«Работа», «План» и «Настройка» стоят рядом у поля ввода. Режим меняется сразу и одинаково виден в окне, консоли и на телефоне — сессия больше не оказывается в «Настройке» сама."
+          },
+          {
+            "title": "Страница по ссылке показывает больше",
+            "description": "План — чек-листом, субагент — карточкой с переходом в его сессию, файл от агента — карточкой с загрузкой."
+          },
+          {
+            "title": "Телефон",
+            "description": "«Настройка» — отдельный раздел в меню; нажатие на работающего субагента открывает его сессию; лента помнит место после просмотра файла."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "The work mode is one switch",
+            "description": "Work, Plan and Setup sit together by the input. The mode changes at once and reads the same in the window, the console and on the phone — a session no longer ends up in Setup on its own."
+          },
+          {
+            "title": "A shared page shows more",
+            "description": "The plan is a checklist, a subagent is a card that opens its session, a file from the agent is a card that downloads it."
+          },
+          {
+            "title": "The phone",
+            "description": "Setup is a place of its own in the menu; tapping a working subagent opens its session; the timeline keeps your place after a file's view."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "tag": "0.24.1",
     "highlights": [
       {

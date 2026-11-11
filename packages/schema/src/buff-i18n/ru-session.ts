@@ -455,6 +455,14 @@ export const session = {
   "Connection «{name}»": "Подключение «{name}»",
   "How to use the «{name}» connection: its tools, limits and quirks":
     "Как пользоваться подключением «{name}»: инструменты, ограничения, особенности",
+  // #894: один переключатель режима работы — Работа, План, Настройка.
+  "Work mode": "Режим работы",
+  Work: "Работа",
+  "Work: the agent does the task — reads, edits and runs by the permission mode.":
+    "Работа: агент выполняет задачу — читает, правит и запускает по режиму разрешений.",
+  "Plan: the agent does not edit files, it drafts a plan.": "План: агент не правит файлы, а составляет план.",
+  "Setup: the agent connects itself to a service, an account or a folder you need.":
+    "Настройка: агент сам подключает себя к сервису, аккаунту или папке, которые вам нужны.",
   // #765: переключатель режима «Настройка» и форма режима.
   "Setup: the agent connects itself to what you need. Click to get back to work.":
     "Настройка: агент сам подключает себя к тому, что вам нужно. Нажмите, чтобы вернуться к работе.",
