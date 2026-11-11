@@ -1,5 +1,6 @@
 export * as BuffProviderFlow from "./buff-provider-flow.js"
 
+import { BuffContextWindow } from "./buff-context-window.js"
 import { BuffI18n } from "./buff-i18n.js"
 import { BuffProvider } from "./buff-provider.js"
 import { turnFailure } from "./buff-turn-failure.js"
@@ -87,12 +88,32 @@ export async function add(
   if (choice === undefined) return
   const typed = choice === MANUAL ? await ui.prompt({ title: t("Model IDs, separated by commas") }) : ""
   if (typed === undefined) return
-  const ids = choice === ALL ? listed : choice === MANUAL ? typed.split(",").map((item) => item.trim()) : [choice]
+  const ids = (
+    choice === ALL ? listed : choice === MANUAL ? typed.split(",").map((item) => item.trim()) : [choice]
+  ).filter(Boolean)
+  // The window (#898): what the server names is taken as it is; for the models it says nothing
+  // about, one question — an empty answer leaves them without a window, and the menu says so.
+  const said = ("models" in found ? found.windows : undefined) ?? {}
+  const bare = ids.filter((model) => !said[model]?.context)
+  const sized = bare.length
+    ? await ui.prompt({
+        title: t("Context window in tokens"),
+        description: t("For {models}: 128k, 1M. Empty — not set, 200k is assumed.", { models: bare.join(", ") }),
+        placeholder: "200k",
+      })
+    : ""
+  if (sized === undefined) return
+  const typedWindow = sized.trim() ? BuffContextWindow.parseCustom(sized, undefined) : undefined
+  if (sized.trim() && !typedWindow) return { problem: t("A context window is a number of tokens: 128k, 1M.") }
   const draft: BuffProvider.Draft = {
     id: or(id, fallbackID),
     name,
     baseURL,
-    models: ids.filter(Boolean).map((model) => ({ id: model })),
+    models: ids.map((model) => ({
+      id: model,
+      ...said[model],
+      ...(!said[model]?.context && typedWindow ? { context: typedWindow } : {}),
+    })),
     ...(key.trim() ? { key: key.trim() } : {}),
   }
   const problem = BuffProvider.draftProblem(draft, t)

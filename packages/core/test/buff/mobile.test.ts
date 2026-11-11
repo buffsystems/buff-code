@@ -93,6 +93,24 @@ describe("api", () => {
     ])
   })
 
+  test("a model's window goes to the phone only when somebody named it (#898)", async () => {
+    const sized = mobileApi(async (method, route, options) => {
+      if (route === "/api/model")
+        return {
+          location: {},
+          data: [
+            { id: "big", providerID: "own", name: "Big", limit: { context: 1_000_000, output: 32_000 } },
+            { id: "bare", providerID: "own", name: "Bare", limit: { context: 200_000, output: 32_000, assumed: true } },
+          ],
+        }
+      return call(method, route, options)
+    })
+    expect((await sized.run(record, "models.list", { project: "p1" })).models).toEqual([
+      { id: "own/big", name: "Big", provider: "own", context: 1_000_000 },
+      { id: "own/bare", name: "Bare", provider: "own" },
+    ])
+  })
+
   test("a new session takes a project and a model from the lists only", async () => {
     await expect(api.run(record, "session.new", { project: "/etc", model: "anthropic/sonnet" })).rejects.toBeInstanceOf(
       RefusalError,

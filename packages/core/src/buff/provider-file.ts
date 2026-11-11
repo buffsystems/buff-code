@@ -49,6 +49,57 @@ export function listedModalities(item: unknown): BuffProvider.Modalities | null 
   return null
 }
 
+const tokens = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : undefined
+
+/** Окно модели по `limit` в файле (#898): контекст и потолок ответа, если они там названы. */
+function sizes(config: Raw): Pick<BuffProvider.Model, "context" | "output"> {
+  const limit = record(config.limit) ? config.limit : {}
+  const context = tokens(limit.context)
+  const output = tokens(limit.output)
+  return { ...(context ? { context } : {}), ...(output ? { output } : {}) }
+}
+
+/**
+ * What a server's model list says about a model's size (#898): OpenRouter's `context_length` and
+ * `top_provider.max_completion_tokens`, vLLM's `max_model_len`, Groq's `context_window`, LiteLLM's
+ * `model_info.max_input_tokens` / `max_output_tokens`. null — the list says nothing.
+ */
+export function listedWindow(item: unknown): BuffProvider.Window | null {
+  if (!record(item)) return null
+  const info = record(item.model_info) ? item.model_info : {}
+  const top = record(item.top_provider) ? item.top_provider : {}
+  const context =
+    tokens(item.context_length) ??
+    tokens(top.context_length) ??
+    tokens(item.max_model_len) ??
+    tokens(item.context_window) ??
+    tokens(info.max_input_tokens) ??
+    tokens(item.max_input_tokens)
+  const output =
+    tokens(top.max_completion_tokens) ??
+    tokens(item.max_completion_tokens) ??
+    tokens(info.max_output_tokens) ??
+    tokens(item.max_output_tokens)
+  if (!context && !output) return null
+  return { ...(context ? { context } : {}), ...(output ? { output } : {}) }
+}
+
+/**
+ * LiteLLM's `/model/info` → windows by the model's public name (#898): its `/models` names no
+ * sizes, this route does — when the proxy's owner wrote them in. Anything else reads as nothing.
+ */
+export function infoWindows(reply: unknown): Record<string, BuffProvider.Window> {
+  const data = record(reply) && Array.isArray(reply.data) ? reply.data : []
+  return Object.fromEntries(
+    data.flatMap((item: unknown) => {
+      if (!record(item) || typeof item.model_name !== "string" || !item.model_name) return []
+      const said = listedWindow(item)
+      return said ? [[item.model_name, said]] : []
+    }),
+  )
+}
+
 /** Свои провайдеры файла: записи `providers` с адресом сервера. */
 export function providers(text: string): Omit<BuffProvider.Entry, "hasKey">[] {
   const section = document(text).providers
@@ -63,7 +114,12 @@ export function providers(text: string): Omit<BuffProvider.Entry, "hasKey">[] {
         baseURL: raw.settings.baseURL,
         models: Object.entries(models).map(([model, config]) =>
           record(config)
-            ? { id: model, ...(typeof config.name === "string" ? { name: config.name } : {}), ...flags(config) }
+            ? {
+                id: model,
+                ...(typeof config.name === "string" ? { name: config.name } : {}),
+                ...flags(config),
+                ...sizes(config),
+              }
             : { id: model },
         ),
       },
@@ -106,11 +162,29 @@ export function withProvider(
                     output: ["text", ...(model.draws ? ["image"] : [])],
                   },
                 }
+          // Окно модели (#898): названное — в `limit`; 0 — человек снял его в форме, и модель снова
+          // честно «без окна»; не сказано — остаётся то, что в файле (в том числе вписанное руками).
+          const written = (record(kept.limit) ? kept.limit : {}) as Raw
+          const { context: _context, ...rest } = written
+          const context = tokens(model.context)
+          const output = tokens(model.output)
+          const limit = {
+            ...(model.context === undefined ? written : rest),
+            ...(context ? { context } : {}),
+            ...(output ? { output } : {}),
+          }
+          const { limit: _limit, ...others } = kept
           // Свой сервер не обязан знать `store` (LiteLLM перед Anthropic отказывает на нём);
           // совместимость, заданную руками, не трогаем.
           return [
             model.id.trim(),
-            { compatibility: { supportsStore: false }, ...kept, ...(name ? { name } : {}), ...capabilities },
+            {
+              compatibility: { supportsStore: false },
+              ...others,
+              ...(name ? { name } : {}),
+              ...capabilities,
+              ...(Object.keys(limit).length ? { limit } : {}),
+            },
           ]
         }),
     ),

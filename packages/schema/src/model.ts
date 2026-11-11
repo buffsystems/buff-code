@@ -140,6 +140,8 @@ export const Info = Schema.Struct({
     context: Schema.Int,
     input: Schema.Int.pipe(optional),
     output: Schema.Int,
+    /** Nobody named this window (autonomous-dev/cloud-front#898): the numbers are the fallback, not the model's. */
+    assumed: Schema.Boolean.pipe(optional),
   }),
 })
   .annotate({ identifier: "Model.Info" })

@@ -1964,7 +1964,7 @@ export type ModelInfo = {
   cost: Array<ModelCost>
   status: "alpha" | "beta" | "deprecated" | "active"
   enabled: boolean
-  limit: { context: number; input?: number; output: number }
+  limit: { context: number; input?: number; output: number; assumed?: boolean }
 }
 
 export type AgentInfo = {

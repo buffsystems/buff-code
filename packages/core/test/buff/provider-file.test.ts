@@ -120,9 +120,75 @@ describe("what a model reads and writes (#27)", () => {
   })
 
   test("a server's list says what a model reads when it says it — OpenRouter's way or LiteLLM's", () => {
-    expect(BuffProviderFile.listedModalities({ id: "a", architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] } })).toEqual({ images: true, draws: false })
-    expect(BuffProviderFile.listedModalities({ id: "b", input_modalities: ["text"], output_modalities: ["image", "text"] })).toEqual({ images: false, draws: true })
-    expect(BuffProviderFile.listedModalities({ id: "c", model_info: { supports_vision: true } })).toEqual({ images: true, draws: false })
+    expect(
+      BuffProviderFile.listedModalities({
+        id: "a",
+        architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] },
+      }),
+    ).toEqual({ images: true, draws: false })
+    expect(
+      BuffProviderFile.listedModalities({ id: "b", input_modalities: ["text"], output_modalities: ["image", "text"] }),
+    ).toEqual({ images: false, draws: true })
+    expect(BuffProviderFile.listedModalities({ id: "c", model_info: { supports_vision: true } })).toEqual({
+      images: true,
+      draws: false,
+    })
     expect(BuffProviderFile.listedModalities({ id: "d", object: "model" })).toBeNull()
+  })
+})
+
+describe("a model's context window (#898)", () => {
+  const draft = (models: BuffProvider.Model[]) => ({ name: "Mine", baseURL: "http://localhost:4000/v1", models })
+
+  test("a window is written as the model's limit and read back; without one the model has none", () => {
+    const text = BuffProviderFile.withProvider("", "mine", draft([{ id: "big", context: 1_000_000 }, { id: "plain" }]))
+    const models = JSON.parse(text).providers.mine.models
+    expect(models.big.limit).toEqual({ context: 1_000_000 })
+    expect(models.plain.limit).toBeUndefined()
+    expect(BuffProviderFile.providers(text)[0]?.models).toEqual([{ id: "big", context: 1_000_000 }, { id: "plain" }])
+  })
+
+  test("0 takes the window out and keeps the rest of the limit; saying nothing keeps the file's", () => {
+    const start = `{ "providers": { "mine": { "settings": { "baseURL": "http://x/v1" }, "models": { "a": { "limit": { "context": 128000, "output": 8000 } }, "b": { "limit": { "context": 64000 } } } } } }`
+    const text = BuffProviderFile.withProvider(start, "mine", draft([{ id: "a", context: 0 }, { id: "b" }]))
+    const models = JSON.parse(text).providers.mine.models
+    expect(models.a.limit).toEqual({ output: 8000 })
+    expect(models.b.limit).toEqual({ context: 64000 })
+    expect(BuffProviderFile.providers(text)[0]?.models).toEqual([
+      { id: "a", output: 8000 },
+      { id: "b", context: 64000 },
+    ])
+  })
+
+  test("a server's list names the window its own way; a list that says nothing gives none", () => {
+    expect(
+      BuffProviderFile.listedWindow({
+        id: "m",
+        context_length: 262144,
+        top_provider: { max_completion_tokens: 16384 },
+      }),
+    ).toEqual({ context: 262144, output: 16384 })
+    expect(BuffProviderFile.listedWindow({ id: "m", max_model_len: 32768 })).toEqual({ context: 32768 })
+    expect(BuffProviderFile.listedWindow({ id: "m", context_window: 131072 })).toEqual({ context: 131072 })
+    expect(
+      BuffProviderFile.listedWindow({ id: "m", model_info: { max_input_tokens: 200000, max_output_tokens: 64000 } }),
+    ).toEqual({ context: 200000, output: 64000 })
+    expect(BuffProviderFile.listedWindow({ id: "m", object: "model", owned_by: "openai" })).toBeNull()
+    expect(
+      BuffProviderFile.listedWindow({ id: "m", model_info: { max_input_tokens: null, max_output_tokens: null } }),
+    ).toBeNull()
+  })
+
+  test("LiteLLM's /model/info gives windows by the public model name, only where they are written in", () => {
+    expect(
+      BuffProviderFile.infoWindows({
+        data: [
+          { model_name: "glm", model_info: { max_input_tokens: 1_000_000, max_output_tokens: 32_000 } },
+          { model_name: "bare", model_info: { max_input_tokens: null } },
+          { model_info: { max_input_tokens: 5 } },
+        ],
+      }),
+    ).toEqual({ glm: { context: 1_000_000, output: 32_000 } })
+    expect(BuffProviderFile.infoWindows("RBAC: access denied")).toEqual({})
   })
 })

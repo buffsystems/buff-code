@@ -11,6 +11,9 @@ import { Provider } from "../../provider.js"
 import { Variant } from "../../variant.js"
 import { ConfigEntryObserver } from "./entry-observer.js"
 
+/** The window a model gets when nobody names one (`Model.Info.default`). */
+const FALLBACK_CONTEXT = 200_000
+
 export const Plugin = define({
   id: "opencode.config.provider",
   effect: Effect.fn(function* (ctx) {
@@ -152,6 +155,9 @@ export const Plugin = define({
             }
             if (config.disabled !== undefined) model.enabled = !config.disabled
             if (config.limit !== undefined) model.limit = { ...model.limit, ...config.limit }
+            // A model only the config knows, without a window in it (#898): 200k is the fallback, and it says so.
+            if (config.limit?.context !== undefined) delete model.limit.assumed
+            else if (inherit && !source?.base && model.limit.context === FALLBACK_CONTEXT) model.limit.assumed = true
           })
           if (config.variants === undefined && !source?.base)
             models.update(providerID, id, (model) => {

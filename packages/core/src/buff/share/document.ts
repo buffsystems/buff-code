@@ -58,7 +58,8 @@ export function buildDocument(
   active = false,
 ): ShareDocument {
   const chosen = record.messages.length ? messages.filter((m) => record.messages.includes(m.id)) : messages
-  const items = chosen.map((m) => toItem(m, record.tools)).filter((i): i is ShareItem => i !== null)
+  const carried = turnFiles(record, messages)
+  const items = chosen.map((m) => toItem(m, record.tools, carried.get(m.id))).filter((i): i is ShareItem => i !== null)
   // The tail (#823): where the dialog is now — the live page lands here; `next` is then nothing.
   const start = page.tail
     ? Math.max(0, items.length - page.limit)
@@ -111,7 +112,9 @@ export function sentFile(
   const m = /^(.+):s(\d+)$/.exec(file)
   if (!m) return null
   const [, message, index] = m
-  if (record.messages.length && !record.messages.includes(message!)) return null
+  // A selected message, or one whose files travel with a selected message of the same answer (#899).
+  if (record.messages.length && !record.messages.includes(message!) && !turnFiles(record, messages).from.has(message!))
+    return null
   const part = messages.find((x) => x.id === message)?.content?.[Number(index)]
   const sent = part?.type === "tool" ? sentOf(part) : null
   return sent ? { path: sent.path, name: sent.name, mime: sent.mime, size: sent.size } : null
@@ -158,7 +161,57 @@ function fileOf(
   }
 }
 
-function toItem(m: StoredMessage, tools: boolean): ShareItem | null {
+/** Файлы, которые агент передал человеку в этой записи, — частями документа. */
+function sentParts(m: StoredMessage): SharePart[] {
+  if (m.type !== "assistant") return []
+  return (m.content ?? []).flatMap((c, index): SharePart[] => {
+    const sent = c.type === "tool" ? sentOf(c) : null
+    if (!sent) return []
+    return [
+      {
+        kind: "file",
+        file: { id: sentId(m.id, index), name: sent.name, mime: sent.mime, size: sent.size },
+        ...(sent.note ? { note: sent.note } : {}),
+      },
+    ]
+  })
+}
+
+/**
+ * Переданные файлы хода для ссылки на выбранные сообщения (#899). Ответ ИИ хранится записью на
+ * каждый шаг, а выбирают запись с текстом: файл, переданный шагом раньше, в неё не входит — и
+ * ссылка на «одно сообщение ИИ» теряла его файлы. Файлы невыбранных записей того же хода идут
+ * с ближайшей следующей выбранной записью ответа (иначе — с последней выбранной в ходе).
+ * Ключ — запись, с которой они идут; `from` — чьи это файлы (по ним ссылка отдаёт байты).
+ */
+function turnFiles(record: ShareRecord, messages: StoredMessage[]): Map<string, SharePart[]> & { from: Set<string> } {
+  const out = Object.assign(new Map<string, SharePart[]>(), { from: new Set<string>() })
+  if (!record.messages.length) return out
+  const picked = new Set(record.messages)
+  const flush = (turn: StoredMessage[]) => {
+    const anchors = turn.filter((m) => picked.has(m.id))
+    if (!anchors.length) return
+    for (const [at, m] of turn.entries()) {
+      if (picked.has(m.id)) continue
+      const parts = sentParts(m)
+      if (!parts.length) continue
+      const anchor = turn.slice(at + 1).find((next) => picked.has(next.id)) ?? anchors.at(-1)!
+      out.set(anchor.id, [...(out.get(anchor.id) ?? []), ...parts])
+      out.from.add(m.id)
+    }
+  }
+  let turn: StoredMessage[] = []
+  for (const m of messages) {
+    if (m.type === "user") {
+      flush(turn)
+      turn = []
+    } else if (m.type === "assistant") turn.push(m)
+  }
+  flush(turn)
+  return out
+}
+
+function toItem(m: StoredMessage, tools: boolean, carried: SharePart[] = []): ShareItem | null {
   const at = typeof m.time?.created === "number" ? m.time.created : Date.parse(String(m.time?.created ?? "")) || 0
   if (m.type === "user") {
     const parts: SharePart[] = []
@@ -167,7 +220,8 @@ function toItem(m: StoredMessage, tools: boolean): ShareItem | null {
     return parts.length ? { id: m.id, role: "user", at, parts } : null
   }
   if (m.type === "assistant") {
-    const parts: SharePart[] = []
+    // Files handed over earlier in the same answer (#899) come first, as the dialog shows them.
+    const parts: SharePart[] = [...carried]
     ;(m.content ?? []).forEach((c, index) => {
       if (c.type === "text" && c.text) parts.push({ kind: "text", text: c.text })
       else if (c.type === "reasoning" && tools && c.text) parts.push({ kind: "reasoning", text: c.text })

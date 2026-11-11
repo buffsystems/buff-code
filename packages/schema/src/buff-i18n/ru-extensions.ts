@@ -25,6 +25,14 @@ export const extensions = {
   "Load from the server": "Загрузить с сервера",
   // #27: what one's own model reads and writes — the server's list says it, or the person.
   "Sees pictures": "Видит картинки",
+  "not set, 200k is assumed": "не задано, считаем 200k",
+  "Context window in tokens": "Окно контекста в токенах",
+  "For {models}: 128k, 1M. Empty — not set, 200k is assumed.":
+    "Для {models}: 128k, 1M. Пусто — не задано, считаем 200k.",
+  "Context window of {model}": "Окно контекста модели {model}",
+  "The model's context window in tokens: 128k, 1M. Empty — not set, 200k is assumed.":
+    "Окно контекста модели в токенах: 128k, 1M. Пусто — не задано, считаем 200k.",
+  "A context window is a number of tokens: 128k, 1M.": "Окно контекста — число токенов: 128k, 1M.",
   Draws: "Рисует",
   // #27: draw_image — a picture by the organisation's painter model.
   "The picture was not drawn.": "Картинка не нарисована.",

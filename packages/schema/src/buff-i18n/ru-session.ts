@@ -409,6 +409,8 @@ export const session = {
   "Context window": "Окно контекста",
   "Model maximum": "Максимум модели",
   "The whole window the model has": "Всё окно, которое есть у модели",
+  "Window not set, {size}": "Окно не задано, {size}",
+  "Set it in Settings → Providers": "Задаётся в «Настройки → Провайдеры»",
   Compact: "Компактный",
   "Mid-size": "Средний",
   "Cheaper and faster: the dialogue is compacted sooner": "Дешевле и быстрее — диалог уплотняется раньше",

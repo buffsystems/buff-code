@@ -117,6 +117,8 @@ export type Model = {
     context: number
     input?: number
     output: number
+    /** Nobody named this window: the numbers are the fallback (autonomous-dev/cloud-front#898). */
+    assumed?: boolean
   }
   status: "alpha" | "beta" | "deprecated" | "active"
   options: Record<string, unknown>

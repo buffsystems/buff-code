@@ -4,6 +4,7 @@
 
 import { Button, Callout, Checkbox, Field, Input } from "@buff/ui/react"
 import { formatServerError } from "@opencode/app/react-reuse/server-errors"
+import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import { BuffProvider } from "@opencode/schema/buff-provider"
 import { turnFailure } from "@opencode/schema/buff-turn-failure"
 import { Plus } from "lucide-react"
@@ -30,6 +31,15 @@ export function OwnProviderForm(props: {
   // What the server's list says each model reads and writes (#27): a chosen model starts with it.
   const [said, setSaid] = useState<Readonly<Record<string, BuffProvider.Modalities>>>({})
   const [models, setModels] = useState<readonly BuffProvider.Model[]>(props.entry?.models ?? [])
+  // What the server says of each model's size (#898), and the window as the person types it.
+  const [sizes, setSizes] = useState<Readonly<Record<string, BuffProvider.Window>>>({})
+  const [windows, setWindows] = useState<Readonly<Record<string, string>>>(() =>
+    Object.fromEntries(
+      (props.entry?.models ?? []).flatMap((model) =>
+        model.context ? [[model.id, BuffContextWindow.exact(model.context)]] : [],
+      ),
+    ),
+  )
   const [typed, setTyped] = useState("")
   const [loading, setLoading] = useState(false)
   const [problem, setProblem] = useState<string>()
@@ -38,12 +48,26 @@ export function OwnProviderForm(props: {
   const rpc = props.server.api().rpc(BuffProvider.Rpc)
 
   const chosen = new Set(models.map((model) => model.id))
-  const fresh = (model: string): BuffProvider.Model => ({ id: model, ...said[model] })
+  const fresh = (model: string): BuffProvider.Model => ({ id: model, ...said[model], ...sizes[model] })
+  const pick = (model: string) => {
+    const item = fresh(model)
+    setModels([...models, item])
+    if (item.context) setWindows({ ...windows, [model]: BuffContextWindow.exact(item.context) })
+  }
   const toggle = (model: string, on: boolean) =>
-    setModels(on ? [...models, fresh(model)] : models.filter((item) => item.id !== model))
+    on ? pick(model) : setModels(models.filter((item) => item.id !== model))
   /** The person's mark on a chosen model: it sees pictures, or answers with them (#27). */
   const mark = (model: string, flag: "images" | "draws", on: boolean) =>
     setModels(models.map((item) => (item.id === model ? { ...item, [flag]: on } : item)))
+
+  /** The window typed for a model (#898): "1M", "128k", "200000"; empty takes it out. */
+  const size = (model: string, text: string) => {
+    setWindows({ ...windows, [model]: text })
+    const context = BuffContextWindow.parseCustom(text, undefined) ?? 0
+    setModels(models.map((item) => (item.id === model ? { ...item, context } : item)))
+  }
+  const unread = (model: string) =>
+    !!windows[model]?.trim() && !BuffContextWindow.parseCustom(windows[model]!, undefined)
 
   const discover = async () => {
     setLoading(true)
@@ -65,15 +89,28 @@ export function OwnProviderForm(props: {
     setSaid(listed)
     // The first read picks every model, with what the list says it reads; later ones keep the
     // choice and only fill in a model the person has not marked.
-    if (models.length === 0) setModels(result.models.map((model) => ({ id: model, ...listed[model] })))
-    else
-      setModels(models.map((item) => (item.images === undefined && listed[item.id] ? { ...item, ...listed[item.id] } : item)))
+    // The same for the window (#898): what the server names fills a model that has none yet.
+    const named = result.windows ?? {}
+    setSizes(named)
+    const filled = (item: BuffProvider.Model): BuffProvider.Model => ({
+      ...item,
+      ...(item.images === undefined ? listed[item.id] : {}),
+      ...(item.context ? {} : named[item.id]),
+    })
+    const next = (models.length === 0 ? result.models.map((model) => ({ id: model })) : models).map(filled)
+    setModels(next)
+    setWindows({
+      ...Object.fromEntries(
+        next.flatMap((item) => (item.context ? [[item.id, BuffContextWindow.exact(item.context)]] : [])),
+      ),
+      ...Object.fromEntries(Object.entries(windows).filter(([, text]) => text.trim())),
+    })
     if (result.models.length === 0) setProblem(t("The server lists no models — add them by hand."))
   }
 
   const add = () => {
     const model = typed.trim()
-    if (model && !chosen.has(model)) setModels([...models, fresh(model)])
+    if (model && !chosen.has(model)) pick(model)
     setTyped("")
   }
 
@@ -84,7 +121,9 @@ export function OwnProviderForm(props: {
     models,
     ...(key.trim() ? { key: key.trim() } : {}),
   }
-  const invalid = BuffProvider.draftProblem(draft, t)
+  const invalid =
+    BuffProvider.draftProblem(draft, t) ??
+    (models.some((model) => unread(model.id)) ? t("A context window is a number of tokens: 128k, 1M.") : undefined)
   const save = async (event: FormEvent) => {
     event.preventDefault()
     if (invalid || saving) return
@@ -167,6 +206,22 @@ export function OwnProviderForm(props: {
                         onChange={(event) => mark(model, "draws", event.currentTarget.checked)}
                       />
                     </span>
+                  )}
+                  {item && (
+                    <label className="flex basis-full items-center gap-2 pl-6" data-slot="own-provider-model-size">
+                      <span className="ui-hint">{t("Context window")}</span>
+                      <Input
+                        className="w-24"
+                        data-slot="own-provider-model-window"
+                        value={windows[model] ?? ""}
+                        placeholder="200k"
+                        aria-label={t("Context window of {model}", { model })}
+                        aria-invalid={unread(model) || undefined}
+                        title={t("The model's context window in tokens: 128k, 1M. Empty — not set, 200k is assumed.")}
+                        onChange={(event) => size(model, event.currentTarget.value)}
+                      />
+                      {!windows[model]?.trim() && <span className="ui-hint">{t("not set, 200k is assumed")}</span>}
+                    </label>
                   )}
                 </div>
               )

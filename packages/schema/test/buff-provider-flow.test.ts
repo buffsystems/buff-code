@@ -28,7 +28,7 @@ function ui(answers: unknown[], discovered: BuffProvider.Discovered = { models: 
 
 describe("adding", () => {
   test("LiteLLM: the address, the key, every model the server lists", async () => {
-    const { dialogs, asked, looked, models } = ui(["", "http://localhost:4000/v1", "sk-test", BuffProviderFlow.ALL])
+    const { dialogs, asked, looked, models } = ui(["", "http://localhost:4000/v1", "sk-test", BuffProviderFlow.ALL, ""])
     expect(await BuffProviderFlow.add(dialogs, models, "litellm")).toEqual({
       id: "litellm",
       name: "LiteLLM",
@@ -36,40 +36,81 @@ describe("adding", () => {
       key: "sk-test",
       models: [{ id: "gpt-mock" }, { id: "claude-mock" }],
     })
-    expect(asked).toEqual(["Название", "Адрес сервера", "Ключ", "Модели LiteLLM"])
+    expect(asked).toEqual(["Название", "Адрес сервера", "Ключ", "Модели LiteLLM", "Окно контекста в токенах"])
     expect(looked).toEqual([{ baseURL: "http://localhost:4000/v1", key: "sk-test" }])
   })
 
   test("another server: its own name and ID, one model, no key", async () => {
-    const { dialogs, asked, models } = ui(["Office vLLM", "", "http://gpu:8000/v1", "", "claude-mock"])
+    const { dialogs, asked, models } = ui(["Office vLLM", "", "http://gpu:8000/v1", "", "claude-mock", ""])
     expect(await BuffProviderFlow.add(dialogs, models, "custom")).toEqual({
       id: "office-vllm",
       name: "Office vLLM",
       baseURL: "http://gpu:8000/v1",
       models: [{ id: "claude-mock" }],
     })
-    expect(asked).toEqual(["Название", "Идентификатор провайдера", "Адрес сервера", "Ключ", "Модели Office vLLM"])
+    expect(asked).toEqual([
+      "Название",
+      "Идентификатор провайдера",
+      "Адрес сервера",
+      "Ключ",
+      "Модели Office vLLM",
+      "Окно контекста в токенах",
+    ])
   })
 
   test("a server that lists nothing takes models by hand", async () => {
-    const { dialogs, asked, models } = ui(["", "http://h/v1", "", BuffProviderFlow.MANUAL, "a, b"], { models: [] })
+    const { dialogs, asked, models } = ui(["", "http://h/v1", "", BuffProviderFlow.MANUAL, "a, b", ""], { models: [] })
     expect(await BuffProviderFlow.add(dialogs, models, "litellm")).toMatchObject({ models: [{ id: "a" }, { id: "b" }] })
-    expect(asked.at(-2)).toBe("Сервер не отдал ни одной модели — добавьте их вручную.")
-    expect(asked.at(-1)).toBe("Идентификаторы моделей через запятую")
+    expect(asked.at(-3)).toBe("Сервер не отдал ни одной модели — добавьте их вручную.")
+    expect(asked.at(-2)).toBe("Идентификаторы моделей через запятую")
   })
 
   test("a refused list says whose problem it is and still lets one type models", async () => {
     const refused: BuffProvider.Discovered = { error: { type: "provider.auth", message: "bad key", status: 401 } }
-    const { dialogs, asked, models } = ui(["", "http://h/v1", "bad", BuffProviderFlow.MANUAL, "m1"], refused)
+    const { dialogs, asked, models } = ui(["", "http://h/v1", "bad", BuffProviderFlow.MANUAL, "m1", ""], refused)
     expect(await BuffProviderFlow.add(dialogs, models, "litellm")).toMatchObject({ models: [{ id: "m1" }] })
-    expect(asked.at(-2)).toStartWith("LiteLLM отклонил ключ (ответ 401: bad key).")
+    expect(asked.at(-3)).toStartWith("LiteLLM отклонил ключ (ответ 401: bad key).")
   })
 
   test("leaving any question stops; a wrong address is a problem, not a save", async () => {
     expect(await BuffProviderFlow.add(ui([undefined]).dialogs, ui([]).models, "litellm")).toBeUndefined()
-    const { dialogs, models } = ui(["", "localhost:4000", "", BuffProviderFlow.MANUAL, "m1"])
+    const { dialogs, models } = ui(["", "localhost:4000", "", BuffProviderFlow.MANUAL, "m1", ""])
     expect(await BuffProviderFlow.add(dialogs, models, "litellm")).toEqual({
       problem: "Адрес должен начинаться с http:// или https://.",
+    })
+  })
+})
+
+describe("the context window (#898)", () => {
+  test("a window the server names is taken; the models it says nothing about get the one typed", async () => {
+    const found: BuffProvider.Discovered = {
+      models: ["big", "bare"],
+      windows: { big: { context: 1_000_000, output: 32_000 } },
+    }
+    const { dialogs, asked, models } = ui(["", "http://h/v1", "", BuffProviderFlow.ALL, "128k"], found)
+    expect(await BuffProviderFlow.add(dialogs, models, "litellm")).toMatchObject({
+      models: [
+        { id: "big", context: 1_000_000, output: 32_000 },
+        { id: "bare", context: 128_000 },
+      ],
+    })
+    expect(asked.at(-1)).toBe("Окно контекста в токенах")
+  })
+
+  test("every window named — no question; an empty answer leaves the model without one; a wrong one is a problem", async () => {
+    const named: BuffProvider.Discovered = { models: ["big"], windows: { big: { context: 400_000 } } }
+    const all = ui(["", "http://h/v1", "", "big"], named)
+    expect(await BuffProviderFlow.add(all.dialogs, all.models, "litellm")).toMatchObject({
+      models: [{ id: "big", context: 400_000 }],
+    })
+    expect(all.asked.at(-1)).toBe("Модели LiteLLM")
+    const none = ui(["", "http://h/v1", "", "gpt-mock", ""])
+    expect(await BuffProviderFlow.add(none.dialogs, none.models, "litellm")).toMatchObject({
+      models: [{ id: "gpt-mock" }],
+    })
+    const wrong = ui(["", "http://h/v1", "", "gpt-mock", "many"])
+    expect(await BuffProviderFlow.add(wrong.dialogs, wrong.models, "litellm")).toEqual({
+      problem: "Окно контекста — число токенов: 128k, 1M.",
     })
   })
 })

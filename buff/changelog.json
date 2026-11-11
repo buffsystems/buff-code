@@ -1,5 +1,38 @@
 [
   {
+    "tag": "0.24.3",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Окно контекста своей модели",
+            "description": "У модели своего провайдера теперь можно указать окно контекста — в «Настройки → Провайдеры» или при добавлении в консоли; если сервер называет его сам, оно подставляется. Пока окно не задано, Buff Code так и пишет, а не выдаёт 200k за максимум модели."
+          },
+          {
+            "title": "Файлы в ссылке на одно сообщение",
+            "description": "Ссылка на выбранный ответ несёт файлы, которые агент передал в этом ответе."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "The context window of your own model",
+            "description": "A model of your own provider can now be given its context window — in Settings → Providers, or while adding it in the console; when the server names it, it is filled in. Until it is set, Buff Code says so instead of showing 200k as the model's maximum."
+          },
+          {
+            "title": "Files in a link to one message",
+            "description": "A link to a chosen answer carries the files the agent handed over in it."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "tag": "0.24.2",
     "highlights": [
       {

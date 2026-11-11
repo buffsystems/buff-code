@@ -673,6 +673,15 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             ?.find((item) => item.providerID === selected.providerID && item.id === selected.modelID)
           return info?.limit?.context
         },
+        /** Nobody named that window (#898): it is the fallback, and the dialog says so. */
+        modelWindowAssumed(): boolean {
+          const selected = model.selection()
+          if (!selected) return false
+          const info = data.location.model
+            .list(location.ref)
+            ?.find((item) => item.providerID === selected.providerID && item.id === selected.modelID)
+          return info?.limit?.assumed === true
+        },
         /** What the next session's create call sends. */
         draft(): { context: number } | undefined {
           const value = draft() ?? configured()

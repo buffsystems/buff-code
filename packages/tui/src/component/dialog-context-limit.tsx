@@ -12,13 +12,15 @@ import { t } from "../feature-plugins/buff/locale"
 /** The dialog as a view: the choices for a model window and the cap in force; a pick reports tokens. */
 export function DialogContextLimitView(props: {
   modelWindow: number | undefined
+  /** The window is a fallback nobody named (#898). */
+  assumed?: boolean
   current: number
   onSelect: (tokens: number) => void
 }) {
   const dialog = useDialog()
   const toast = useToast()
   const options = createMemo(() =>
-    BuffContextWindow.options(props.modelWindow, props.current, t).map((option) => ({
+    BuffContextWindow.options(props.modelWindow, props.current, t, props.assumed === true).map((option) => ({
       value: option.id,
       title: option.label,
       description: option.hint,
@@ -68,6 +70,7 @@ export function DialogContextLimit() {
   return (
     <DialogContextLimitView
       modelWindow={local.contextLimit.modelWindow()}
+      assumed={local.contextLimit.modelWindowAssumed()}
       current={local.contextLimit.current()}
       onSelect={(tokens) => local.contextLimit.set(tokens)}
     />

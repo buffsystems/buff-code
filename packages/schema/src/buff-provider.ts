@@ -29,6 +29,11 @@ export const Model = Schema.Struct({
   name: Schema.optional(Schema.String),
   images: Schema.optional(Schema.Boolean),
   draws: Schema.optional(Schema.Boolean),
+  /** The model's context window in tokens (#898). Read: unset — nobody named it and a fallback is in
+   *  use. Written: unset keeps what the file says, 0 takes the window out. */
+  context: Schema.optional(Schema.Number),
+  /** The most it writes in one answer, in tokens, when the server says. */
+  output: Schema.optional(Schema.Number),
 })
 export type Model = typeof Model.Type
 
@@ -59,11 +64,17 @@ const Failure = Schema.Struct({ error: SessionError.Error })
 export const Modalities = Schema.Struct({ images: Schema.Boolean, draws: Schema.Boolean })
 export type Modalities = typeof Modalities.Type
 
+/** What a server says about a model's size (#898): its context window and its longest answer, in tokens. */
+export const Window = Schema.Struct({ context: Schema.optional(Schema.Number), output: Schema.optional(Schema.Number) })
+export type Window = typeof Window.Type
+
 export const Discovered = Schema.Union([
   Schema.Struct({
     models: Schema.Array(Schema.String),
     /** Per model, where the server's list states it; a model not here — the person says. */
     modalities: Schema.optional(Schema.Record(Schema.String, Modalities)),
+    /** Per model, where the server names its window (`/models`, LiteLLM's `/model/info`); not here — the person says. */
+    windows: Schema.optional(Schema.Record(Schema.String, Window)),
   }),
   Failure,
 ])

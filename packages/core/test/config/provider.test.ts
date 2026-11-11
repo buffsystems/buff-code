@@ -202,7 +202,8 @@ describe("ConfigProviderPlugin.Plugin", () => {
 
       const model = required(yield* models.get(providerID, modelID))
       expect(model.capabilities).toEqual({ tools: true, input: ["text", "image"], output: ["text"] })
-      expect(model.limit).toEqual({ context: 200_000, output: 32_000 })
+      // Nobody named the window (#898): the fallback numbers say what they are.
+      expect(model.limit).toEqual({ context: 200_000, output: 32_000, assumed: true })
     }),
   )
 

@@ -22,6 +22,9 @@ import { BuffLocale } from "../locale.js"
 import { buildDocument, fileChunk, sentFile, type StoredMessage } from "./document.js"
 import { hashPassword, verifyPassword, type ShareRecord, type ShareStore } from "./store.js"
 
+/** Сколько байты переданного файла ждут следующей части (#897). */
+const HELD_MS = 60_000
+
 export interface LinkPorts {
   store: ShareStore
   /** Шлюз: buff.systems или стенд — хост ссылок. */
@@ -209,6 +212,8 @@ export class ShareLinks {
       const a = parsed(parseShareFileArgs, args)
       const opened = await this.open(a.id, a.pass)
       if ("refused" in opened) return refused(opened.refused)
+      const held = this.heldFile(a.id, a.file)
+      if (held) return { ok: true, chunk: held(a.from) }
       const messages = await this.p.messages(opened.record.session)
       const chunk =
         fileChunk(opened.record, messages, a.file, a.from) ??
@@ -217,6 +222,20 @@ export class ShareLinks {
       return { ok: true, chunk }
     }
     throw new RefusalError(`not available to the share viewer: ${op}`)
+  }
+
+  /**
+   * Переданный файл, который сейчас качают (#897): его байты держим между частями — иначе каждая
+   * часть заново читала всю сессию и весь файл, и 8 МБ шли минуту. Один файл, недолго; пароль
+   * ссылки проверен до обращения сюда.
+   */
+  private held?: { key: string; until: number; chunk: (from: number) => ShareFileChunk }
+
+  private heldFile(id: string, file: string): ((from: number) => ShareFileChunk) | null {
+    const held = this.held
+    if (!held || held.key !== `${id}\n${file}` || held.until <= this.p.now()) return null
+    held.until = this.p.now() + HELD_MS
+    return held.chunk
   }
 
   /** Часть файла, который агент передал человеку (#892): с диска, из каталога сессии. */
@@ -229,13 +248,20 @@ export class ShareLinks {
     const sent = sentFile(record, messages, file)
     const bytes = sent && this.p.read ? await this.p.read(record.session, sent.path) : null
     if (!sent || !bytes) return null
-    const part = bytes.subarray(from, from + SHARE_FILE_CHUNK)
-    return {
-      file: { id: file, name: sent.name, mime: sent.mime, size: bytes.length },
-      data: Buffer.from(part).toString("base64"),
-      from,
-      next: from + part.length < bytes.length ? from + part.length : null,
+    const info = { id: file, name: sent.name, mime: sent.mime, size: bytes.length }
+    const chunk = (at: number): ShareFileChunk => {
+      const part = bytes.subarray(at, at + SHARE_FILE_CHUNK)
+      return {
+        file: info,
+        data: Buffer.from(part).toString("base64"),
+        from: at,
+        next: at + part.length < bytes.length ? at + part.length : null,
+      }
     }
+    // A file of one chunk is done with this answer: nothing to hold.
+    if (bytes.length > SHARE_FILE_CHUNK)
+      this.held = { key: `${record.id}\n${file}`, until: this.p.now() + HELD_MS, chunk }
+    return chunk(from)
   }
 
   /**

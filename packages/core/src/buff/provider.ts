@@ -110,17 +110,39 @@ export const register = Effect.fn("BuffProvider.register")(function* (ctx: Conte
     return value?.type === "key" ? value.key : undefined
   })
 
-  const models = Effect.fnUntraced(function* (input: { baseURL: string; key?: string; id?: string }) {
+  const listed = Effect.fnUntraced(function* (input: { baseURL: string; key?: string; id?: string }) {
     const baseURL = input.baseURL.trim().replace(/\/+$/, "")
     // Сохранённый ключ уходит только на адрес, записанный у этого провайдера.
     const saved = input.id ? (yield* list).find((entry) => entry.id === input.id) : undefined
     const key = input.key || (saved && saved.baseURL === baseURL ? yield* storedKey(saved.id) : undefined)
-    const url = `${baseURL}/models`
-    const request = HttpClientRequest.get(url).pipe(
-      HttpClientRequest.acceptJson,
-      key ? HttpClientRequest.bearerToken(key) : (request) => request,
+    const get = (url: string) =>
+      HttpClientRequest.get(url).pipe(
+        HttpClientRequest.acceptJson,
+        key ? HttpClientRequest.bearerToken(key) : (request) => request,
+      )
+    const found = yield* modelList(get(`${baseURL}/models`))
+    if ("error" in found) return found
+    // The list names no window for some models (#898): LiteLLM keeps the sizes on `/model/info`.
+    // A server without that route, or one that keeps it to its admin, simply adds nothing.
+    if (found.models.every((model) => found.windows?.[model]?.context)) return found
+    const info = yield* http.execute(get(`${baseURL}/model/info`)).pipe(
+      Effect.timeout(options.timeout),
+      Effect.flatMap((response) => (response.status >= 400 ? Effect.succeed(undefined) : response.json)),
+      Effect.map(BuffProviderFile.infoWindows),
+      Effect.orElseSucceed((): Record<string, BuffProvider.Window> => ({})),
     )
-    return yield* http.execute(request).pipe(
+    const windows = Object.fromEntries(
+      found.models.flatMap((model) => {
+        const said = { ...info[model], ...found.windows?.[model] }
+        return said.context || said.output ? [[model, said]] : []
+      }),
+    )
+    return { ...found, ...(Object.keys(windows).length ? { windows } : {}) } satisfies BuffProvider.Discovered
+  })
+
+  /** Ответ `/models` → модели сервера и то, что список говорит о них. */
+  const modelList = (request: HttpClientRequest.HttpClientRequest) =>
+    http.execute(request).pipe(
       Effect.timeout(options.timeout),
       Effect.flatMap((response) =>
         response.status >= 400
@@ -138,9 +160,16 @@ export const register = Effect.fn("BuffProvider.register")(function* (ctx: Conte
                       return said ? [[item.id, said]] : []
                     }),
                   )
+                  const windows = Object.fromEntries(
+                    items.flatMap((item) => {
+                      const said = BuffProviderFile.listedWindow(item)
+                      return said ? [[item.id, said]] : []
+                    }),
+                  )
                   return {
                     models: [...new Set(items.map((item) => item.id))].toSorted((a, b) => a.localeCompare(b)),
                     ...(Object.keys(modalities).length ? { modalities } : {}),
+                    ...(Object.keys(windows).length ? { windows } : {}),
                   }
                 },
               ),
@@ -160,7 +189,8 @@ export const register = Effect.fn("BuffProvider.register")(function* (ctx: Conte
         }),
       ),
     )
-  })
+
+  const models = listed
 
   const save = Effect.fnUntraced(function* (draft: BuffProvider.Draft) {
     const problem = BuffProvider.draftProblem(draft, BuffLocale.t)

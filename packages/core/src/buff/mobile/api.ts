@@ -41,7 +41,7 @@ interface ModelInfo {
   name: string
   family?: string
   time?: { released?: number }
-  limit?: { context?: number }
+  limit?: { context?: number; assumed?: boolean }
   capabilities?: { input?: string[] }
   variants?: { id: string }[]
 }
@@ -560,7 +560,8 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
           id: modelKey(m),
           name: m.name,
           provider: m.providerID,
-          ...(m.limit?.context ? { context: m.limit.context } : {}),
+          // A window nobody named (#898) is not sent as the model's: the phone then shows no number.
+          ...(m.limit?.context && !m.limit.assumed ? { context: m.limit.context } : {}),
           // #757: какие файлы модель читает — телефон предлагает только такие модели после отказа.
           ...(m.capabilities?.input ? { input: m.capabilities.input } : {}),
           // #759: режимы размышлений модели — её варианты.

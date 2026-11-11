@@ -21,6 +21,11 @@ const PRESETS: readonly { tokens: number; label: string; hint: string }[] = [
 ]
 
 const MAXIMUM = { label: "Model maximum", hint: "The whole window the model has" }
+/** The model's window is not known (#898): the number in use is a fallback, and the person is told where to set it. */
+const ASSUMED = {
+  label: "Window not set, {size}",
+  hint: "Set it in Settings → Providers",
+}
 const OWN = { label: "Own size", hint: "A size of your own, in tokens" }
 
 /** Tokens in short: 64k, 200k, 1M, 1.5M. */
@@ -33,16 +38,32 @@ function trim(value: number) {
   return (Math.round(value * 10) / 10).toString()
 }
 
-/** The limit's label: a preset by name, the model's maximum (with its size when known), a custom size. */
-export function label(limit: number | undefined, model?: number, t: BuffI18n.T = BuffI18n.english): string {
+/** Tokens as a person would type them back, losing nothing: 1M, 128k, 262144. */
+export function exact(tokens: number): string {
+  if (tokens % 1_000_000 === 0) return `${tokens / 1_000_000}M`
+  if (tokens % 1_000 === 0) return `${tokens / 1_000}k`
+  return String(tokens)
+}
+
+/**
+ * The limit's label: a preset by name, the model's maximum (with its size when known), a custom
+ * size. `assumed` — the model's size is a fallback nobody named: the maximum says so.
+ */
+export function label(
+  limit: number | undefined,
+  model?: number,
+  t: BuffI18n.T = BuffI18n.english,
+  assumed = false,
+): string {
+  if (!limit && model && assumed) return t(ASSUMED.label, { size: format(model) })
   if (!limit) return model ? `${t(MAXIMUM.label)}, ${format(model)}` : t(MAXIMUM.label)
   const preset = PRESETS.find((item) => item.tokens === limit)
   return `${t(preset?.label ?? OWN.label)}, ${format(limit)}`
 }
 
 /** What the limit changes, in a line. */
-export function hint(limit: number | undefined, t: BuffI18n.T = BuffI18n.english): string {
-  if (!limit) return t(MAXIMUM.hint)
+export function hint(limit: number | undefined, t: BuffI18n.T = BuffI18n.english, assumed = false): string {
+  if (!limit) return t(assumed ? ASSUMED.hint : MAXIMUM.hint)
   const preset = PRESETS.find((item) => item.tokens === limit)
   return t(preset?.hint ?? OWN.hint)
 }
@@ -53,12 +74,12 @@ export type Option = { id: string; label: string; hint: string }
  * The choices for a control: the model's maximum, the presets that fit the model's window (all of
  * them when it is unknown), the limit in force when it is no preset, then a custom size.
  */
-export function options(model?: number, current?: number, t: BuffI18n.T = BuffI18n.english): Option[] {
+export function options(model?: number, current?: number, t: BuffI18n.T = BuffI18n.english, assumed = false): Option[] {
   const sizes = new Set(PRESETS.map((item) => item.tokens).filter((tokens) => !model || tokens <= model))
   if (current) sizes.add(current)
   const sorted = [...sizes].sort((a, b) => a - b)
   return [
-    { id: "0", label: label(0, model, t), hint: hint(0, t) },
+    { id: "0", label: label(0, model, t, assumed), hint: hint(0, t, assumed) },
     ...sorted.map((tokens) => ({ id: String(tokens), label: label(tokens, model, t), hint: hint(tokens, t) })),
     { id: CUSTOM, label: `${t(OWN.label)}…`, hint: t(OWN.hint) },
   ]

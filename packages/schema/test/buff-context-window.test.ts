@@ -84,3 +84,25 @@ test("a custom size is a whole number of tokens from 1k up to the model's window
   expect(BuffContextWindow.parseCustom("abc", 400_000)).toBeUndefined()
   expect(BuffContextWindow.parseCustom("", 400_000)).toBeUndefined()
 })
+
+test("a window nobody named is not shown as the model's maximum (#898)", () => {
+  expect(BuffContextWindow.label(0, 200_000, undefined, true)).toBe("Window not set, 200k")
+  expect(BuffContextWindow.label(0, 200_000, ru, true)).toBe("Окно не задано, 200k")
+  // A cap of the person's own is named as ever.
+  expect(BuffContextWindow.label(64_000, 200_000, undefined, true)).toBe("Compact, 64k")
+  const [maximum] = BuffContextWindow.options(200_000, undefined, undefined, true)
+  expect(maximum).toEqual({
+    id: "0",
+    label: "Window not set, 200k",
+    hint: "Set it in Settings → Providers",
+  })
+  expect(BuffContextWindow.options(200_000)[0]?.label).toBe("Model maximum, 200k")
+})
+
+test("a size is written back the way it is typed, exactly (#898)", () => {
+  expect(BuffContextWindow.exact(1_000_000)).toBe("1M")
+  expect(BuffContextWindow.exact(128_000)).toBe("128k")
+  expect(BuffContextWindow.exact(262_144)).toBe("262144")
+  for (const tokens of [1_000_000, 128_000, 262_144])
+    expect(BuffContextWindow.parseCustom(BuffContextWindow.exact(tokens), undefined)).toBe(tokens)
+})

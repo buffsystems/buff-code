@@ -351,7 +351,13 @@ export function Composer(props: ComposerProps) {
   const contextLimit = props.contextLimit
   const modelWindow = selection.model?.limit.context
   const context = contextLimit && {
-    options: BuffContextWindow.options(modelWindow, contextLimit.current, i18n.buff.t),
+    // A window nobody named (#898) is offered as what it is — a fallback, with where to set it.
+    options: BuffContextWindow.options(
+      modelWindow,
+      contextLimit.current,
+      i18n.buff.t,
+      selection.model?.limit.assumed === true,
+    ),
     current: String(contextLimit.current),
     onSelect: (id: string) => {
       if (id === BuffContextWindow.CUSTOM) {

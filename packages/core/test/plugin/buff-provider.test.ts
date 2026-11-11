@@ -36,7 +36,13 @@ function fakeServer() {
       seen.push(auth)
       if (auth !== "Bearer sk-good") return Response.json({ error: { message: "bad key", code: 401 } }, { status: 401 })
       const url = new URL(request.url)
-      if (url.pathname === "/v1/models") return Response.json({ object: "list", data: [{ id: "m2" }, { id: "m1" }] })
+      if (url.pathname === "/v1/models")
+        return Response.json({ object: "list", data: [{ id: "m2", context_length: 128_000 }, { id: "m1" }] })
+      // LiteLLM's way (#898): the list names no sizes, this route does.
+      if (url.pathname === "/v1/model/info")
+        return Response.json({
+          data: [{ model_name: "m1", model_info: { max_input_tokens: 1_000_000, max_output_tokens: 32_000 } }],
+        })
       const body = (await request.json()) as {
         model?: string
         stream?: boolean
@@ -108,7 +114,11 @@ describe("BuffProvider (#562)", () => {
   it.live("the server's models are listed; a wrong key is the provider's refusal", () =>
     Effect.gen(function* () {
       const { rpc, fake } = yield* setup
-      expect(yield* rpc.models({ baseURL: fake.baseURL, key: "sk-good" })).toEqual({ models: ["m1", "m2"] })
+      // The windows come from the list where it names them, else from LiteLLM's /model/info (#898).
+      expect(yield* rpc.models({ baseURL: fake.baseURL, key: "sk-good" })).toEqual({
+        models: ["m1", "m2"],
+        windows: { m1: { context: 1_000_000, output: 32_000 }, m2: { context: 128_000 } },
+      })
       expect(yield* rpc.models({ baseURL: fake.baseURL, key: "sk-bad" })).toEqual({
         error: { type: "provider.auth", status: 401, message: "bad key" },
       })
@@ -135,7 +145,7 @@ describe("BuffProvider (#562)", () => {
       // Проверке не нужен весь предел ответа модели: ключ с малым лимитом иначе получает 402.
       expect(fake.limits.at(-1)).toBe(1024)
       // Сохранённый ключ годится и для списка моделей при правке.
-      expect(yield* rpc.models({ baseURL: fake.baseURL, id: "litellm" })).toEqual({ models: ["m1", "m2"] })
+      expect(yield* rpc.models({ baseURL: fake.baseURL, id: "litellm" })).toMatchObject({ models: ["m1", "m2"] })
       // На другой адрес сохранённый ключ не уходит.
       const elsewhere = fake.baseURL.replace("/v1", "/other/v1")
       yield* rpc.models({ baseURL: elsewhere, id: "litellm" })

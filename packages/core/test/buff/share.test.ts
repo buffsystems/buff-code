@@ -403,10 +403,69 @@ describe("links", () => {
     expect(rest.next).toBeNull()
     expect(Buffer.from(first.data, "base64").length + Buffer.from(rest.data, "base64").length).toBe(100 * 1024)
     expect(asked[0]).toEqual(["s1", "out/TEXT.md"])
+    // The next chunk comes from the bytes already read (#897): neither the session nor the file is read again.
+    expect(asked.length).toBe(1)
     await expect(r.links.serve(SHARE_FILE, { id: ID, file: "a9:s1" })).rejects.toBeInstanceOf(RefusalError)
     const gone = rig({ messages: async () => handedMessages, read: async () => null })
     await gone.links.create({ session: "s1", title: "Разбор" })
     await expect(gone.links.serve(SHARE_FILE, { id: ID, file: "a9:s0" })).rejects.toBeInstanceOf(RefusalError)
+  })
+
+  describe("one answer is several records — its handed files go with the chosen one (#899)", () => {
+    const send = (id: string, file: string) => ({
+      type: "tool" as const,
+      id,
+      name: "send_file",
+      state: {
+        status: "completed",
+        input: { path: file, note: "" },
+        content: [{ type: "text", text: "Sent" }],
+        metadata: { sent: { file, name: file.split("/").at(-1)!, mime: "text/plain", bytes: 5 } },
+      },
+    })
+    // Two answers: each hands files over in its steps and says the words in its last record.
+    const steps = [
+      { id: "u1", type: "user", text: "Собери", time: { created: 1 } },
+      { id: "a1", type: "assistant", time: { created: 2 }, content: [send("t1", "out/index.html")] },
+      { id: "a2", type: "assistant", time: { created: 3 }, content: [send("t2", "out/REPORT.md")] },
+      { id: "a3", type: "assistant", time: { created: 4 }, content: [{ type: "text", text: "Готово." }] },
+      { id: "u2", type: "user", text: "Ещё", time: { created: 5 } },
+      { id: "b1", type: "assistant", time: { created: 6 }, content: [send("t3", "out/other.txt")] },
+      { id: "b2", type: "assistant", time: { created: 7 }, content: [{ type: "text", text: "И это." }] },
+    ] as unknown as StoredMessage[]
+    const page = { limit: 50 }
+
+    test("the chosen record of an answer shows the files of its earlier steps, before its words", () => {
+      const document = buildDocument(record({ messages: ["a3"] }), steps, page, "Сессия")
+      expect(document.items.map((item) => item.id)).toEqual(["a3"])
+      expect(document.items[0]?.parts).toEqual([
+        { kind: "file", file: { id: "a1:s0", name: "index.html", mime: "text/plain", size: 5 } },
+        { kind: "file", file: { id: "a2:s0", name: "REPORT.md", mime: "text/plain", size: 5 } },
+        { kind: "text", text: "Готово." },
+      ])
+    })
+
+    test("another answer's files stay out; a chosen step keeps its own file once", () => {
+      const other = buildDocument(record({ messages: ["b2"] }), steps, page, "Сессия")
+      expect(other.items[0]?.parts.map((part) => (part.kind === "file" ? part.file.id : part.kind))).toEqual([
+        "b1:s0",
+        "text",
+      ])
+      const both = buildDocument(record({ messages: ["a1", "a3"] }), steps, page, "Сессия")
+      expect(
+        both.items.map((item) => item.parts.map((part) => (part.kind === "file" ? part.file.id : part.kind))),
+      ).toEqual([["a1:s0"], ["a2:s0", "text"]])
+      // Only the prompt is chosen: the answer's files are not part of it.
+      expect(buildDocument(record({ messages: ["u1"] }), steps, page, "Сессия").items[0]?.parts).toEqual([
+        { kind: "text", text: "Собери" },
+      ])
+    })
+
+    test("such a file is served by the link; a file of an answer that is not chosen is not", () => {
+      expect(sentFile(record({ messages: ["a3"] }), steps, "a1:s0")?.name).toBe("index.html")
+      expect(sentFile(record({ messages: ["a3"] }), steps, "b1:s0")).toBeNull()
+      expect(sentFile(record({ messages: ["u1"] }), steps, "a1:s0")).toBeNull()
+    })
   })
 
   test("a link of selected messages does not open subagents' sessions", async () => {
