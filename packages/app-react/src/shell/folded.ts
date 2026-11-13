@@ -1,5 +1,4 @@
-// Which sections of the sidebar are folded, kept across restarts (#709, #744): the «All sessions»
-// projects per server, and the open tabs' project groups.
+// Which sections of the sidebar are folded, kept across restarts (#744): the open tabs' project groups.
 
 import { useEffect, useMemo, useState } from "react"
 import { usePlatform } from "../platform/context"

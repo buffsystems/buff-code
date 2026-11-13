@@ -4,12 +4,14 @@ import os from "node:os"
 import path from "node:path"
 import { Context, Effect, Layer, Stream } from "effect"
 import type { Scope } from "effect"
-import { RefusalError, type PairingView, type PeerLog, type RelayConn, type Reply } from "@buff/mobile-protocol"
+import { RefusalError, type PairingView, type RelayConn, type Reply } from "@buff/mobile-protocol"
 import { connect as natsConnect } from "nats.ws"
 import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { Bus } from "../bus.js"
 import { MobileAgent, type AgentStatus, type Phone } from "./mobile/agent.js"
+import { sentMessages } from "./mobile/delta.js"
+import { peerLog } from "./mobile/log.js"
 import { mobileApi, type Call, type Fetch, type MobileApi, type Terminals } from "./mobile/api.js"
 import { lookupHome, type SignedIn } from "./mobile/home.js"
 import { machineNotice, noticeKindOf, type NoticeKind } from "./mobile/notify.js"
@@ -26,12 +28,6 @@ import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 
 /** Шлюз: buff.systems; стенд — через BUFF_MOBILE_GATEWAY. */
 export const gatewayHost = () => process.env.BUFF_MOBILE_GATEWAY?.trim() || "buff.systems"
-
-const log: PeerLog = {
-  info: (message, fields) => Effect.runFork(Effect.logInfo(message, fields ?? {})),
-  warn: (message, fields) => Effect.runFork(Effect.logWarning(message, fields ?? {})),
-  error: (message, fields) => Effect.runFork(Effect.logError(message, fields ?? {})),
-}
 
 /** Вход на свой сервер по петле: он того же выпуска и знает имя Buff. */
 const basic = (password: string) =>
@@ -148,11 +144,16 @@ const connect = (host: string) => async (token: string): Promise<RelayConn> =>
   })) as unknown as RelayConn
 
 /** Кто из телефонов смотрит какую сессию. */
-function watchers() {
+function watchers(sent: ReturnType<typeof sentMessages>) {
   const by = new Map<string, Set<string>>()
   return {
-    watch: (device: string, session: string) => void by.set(session, (by.get(session) ?? new Set()).add(device)),
+    // Открыл сессию заново — ответ на watch несёт её целиком, дальше — только изменения (#908).
+    watch: (device: string, session: string) => {
+      sent.forget(device, session)
+      by.set(session, (by.get(session) ?? new Set()).add(device))
+    },
     unwatch: (device: string, session: string) => {
+      sent.forget(device, session)
       by.get(session)?.delete(device)
       if (by.get(session)?.size === 0) by.delete(session)
     },
@@ -193,9 +194,11 @@ const noShares = (): ShareBridge => ({
 
 const make = Effect.gen(function* () {
   const bus = yield* Bus.Service
+  const log = yield* peerLog
   let agent: MobileAgent | null = null
   let shares: ShareBridge | null = null
-  const watches = watchers()
+  const sent = sentMessages()
+  const watches = watchers(sent)
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
   let api: MobileApi | null = null
   let loop: Call | null = null
@@ -242,7 +245,15 @@ const make = Effect.gen(function* () {
         const devices = watches.of(session)
         if (!agent || !api || !devices.length) return
         void api.state(session).then(
-          (record) => devices.forEach((device) => agent?.push(device, { kind: "event", stream: "bc.session", record })),
+          // Только изменившиеся сообщения (#908): телефон сливает их со своими по id.
+          (record) =>
+            devices.forEach((device) =>
+              agent?.push(device, {
+                kind: "event",
+                stream: "bc.session",
+                record: { ...record, messages: sent.fresh(device, session, record.messages) },
+              }),
+            ),
           (err: unknown) => log.warn("mobile: session state not sent", { session, err: String(err) }),
         )
       }, SETTLE_MS),

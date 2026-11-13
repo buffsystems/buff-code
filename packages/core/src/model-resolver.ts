@@ -11,6 +11,7 @@ import { Capabilities, ID, Info, Model, Ref, VariantID } from "./model.js"
 import type { RuntimeInfo } from "./model.js"
 import { Npm } from "@opencode/util/npm"
 import { Provider } from "./provider.js"
+import { Variant } from "./variant.js"
 
 export class VariantUnavailableError extends Schema.TaggedError<VariantUnavailableError>()(
   "SessionRunnerModel.VariantUnavailableError",
@@ -137,8 +138,9 @@ export const withVariant = (
   variantID: VariantID | undefined,
 ): Effect.Effect<Info, VariantUnavailableError> => {
   const id = variantID === "default" ? undefined : variantID
-  const variant = model.variants?.find((item) => item.id === id)
-  if (!variant && id !== undefined)
+  const chosen = id === undefined ? undefined : Variant.closest(model.variants?.map((item) => item.id) ?? [], id)
+  const variant = model.variants?.find((item) => item.id === chosen)
+  if (chosen === null && id !== undefined)
     return Effect.fail(
       new VariantUnavailableError({
         providerID: model.providerID,
@@ -146,16 +148,7 @@ export const withVariant = (
         variant: id,
       }),
     )
-  return Effect.succeed(
-    variant
-      ? {
-          ...model,
-          settings: Provider.mergeOverlay(model.settings, Provider.modelSettings(variant.settings)),
-          headers: Provider.mergeHeaders(model.headers, variant.headers),
-          body: Provider.mergeOverlay(model.body, variant.body),
-        }
-      : model,
-  )
+  return Effect.succeed(variant ? Variant.apply(model, variant) : model)
 }
 
 export interface Dependencies {
@@ -381,7 +374,7 @@ export const layer = Layer.effect(
         ref: Ref.make({
           id: selected.id,
           providerID: selected.providerID,
-          ...(variant === undefined ? {} : { variant }),
+          ...(variant === undefined ? {} : { variant: chosenVariant(selected, variant) }),
         }),
         capabilities: selected.capabilities,
         cost: selected.cost,
@@ -410,6 +403,13 @@ export const layer = Layer.effect(
     })
   }),
 )
+
+/** The variant the run actually got (#900): a level the model does not offer is lowered by `withVariant`. */
+function chosenVariant(model: Info, requested: VariantID): VariantID {
+  if (requested === "default") return requested
+  const chosen = Variant.closest(model.variants?.map((item) => item.id) ?? [], requested)
+  return chosen ? VariantID.make(chosen) : VariantID.make("default")
+}
 
 function hasConfiguredAuth(model: RuntimeInfo) {
   return [model.settings?.apiKey, model.settings?.authToken, model.settings?.accessToken].some(

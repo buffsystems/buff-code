@@ -49,6 +49,29 @@ test("a phone row says whether it is on the line and when it was last heard", ()
   )
   expect([on!.id, on!.name, on!.status]).toEqual(["d1", "Pixel", "online"])
   expect([off!.status, off!.lastSeen]).toEqual(["offline", "—"])
+  expect(on!.usage).toBeUndefined()
+})
+
+test("a paired phone carries its pair's traffic today for the table (#923)", () => {
+  const [row] = phoneRows(
+    [
+      {
+        device: "d1",
+        display: "Pixel",
+        paired: 1_700_000_000,
+        online: true,
+        seen: 1_700_000_100,
+        usage: { bytes: 340, limit: 2000, day: "2026-11-12", exhausted: false },
+      },
+    ],
+    "en-US",
+  )
+  expect(row!.usage).toEqual({
+    bytes: 340,
+    limit: 2000,
+    resets: BuffMobile.resetsAt("2026-11-12", "en-US"),
+    exhausted: false,
+  })
 })
 
 test("a home install that forbids phones blocks pairing, named the way it applies", () => {

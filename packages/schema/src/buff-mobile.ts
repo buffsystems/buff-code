@@ -30,6 +30,10 @@ export const Phone = Schema.Struct({
   paired: Schema.Number,
   online: Schema.Boolean,
   seen: Schema.NullOr(Schema.Number),
+  /** Трафик пары за сутки UTC, как сказал шлюз (#918): байт из лимита, исчерпан ли. */
+  usage: Schema.optional(
+    Schema.Struct({ bytes: Schema.Number, limit: Schema.Number, day: Schema.String, exhausted: Schema.Boolean }),
+  ),
 })
 export type Phone = typeof Phone.Type
 
@@ -109,4 +113,42 @@ export function appLinks(gateway: string): AppLink[] {
     { store: "rustore", name: "RuStore", url: `${site}/rustore` },
     { store: "apk", name: "APK", url: `${site}/android-apk` },
   ]
+}
+
+const UNITS = ["{n} B", "{n} KB", "{n} MB", "{n} GB", "{n} TB"] as const
+
+/** A size in the largest unit it fills: 340 MB, 2 GB, 1.5 TB (#918). */
+function sizeText(bytes: number, t: (text: string, vars?: Record<string, string | number>) => string, locale: string) {
+  let n = Math.max(0, bytes)
+  let i = 0
+  while (n >= 1024 && i < UNITS.length - 1) {
+    n /= 1024
+    i++
+  }
+  const shown = i >= 3 ? Math.round(n * 10) / 10 : Math.round(n)
+  return t(UNITS[i]!, { n: shown.toLocaleString(locale) })
+}
+
+/** When the gateway's UTC `day` ends, in local time (#923): the reset of a pair's daily traffic. */
+export function resetsAt(day: string, locale: string): string {
+  const [y, m, d] = day.split("-").map(Number)
+  return new Date(Date.UTC(y!, m! - 1, d! + 1)).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
+}
+
+/**
+ * A pair's traffic today in words (#918): «340 MB of 2 GB today, resets at 03:00», or «daily traffic
+ * used up until 03:00». The day is the gateway's UTC day; the reset — its end, in local time.
+ */
+export function usageLine(
+  usage: NonNullable<Phone["usage"]>,
+  t: (text: string, vars?: Record<string, string | number>) => string,
+  locale: string,
+): string {
+  const time = resetsAt(usage.day, locale)
+  if (usage.exhausted) return t("daily traffic used up until {time}", { time })
+  return t("{used} of {limit} today, resets at {time}", {
+    used: sizeText(usage.bytes, t, locale),
+    limit: sizeText(usage.limit, t, locale),
+    time,
+  })
 }

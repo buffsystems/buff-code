@@ -93,26 +93,32 @@ describe("the list", () => {
     ])
   })
 
-  // #709: вне закреплённых и групп — по проектам, свежий проект выше; заголовок — имя папки.
-  test("by project instead of by time when the window asks", () => {
-    const where: Record<string, string> = {
-      today: "/w/shop",
-      yesterday: "/w/blog",
-      old: "/w/shop",
-      grouped: "/w/blog",
-      pinned: "/w/shop",
-    }
-    const projectOf = (item: { id: string }) => where[item.id] ?? ""
-    const sections = Marks.sections(sessions, marks, now, "", projectOf).slice(1)
+  // #922: окно даёт признак активной сессии — работающие и ждущие человека наверху, остальное одним
+  // списком, свежее сообщение выше; без проектов и дней.
+  test("recents when the window asks: the active on top, then the rest flat, newest first", () => {
+    const live = new Set(["old", "pinned"])
+    const sections = Marks.sections(sessions, marks, now, "", (item) => live.has(item.id))
     expect(shape(sections)).toEqual([
+      ["Active sessions", ["old", "pinned"]],
+      ["Setup", []],
+      ["Выпуск", ["grouped"]],
+      ["Recent", ["today", "yesterday"]],
+    ])
+    expect(sections.map((section) => section.kind)).toEqual(["active", "setup", "group", "recent"])
+  })
+
+  test("recents: an active setup session is among the active; nothing active — no such section", () => {
+    const withSetup = [...sessions, { ...session("setup-run", now - 7 * day), setup: true }]
+    const running = Marks.sections(withSetup, marks, now, "", (item) => item.id === "setup-run")
+    expect(shape(running).slice(0, 2)).toEqual([
+      ["Active sessions", ["setup-run"]],
+      ["Setup", []],
+    ])
+    expect(shape(Marks.sections(sessions, marks, now, "", () => false))).toEqual([
+      ["Setup", []],
       ["Pinned", ["pinned"]],
       ["Выпуск", ["grouped"]],
-      ["shop", ["today", "old"]],
-      ["blog", ["yesterday"]],
-    ])
-    expect(sections.slice(2).map((section) => [section.kind, section.key])).toEqual([
-      ["project", "project:/w/shop"],
-      ["project", "project:/w/blog"],
+      ["Recent", ["today", "yesterday", "old"]],
     ])
   })
 

@@ -8,6 +8,9 @@ export const sessions = {
   Yesterday: "Вчера",
   Earlier: "Раньше",
   Pinned: "Закреплённые",
+  // Recents (#922)
+  "Active sessions": "Активные",
+  Recent: "Недавние",
   // состояние сессии
   "Waiting for permission": "Ждёт разрешения",
   "Waiting for an answer": "Ждёт ответа",

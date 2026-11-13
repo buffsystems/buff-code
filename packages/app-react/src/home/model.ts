@@ -67,7 +67,7 @@ function compareSessionTime(a: SessionInfo, b: SessionInfo) {
 
 // Worktree inventories load on demand, so a worktree session may not match any directory yet; the
 // session's project ID still identifies its added project.
-function homeProjectForSession(session: SessionInfo, projects: readonly HomeProject[]) {
+export function homeProjectForSession(session: SessionInfo, projects: readonly HomeProject[]) {
   const directory = pathKey(session.location.directory)
   return (
     projects.find(

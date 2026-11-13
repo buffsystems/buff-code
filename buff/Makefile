@@ -14,7 +14,7 @@ DIST := /src/buff/dist
 DOCKER_RUN := docker run --rm -v $(ROOT):/src -w /src \
 	-e OPENCODE_VERSION=$(VERSION) -e OPENCODE_CHANNEL=latest -e HOME=/tmp $(IMAGE)
 
-.PHONY: icons image deps dist verify shots test unit package desktop desktop-bundle desktop-linux desktop-win desktop-mac desktop-shot shell clean
+.PHONY: icons image deps dist dist-one verify shots test unit package desktop desktop-bundle desktop-linux desktop-win desktop-mac desktop-shot shell clean
 icons:                      ## мобильные и веб-иконки десктопа под нашим знаком (ios/, android/)
 	docker run --rm -v $(ROOT):/src -w /src -e HOME=/tmp $(IMAGE) sh -c 'git config --global --add safe.directory /src && buff/icons.sh'
 
@@ -26,6 +26,10 @@ deps:                       ## поставить зависимости мон�
 
 dist:                       ## собрать бинарь под все цели
 	$(DOCKER_RUN) bash -c 'cd packages/cli && bun run script/build.ts --outdir=$(DIST)'
+
+dist-one:                   ## собрать бинарь под одну цель: make dist-one TARGET=buff-linux-x64-baseline (флот стенда из ветки)
+	@test -n "$(TARGET)" || { echo "TARGET не задан" >&2; exit 1; }
+	$(DOCKER_RUN) bash -c 'cd packages/cli && bun run script/build.ts --outdir=$(DIST) --target=$(TARGET)'
 
 verify:                     ## проверить артефакты и ответ --version
 	$(DOCKER_RUN) bash buff/verify-dist.sh $(DIST) $(BINARY) $(VERSION)

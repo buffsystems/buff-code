@@ -455,6 +455,33 @@ describe("ConfigProviderPlugin.Plugin", () => {
     }),
   )
 
+  it.effect("gives a DeepSeek V4 behind the platform's gateway its chat-template levels (#900)", () =>
+    Effect.gen(function* () {
+      const models = yield* Model.Service
+      yield* addPlugin([
+        new Document({
+          type: "document",
+          info: decode({
+            providers: {
+              gw: {
+                package: "aisdk:@ai-sdk/openai-compatible",
+                models: { "own/deepseek-v4.1-flash": {} },
+              },
+            },
+          }),
+        }),
+      ])
+
+      const model = required(yield* models.get(Provider.ID.make("gw"), Model.ID.make("own/deepseek-v4.1-flash")))
+      expect(model.variants).toEqual([
+        { id: Model.VariantID.make("none"), body: { chat_template_kwargs: { thinking: false } } },
+        { id: Model.VariantID.make("low"), body: { chat_template_kwargs: { thinking: true, reasoning_effort: "low" } } },
+        { id: Model.VariantID.make("high"), body: { chat_template_kwargs: { thinking: true, reasoning_effort: "high" } } },
+        { id: Model.VariantID.make("max"), body: { chat_template_kwargs: { thinking: true, reasoning_effort: "max" } } },
+      ])
+    }),
+  )
+
   it.effect("keeps configured model variant bodies unchanged", () =>
     Effect.gen(function* () {
       const models = yield* Model.Service

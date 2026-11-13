@@ -14,6 +14,7 @@ import {
   type DeviceRecord,
   type LocalPeer,
   type PairingView,
+  type PairUsage,
   type PeerLog,
   type PushMessage,
   type RelayConn,
@@ -51,6 +52,8 @@ export interface Phone {
   paired: number
   online: boolean
   seen: number | null
+  /** The pair's traffic today, as the gateway told it (#918). */
+  usage?: PairUsage
 }
 
 export interface AgentStatus {
@@ -173,6 +176,7 @@ export class MobileAgent {
         paired: d.created,
         online: live.has(d.device),
         seen: this.host.seen(id, d.device),
+        ...usageOf(this.link?.usage.of(d.device)),
       }))
   }
 
@@ -272,3 +276,5 @@ export class MobileAgent {
     return local
   }
 }
+
+const usageOf = (usage: PairUsage | null | undefined): { usage?: PairUsage } => (usage ? { usage } : {})

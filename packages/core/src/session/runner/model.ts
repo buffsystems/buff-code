@@ -5,6 +5,8 @@ import { LanguageModel } from "@opencode/ai"
 import { Model } from "@opencode/schema/model"
 import { Provider } from "@opencode/schema/provider"
 import { Context, Effect, Layer, Schema } from "effect"
+import type { Entry as ConfigEntry } from "@opencode/schema/config"
+import { Config } from "../../config.js"
 import { ModelResolver } from "../../model-resolver.js"
 import { SessionSchema } from "../schema.js"
 
@@ -80,17 +82,36 @@ export const resolved = (
   transport: options.transport,
 })
 
+/** The variant a session runs at (#900): its own, else the config's default thinking level — the one key every client and
+ *  the platform's engine share; `withVariant` lowers it to what the model offers. */
+export function sessionVariant(
+  variant: Model.VariantID | undefined,
+  entries: readonly ConfigEntry[],
+): Model.VariantID | undefined {
+  if (variant !== undefined && variant !== "default") return variant
+  const thinking = Config.latest(entries, "thinking")
+  return thinking ? Model.VariantID.make(thinking) : undefined
+}
+
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const resolver = yield* ModelResolver.Service
+    const config = yield* Config.Service
     return Service.of({
       resolve: Effect.fn("SessionRunnerModel.resolve")(function* (session, available) {
         // Location plugins populate and filter the catalog asynchronously during layer startup.
         if (!session.model) {
           const resolved = yield* resolver.resolve()
-          if (resolved) return resolved
-          return yield* new ModelNotSelectedError({ sessionID: session.id })
+          if (!resolved) return yield* new ModelNotSelectedError({ sessionID: session.id })
+          // The config's default model takes the config's thinking level too (#900): `buff run` without --model
+          // (the platform's engine) went out with no level at all.
+          const variant = sessionVariant(undefined, yield* config.entries())
+          if (variant === undefined) return resolved
+          const info = (yield* available()).find(
+            (model) => model.providerID === resolved.ref.providerID && model.id === resolved.ref.id,
+          )
+          return info ? yield* resolver.resolveModel(info, variant) : resolved
         }
         const selected = (yield* available()).find(
           (model) => model.providerID === session.model?.providerID && model.id === session.model.id,
@@ -100,10 +121,10 @@ const layer = Layer.effect(
             providerID: session.model.providerID,
             modelID: session.model.id,
           })
-        return yield* resolver.resolveModel(selected, session.model.variant)
+        return yield* resolver.resolveModel(selected, sessionVariant(session.model.variant, yield* config.entries()))
       }),
     })
   }),
 )
 
-export const node = makeLocationNode({ service: Service, layer, deps: [ModelResolver.node] })
+export const node = makeLocationNode({ service: Service, layer, deps: [ModelResolver.node, Config.node] })

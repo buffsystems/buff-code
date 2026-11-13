@@ -244,6 +244,9 @@ describe("BuffModels (#370)", () => {
           expect(model?.limit).toEqual({ context: 200_000, output: 32_000 })
           expect(model?.variants.map((v) => String(v.id))).toEqual(["none", "minimal", "low", "medium", "high", "xhigh", "max"])
           expect(model?.variants.find((v) => v.id === "high")).toMatchObject({ settings: { reasoningEffort: "high" } })
+          // #900: the organisation's level is the model's own default — a session that picks no variant runs at it, a
+          // picked one overlays it; the connector no longer patches requests.
+          expect(model?.settings).toMatchObject({ reasoningEffort: "high" })
           // The desktop's picker hides models released over half a year ago; the organisation's
           // model is current by definition — its admin chose it — so it must not read as 1970.
           expect(Date.now() - (model?.time.released ?? 0)).toBeLessThan(60_000)

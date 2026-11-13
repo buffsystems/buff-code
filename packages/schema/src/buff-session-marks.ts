@@ -128,7 +128,7 @@ interface Listed {
 export interface Section<Item> {
   readonly key: string
   readonly title: string
-  readonly kind: "setup" | "pinned" | "group" | "time" | "project"
+  readonly kind: "active" | "setup" | "pinned" | "group" | "time" | "recent"
   readonly group?: Group
   readonly items: readonly Item[]
 }
@@ -141,8 +141,9 @@ const startOfDay = (time: number) => {
 const newestFirst = <Item extends Listed>(items: readonly Item[]) => items.toSorted((a, b) => b.updated - a.updated)
 
 /**
- * Список сессий по разделам: закреплённые (в порядке закрепления), группы, затем по времени —
- * или по проектам, когда окно даёт `projectOf` (#709): свежий проект выше, заголовок — имя папки.
+ * Список сессий по разделам: закреплённые (в порядке закрепления), группы, затем по времени.
+ * Когда окно даёт `active` (#922, Recents): работающие и ждущие человека — первым разделом, откуда бы
+ * они ни были, а вместо дней — один плоский список, свежее сообщение выше.
  * Архивные и побочные диалоги не показываются. Группа видна и пустой — в неё можно класть. При поиске пустые
  * разделы пропадают.
  */
@@ -151,30 +152,35 @@ export function sections<Item extends Listed>(
   marks: State,
   now: number,
   query = "",
-  projectOf?: (item: Item) => string,
+  active?: (item: Item) => boolean,
 ): Section<Item>[] {
   const needle = query.trim().toLowerCase()
   const out = hidden(marks)
   const shown = sessions.filter(
     (item) => !out.has(item.id) && (!needle || (item.title ?? "").toLowerCase().includes(needle)),
   )
-  // Режим «Настройка» — своим разделом первым: он виден и пустым, это вход в режим (#765).
-  const setup = newestFirst(shown.filter((item) => item.setup))
-  const byID = new Map(shown.filter((item) => !item.setup).map((item) => [item.id, item]))
+  const live = active ? newestFirst(shown.filter(active)) : []
+  const liveIDs = new Set(live.map((item) => item.id))
+  const listed = shown.filter((item) => !liveIDs.has(item.id))
+  // Режим «Настройка» — своим разделом: он виден и пустым, это вход в режим (#765).
+  const setup = newestFirst(listed.filter((item) => item.setup))
+  const byID = new Map(listed.filter((item) => !item.setup).map((item) => [item.id, item]))
   const pinned = marks.pinned.flatMap((id) => (byID.has(id) ? [byID.get(id)!] : []))
   const taken = new Set([...setup, ...pinned].map((item) => item.id))
   const groups = marks.groups.map((group): Section<Item> => {
-    const items = newestFirst(shown.filter((item) => !taken.has(item.id) && marks.membership[item.id] === group.id))
+    const items = newestFirst(listed.filter((item) => !taken.has(item.id) && marks.membership[item.id] === group.id))
     for (const item of items) taken.add(item.id)
     return { key: `group:${group.id}`, title: group.name, kind: "group", group, items }
   })
-  const rest = newestFirst(shown.filter((item) => !taken.has(item.id)))
+  const rest = newestFirst(listed.filter((item) => !taken.has(item.id)))
   const head = [
+    ...(live.length ? [{ key: "active", title: "Active sessions", kind: "active" as const, items: live }] : []),
     ...(!needle || setup.length ? [{ key: "setup", title: "Setup", kind: "setup" as const, items: setup }] : []),
     ...(pinned.length ? [{ key: "pinned", title: "Pinned", kind: "pinned" as const, items: pinned }] : []),
     ...groups.filter((section) => !needle || section.items.length),
   ]
-  if (projectOf) return [...head, ...byProject(rest, projectOf)]
+  if (active)
+    return [...head, ...(rest.length ? [{ key: "recent", title: "Recent", kind: "recent" as const, items: rest }] : [])]
   const today = startOfDay(now)
   const time: Section<Item>[] = [
     { key: "today", title: "Today", kind: "time", items: rest.filter((item) => item.updated >= today) },
@@ -187,21 +193,6 @@ export function sections<Item extends Listed>(
     { key: "older", title: "Earlier", kind: "time", items: rest.filter((item) => item.updated < today - DAY) },
   ]
   return [...head, ...time.filter((section) => section.items.length)]
-}
-
-/** Сессии по проектам; `items` уже свежие первыми, поэтому и проекты встают по свежести. */
-function byProject<Item extends Listed>(items: readonly Item[], projectOf: (item: Item) => string): Section<Item>[] {
-  const out = new Map<string, Item[]>()
-  for (const item of items) {
-    const project = projectOf(item)
-    out.set(project, [...(out.get(project) ?? []), item])
-  }
-  return [...out].map(([project, list]) => ({
-    key: `project:${project}`,
-    title: project.split(/[\\/]/).filter(Boolean).pop() ?? project,
-    kind: "project" as const,
-    items: list,
-  }))
 }
 
 /** Архив — отдельным списком, свежие первыми. */

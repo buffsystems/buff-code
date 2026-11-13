@@ -1,6 +1,7 @@
-// Every session of the server beside the work (#584, Buff #452): pinned, groups, then by day, each
-// with its state in a word — waiting for permission, for an answer, running, failed. A row's menu
-// pins, renames, files into a group and archives; the archive restores. Marks are the core's.
+// Every session of the server beside the work (#584, Buff #452), Recents (#922): the running and the
+// waiting on top, then pinned, groups and the rest newest first — no projects, the open tabs show
+// those; each row with its state in a word or the date of its last message. A row's menu pins,
+// renames, files into a group and archives; the archive restores. Marks are the core's.
 
 import {
   Button,
@@ -21,18 +22,19 @@ import { BuffSessionMarks } from "@opencode/schema/buff-session-marks"
 import type { SessionInfo } from "@opencode/client/promise"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatServerError } from "@opencode/app/react-reuse/server-errors"
-import { sessionRows, type Row } from "./rows"
+import { followDeletions } from "./deletions"
+import { inProjects, lastMessageLabel, sessionRows, type Row } from "./rows"
 import { followSetupOpened, openSetupSession } from "./setup"
 import { TranscriptSearchResult, useOpenTranscriptResult, useTranscriptSearch } from "./transcript-search"
-import { ChevronDown, ChevronRight, Plus, Smartphone } from "lucide-react"
+import { Plus, Smartphone } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { DataState } from "../../core/data/state"
 import { serverKey, type Server } from "../../core/servers"
 import { useDialog } from "../../dialog/dialogs"
 import { useSessionMarks } from "../../home/marks"
+import { homeProjects } from "../../home/model"
 import { useI18n } from "../../i18n/provider"
-import { useFolded } from "../folded"
-import { useConnection, useServerData, useServers } from "../../react/core"
+import { useConnection, useServerData, useServerProjects, useServers } from "../../react/core"
 import { shallowEqual } from "../../react/use-store"
 import { ContextMenu } from "../menu/context-menu"
 import { showToast } from "../notifications/toast"
@@ -40,10 +42,6 @@ import { useShellSettings } from "../settings-context"
 import { useServerByKey } from "../server-data"
 import { useCurrentTab, useTabs } from "../tabs/provider"
 import { tabServer } from "../tabs/tabs"
-
-
-const folder = (session: SessionInfo) => session.location.directory.split("/").filter(Boolean).pop() ?? ""
-const projectOf = (row: Row) => row.session.location.directory
 
 /** The server the sessions column shows: the current tab's, else the first one. */
 export function useSessionsServer() {
@@ -81,17 +79,33 @@ function ServerSessionList(props: { server: Server; current?: string }) {
     retry: false,
     staleTime: 30_000,
   })
+  const client = useQueryClient()
+  useEffect(
+    () => followDeletions(props.server.event, client, ["home-sessions", props.server.key]),
+    [props.server, client],
+  )
   const live = useServerData(props.server, (state) => state.session.info)
+  const opened = useServerProjects(props.server).list
+  const known = useServerData(props.server, (state) => state.project.info)
+  const projects = useMemo(() => homeProjects(opened, Object.values(known)), [opened, known])
   const rows = useMemo(
     () =>
-      sessionRows(mergeHomeSessionIndex(index.data ?? [], Object.values(live)), (session) =>
-        sessionLabel(session, i18n.buff.t),
+      inProjects(
+        sessionRows(mergeHomeSessionIndex(index.data ?? [], Object.values(live)), (session) =>
+          sessionLabel(session, i18n.buff.t),
+        ),
+        projects,
       ),
-    [index.data, live, i18n],
+    [index.data, live, projects, i18n],
   )
-  // #709: outside the pinned and the groups — by project, each folding.
-  const sections = BuffSessionMarks.sections(rows, marks, Date.now(), query, projectOf)
-  const [folded, fold] = useFolded(`folded:${props.server.key}`)
+  const autoApprove = useShellSettings((settings) => settings.autoApprove)
+  // #922: the running and the waiting stay on top.
+  const active = useServerData(
+    props.server,
+    (state) => rows.filter((row) => rowStatus(state, row.id, autoApprove)).map((row) => row.id),
+    shallowEqual,
+  )
+  const sections = BuffSessionMarks.sections(rows, marks, Date.now(), query, (row) => active.includes(row.id))
   // #453: the same query searches the conversations' text too.
   const search = useTranscriptSearch(props.server, query)
   const openResult = useOpenTranscriptResult(props.server)
@@ -127,16 +141,8 @@ function ServerSessionList(props: { server: Server; current?: string }) {
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pe-1">
         {sections.map((section) => (
           <div key={section.key} data-section={section.key} className="flex flex-col gap-0.5">
-            {section.kind === "project" ? (
-              <ProjectTitle
-                section={section}
-                folded={folded.has(section.key) && !query}
-                onToggle={() => fold(section.key)}
-              />
-            ) : (
-              <SectionTitle section={section} server={props.server} onOpen={openSession} />
-            )}
-            {section.kind === "project" && folded.has(section.key) && !query ? null : section.items.length === 0 ? (
+            <SectionTitle section={section} server={props.server} onOpen={openSession} />
+            {section.items.length === 0 ? (
               <span className="ui-note px-1.5 text-xs">
                 {section.kind === "setup"
                   ? i18n.buff.t("Nothing connected yet — press + and ask to connect something.")
@@ -150,7 +156,6 @@ function ServerSessionList(props: { server: Server; current?: string }) {
                   server={props.server}
                   marks={marks}
                   current={row.id === props.current}
-                  inProject={section.kind === "project"}
                 />
               ))
             )}
@@ -228,8 +233,6 @@ function SessionRow(props: {
   marks: BuffSessionMarks.State
   current: boolean
   archived?: boolean
-  /** Under its project's heading (#709): the folder is not repeated. */
-  inProject?: boolean
 }) {
   const i18n = useI18n()
   const dialog = useDialog()
@@ -341,28 +344,23 @@ function SessionRow(props: {
           onClick={open}
         >
           <span className="w-full truncate text-[13px] leading-4">{props.row.title}</span>
-          {(status || phone || !props.inProject) && (
-            <span className="w-full truncate text-xs text-muted-foreground">
-              {status ? (
-                <span
-                  data-kind={status.kind}
-                  className={status.kind === "failed" ? "text-destructive" : "text-primary"}
-                >
-                  {i18n.buff.t(status.label)}
-                </span>
-              ) : (
-                <>
-                  {phone && (
-                    <span data-origin="phone" title={i18n.buff.t("Started on the phone")}>
-                      <Smartphone size={11} aria-hidden className="inline align-[-1px]" /> {phone.device ?? ""}
-                      {" · "}
-                    </span>
-                  )}
-                  {!props.inProject && folder(props.row.session)}
-                </>
-              )}
-            </span>
-          )}
+          <span className="w-full truncate text-xs text-muted-foreground">
+            {status ? (
+              <span data-kind={status.kind} className={status.kind === "failed" ? "text-destructive" : "text-primary"}>
+                {i18n.buff.t(status.label)}
+              </span>
+            ) : (
+              <>
+                {phone && (
+                  <span data-origin="phone" title={i18n.buff.t("Started on the phone")}>
+                    <Smartphone size={11} aria-hidden className="inline align-[-1px]" /> {phone.device ?? ""}
+                    {" · "}
+                  </span>
+                )}
+                {lastMessageLabel(props.row.updated, Date.now(), i18n.intl)}
+              </>
+            )}
+          </span>
         </button>
       )}
     </ContextMenu>
@@ -380,25 +378,6 @@ function rowStatus(state: DataState, sessionID: string, autoApprove: boolean) {
     question: !!sessionFormRequest(family, state.session.form, sessionID),
     running: [sessionID, ...family.map((item) => item.id)].some((id) => state.session.active[id] === "running"),
   })
-}
-
-/** A project's heading (#709): its folder, how many sessions, and a fold. */
-function ProjectTitle(props: { section: BuffSessionMarks.Section<Row>; folded: boolean; onToggle: () => void }) {
-  const Chevron = props.folded ? ChevronRight : ChevronDown
-  return (
-    <button
-      type="button"
-      data-action="buff-sessions-project-toggle"
-      aria-expanded={!props.folded}
-      title={props.section.key.slice("project:".length)}
-      className="ui-eyebrow flex items-center gap-1 px-1.5 text-start hover:text-foreground"
-      onClick={props.onToggle}
-    >
-      <Chevron aria-hidden className="size-3 shrink-0" />
-      <span className="min-w-0 truncate">{props.section.title}</span>
-      <span className="ms-auto shrink-0 tabular-nums">{props.section.items.length}</span>
-    </button>
-  )
 }
 
 function SectionTitle(props: {

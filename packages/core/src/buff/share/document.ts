@@ -45,9 +45,6 @@ export type StoredContent =
 /** Вызов субагента (#753): его собственная сессия — в метаданных вызова. */
 const SUBAGENT_TOOL = "subagent"
 
-/** Сколько символов входа и выхода инструмента попадает в документ. */
-const TOOL_CLIP = 8_000
-
 /** Страница документа: выбранные (или все) сообщения по порядку, инструменты — по настройке ссылки. */
 export function buildDocument(
   record: ShareRecord,
@@ -266,7 +263,9 @@ function toolPart(c: Extract<StoredContent, { type: "tool" }>): SharePart {
   const input =
     c.state.input === undefined
       ? undefined
-      : clip(typeof c.state.input === "string" ? c.state.input : JSON.stringify(c.state.input, null, 2))
+      : typeof c.state.input === "string"
+        ? c.state.input
+        : JSON.stringify(c.state.input, null, 2)
   const output =
     status === "error"
       ? c.state.error?.message
@@ -280,9 +279,8 @@ function toolPart(c: Extract<StoredContent, { type: "tool" }>): SharePart {
     title: c.name,
     status,
     ...(input ? { input } : {}),
-    ...(output ? { output: clip(output) } : {}),
+    ...(output ? { output } : {}),
     ...(c.name === SUBAGENT_TOOL && typeof child === "string" && child ? { session: child } : {}),
   }
 }
 
-const clip = (text: string): string => (text.length > TOOL_CLIP ? `${text.slice(0, TOOL_CLIP)}…` : text)

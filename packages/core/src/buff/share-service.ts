@@ -15,6 +15,7 @@ import { ShareLinks, type CreateInput, type ShareView, type UpdateInput } from "
 import { phoneCommand } from "./share/phone.js"
 import { fileShareStore } from "./share/store.js"
 import type { StoredMessage } from "./share/document.js"
+import { peerLog } from "./mobile/log.js"
 
 /**
  * Публичные ссылки Buff Code (#816, эпик #769) — одна служба на машину, в управляемой службе
@@ -39,13 +40,7 @@ const make = Effect.gen(function* () {
       throw new RefusalError(BuffLocale.t("The Buff Code service is not running — public links are made through it."))
     return links
   }
-  const log = {
-    info: (message: string, fields?: Record<string, unknown>) => Effect.runFork(Effect.logInfo(message, fields ?? {})),
-    warn: (message: string, fields?: Record<string, unknown>) =>
-      Effect.runFork(Effect.logWarning(message, fields ?? {})),
-    error: (message: string, fields?: Record<string, unknown>) =>
-      Effect.runFork(Effect.logError(message, fields ?? {})),
-  }
+  const log = yield* peerLog
   return {
     status: async (): Promise<BuffShare.Status> => ({
       gateway: mobile.gateway.host(),

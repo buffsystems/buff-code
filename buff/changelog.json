@@ -1,5 +1,54 @@
 [
   {
+    "tag": "0.24.4",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Недавние сессии — одним списком",
+            "description": "В «Все сессии» и в меню телефона нет повторов по проектам: сверху то, что сейчас работает или ждёт ответа, ниже — недавние, свежие первыми, с датой под названием. Удалённая сессия пропадает сразу."
+          },
+          {
+            "title": "Телефон видит весь вызов",
+            "description": "У команды, которая ещё выполняется, видны её параметры; у завершённой — параметры и результат; между вызовами — размышления модели."
+          },
+          {
+            "title": "Телефон держит связь и бережёт трафик",
+            "description": "Пока агент выполняет долгую команду, телефон не теряет связь. Изменения сессии уходят на телефон по частям, а не целиком, — суточного трафика хватает надолго."
+          },
+          {
+            "title": "Трафик пары на виду",
+            "description": "Расход суточного трафика пары «телефон — машина» виден на телефоне, в окне («Настройки → Телефон») и в консоли. Если лимит исчерпан, обе стороны так и говорят и называют время сброса, а не «нет сети»."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "Recent sessions in one list",
+            "description": "«All sessions» and the phone's menu no longer repeat sessions per project: what is working or waiting for an answer comes first, then the recent ones, newest on top, with the date under the title. A deleted session disappears at once."
+          },
+          {
+            "title": "The phone sees the whole call",
+            "description": "A command that is still running shows its parameters; a finished one shows the parameters and the result; the model's thoughts appear between calls."
+          },
+          {
+            "title": "The phone stays connected and saves traffic",
+            "description": "While the agent runs a long command, the phone keeps its connection. Session changes reach the phone in parts, not as a whole, so the daily traffic lasts."
+          },
+          {
+            "title": "The pair's traffic in sight",
+            "description": "The daily traffic of a phone–machine pair is shown on the phone, in the window (Settings → Phone) and in the console. When the limit is used up, both sides say so and name the reset time instead of «no network»."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "tag": "0.24.3",
     "highlights": [
       {

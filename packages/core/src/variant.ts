@@ -1,5 +1,6 @@
 export * as Variant from "./variant.js"
 
+import { BuffVariant } from "@opencode/schema/buff-variant"
 import { Model } from "./model.js"
 import { Provider } from "./provider.js"
 
@@ -22,6 +23,34 @@ export function resolve(model: Model.Info, supports: readonly Support[] = [{ typ
   const main = effort ? protocol(model, effort) : budget ? protocol(model, budget) : toggle
   const variants = [...toggle.filter((variant) => variant.id === "none"), ...main]
   return variants.filter((variant, index) => variants.findIndex((other) => other.id === variant.id) === index)
+}
+
+/**
+ * The variant to run for a requested level the model may not offer (#900): the closest thinking level below it, else the
+ * closest above — a request to think is never quietly turned off, nor handed to the provider's own (often highest)
+ * default; a toggle model just thinks. Off where the model cannot switch off → the provider decides (undefined). An id
+ * outside the level dictionary is not a level and has nothing to map to (null).
+ */
+export function closest(available: readonly string[], requested: string): string | undefined | null {
+  if (available.includes(requested)) return requested
+  const levels: readonly string[] = BuffVariant.LEVELS
+  const rank = levels.indexOf(requested)
+  if (rank < 0) return null
+  if (requested === "none" || requested === "default") return undefined
+  const thinking = levels.filter((level) => level !== "none" && level !== "default" && available.includes(level))
+  const below = thinking.filter((level) => levels.indexOf(level) <= rank)
+  const above = thinking.filter((level) => levels.indexOf(level) > rank)
+  return below.at(-1) ?? above[0] ?? (available.includes("thinking") ? "thinking" : undefined)
+}
+
+/** A model with a variant's overlays laid over its own settings, headers and body — the one way a variant applies. */
+export function apply(model: Model.Info, variant: Variants[number]): Model.Info {
+  return {
+    ...model,
+    settings: Provider.mergeOverlay(model.settings, Provider.modelSettings(variant.settings)),
+    headers: Provider.mergeHeaders(model.headers, variant.headers),
+    body: Provider.mergeOverlay(model.body, variant.body),
+  }
 }
 
 const EFFORTS = ["low", "medium", "high"]
@@ -112,17 +141,24 @@ const nvidiaTemplate = (chat_template_kwargs: Record<string, unknown>): Overlay 
 const nvidiaToggle = (key: string): Variants =>
   toggle(nvidiaTemplate({ [key]: false }), nvidiaTemplate({ [key]: true }))
 
+// DeepSeek V4 served by an OpenAI-compatible host (NVIDIA, a LiteLLM gateway, vLLM) takes the level only through its
+// chat template: a top-level `reasoning_effort` is ignored, and the template refuses any effort but low/high/max.
+const DEEPSEEK_V4_EFFORTS = ["none", "low", "high", "max"]
+
+const deepseekV4Template = (support: Support): Variants => {
+  if (support.type === "toggle") return nvidiaToggle("thinking")
+  if (support.type !== "effort") return []
+  const values = support.values?.filter((effort) => DEEPSEEK_V4_EFFORTS.includes(effort)) ?? DEEPSEEK_V4_EFFORTS
+  return efforts(values, (effort) =>
+    effort === "none"
+      ? nvidiaTemplate({ thinking: false })
+      : nvidiaTemplate({ thinking: true, reasoning_effort: effort }),
+  )
+}
+
 const nvidiaChat: Protocol = (model, support) => {
   const id = modelID(model).toLowerCase()
-  if (id.includes("deepseek-v4")) {
-    if (support.type === "toggle") return nvidiaToggle("thinking")
-    if (support.type !== "effort") return []
-    return efforts(support.values ?? ["none", "high", "max"], (effort) =>
-      effort === "none"
-        ? nvidiaTemplate({ thinking: false })
-        : nvidiaTemplate({ thinking: true, reasoning_effort: effort }),
-    )
-  }
+  if (id.includes("deepseek-v4")) return deepseekV4Template(support)
   if (id.includes("kimi-k2.6") || id.includes("kimi-k2-6")) return nvidiaToggle("thinking")
   if (id.includes("kimi-k3")) {
     if (support.type === "toggle") return nvidiaToggle("thinking")
@@ -189,6 +225,7 @@ const deepinfraChat: Protocol = (model, support) => {
 
 const openaiCompatible: Protocol = (model, support) => {
   if (model.providerID === "nvidia") return nvidiaChat(model, support)
+  if (modelID(model).toLowerCase().includes("deepseek-v4")) return deepseekV4Template(support)
   return openaiChat(model, support)
 }
 

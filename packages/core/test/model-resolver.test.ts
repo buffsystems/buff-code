@@ -603,6 +603,26 @@ describe("ModelResolver", () => {
     }),
   )
 
+  it.effect("lowers a level the model does not offer to the closest one below (#900)", () =>
+    Effect.gen(function* () {
+      const level = (id: string, effort: string) => ({
+        id: VariantID.make(id),
+        settings: {},
+        headers: {},
+        body: { chat_template_kwargs: { thinking: true, reasoning_effort: effort } },
+      })
+      const catalog = model(Provider.aisdk("@ai-sdk/openai-compatible"), {
+        settings: { baseURL: "https://compatible.example/v1" },
+        variants: [level("low", "low"), level("high", "high")],
+      })
+      const resolved = yield* ModelResolver.resolveModel(catalog, VariantID.make("medium"))
+
+      expect(resolved.route.defaults.http?.body).toMatchObject({
+        chat_template_kwargs: { thinking: true, reasoning_effort: "low" },
+      })
+    }),
+  )
+
   it.effect("rejects an explicit unavailable variant during model resolution", () =>
     Effect.gen(function* () {
       const catalog = model(Provider.aisdk("@ai-sdk/openai"), {

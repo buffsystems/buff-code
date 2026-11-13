@@ -10,6 +10,7 @@ import { Keymap } from "../../context/keymap"
 import { useTheme } from "../../context/theme"
 import { useDialog } from "../../ui/dialog"
 import { t } from "./locale"
+import { localeTag } from "./locale-state"
 import { pairConfirm } from "./phone-note"
 
 /**
@@ -259,7 +260,11 @@ function Commands(props: { context: Context }) {
         ...phones.map((phone) => ({
           title: phone.display,
           value: phone.device,
-          description: phone.online ? t("on the line") : t("not on the line"),
+          // #918: the pair's traffic today next to whether the phone is on the line.
+          description: [
+            phone.online ? t("on the line") : t("not on the line"),
+            ...(phone.usage ? [BuffMobile.usageLine(phone.usage, t, localeTag())] : []),
+          ].join(" · "),
           category: t("Paired phones"),
         })),
         // Where to get the app (#704): the gateway's site pages, opened in the browser.

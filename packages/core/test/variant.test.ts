@@ -198,6 +198,20 @@ test("spells Chat Completions variants for hosting providers", () => {
     { id: "max", body: { chat_template_kwargs: { thinking: true, reasoning_effort: "max" } } },
   ])
 
+  // DeepSeek V4 behind any OpenAI-compatible host (a LiteLLM gateway, vLLM) takes the level only through its chat
+  // template (#900): `reasoning_effort` at the top is ignored, `medium` is refused by the template.
+  expect(resolve(model("@opencode/ai/providers/openai-compatible", "deepseek-v4.1-flash", undefined, "gw"), [{ type: "effort" }])).toEqual([
+    { id: "none", body: { chat_template_kwargs: { thinking: false } } },
+    { id: "low", body: { chat_template_kwargs: { thinking: true, reasoning_effort: "low" } } },
+    { id: "high", body: { chat_template_kwargs: { thinking: true, reasoning_effort: "high" } } },
+    { id: "max", body: { chat_template_kwargs: { thinking: true, reasoning_effort: "max" } } },
+  ])
+  expect(
+    resolve(model("@opencode/ai/providers/openai-compatible", "own/deepseek-v4.1-flash", undefined, "buff"), [
+      { type: "effort", values: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] },
+    ]).map((item) => item.id),
+  ).toEqual(["none", "low", "high", "max"])
+
   expect(
     resolve(model("@opencode/ai/providers/openai-compatible", "moonshotai/kimi-k2.6", undefined, "nvidia"), [
       { type: "effort", values: ["none", "low", "high", "max"] },
@@ -266,4 +280,22 @@ test("spells Chat Completions variants for hosting providers", () => {
     { id: "high", settings: { reasoningEffort: "high" } },
     { id: "xhigh", settings: { reasoningEffort: "xhigh" } },
   ])
+})
+
+test("lowers a level the model does not offer to the closest one below (#900)", () => {
+  const deepseek = ["none", "low", "high", "max"]
+  expect(Variant.closest(deepseek, "high")).toBe("high")
+  expect(Variant.closest(deepseek, "medium")).toBe("low")
+  expect(Variant.closest(deepseek, "xhigh")).toBe("high")
+  expect(Variant.closest(deepseek, "none")).toBe("none")
+  // Asked to think, never silently switched off nor handed to the provider's default: nothing below → closest above.
+  expect(Variant.closest(["none", "high", "max"], "minimal")).toBe("high")
+  // A model that only toggles thinks when asked for any level.
+  expect(Variant.closest(["none", "thinking"], "medium")).toBe("thinking")
+  expect(Variant.closest(["none", "thinking"], "none")).toBe("none")
+  // Off where the model cannot switch off → the provider decides.
+  expect(Variant.closest(["high", "max"], "none")).toBeUndefined()
+  expect(Variant.closest([], "high")).toBeUndefined()
+  // An id outside the dictionary is not a level — nothing to lower it to.
+  expect(Variant.closest(deepseek, "turbo")).toBeNull()
 })

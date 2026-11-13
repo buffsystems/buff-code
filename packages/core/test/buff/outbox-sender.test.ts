@@ -35,7 +35,7 @@ test("пачка уходит одним запросом с источнико�
           return Promise.resolve({ ok: true, status: 200 })
         },
       })
-      expect(result).toEqual({ sent: 2, delivered: true })
+      expect(result).toEqual({ sent: 2, delivered: true, more: false })
       expect(sent.length).toBe(1)
       expect(sent[0].url).toBe("http://api/engine/rows")
       expect(sent[0].headers["X-Buff-Org"]).toBe("acme")
@@ -95,7 +95,12 @@ test("пустая очередь — запроса нет", async () => {
 })
 
 test("пауза между попытками растёт после отказа и сбрасывается после доставки", () => {
-  expect(BuffOutboxSender.pause({ delivered: true, sent: 5 }, 0)).toBe(0)
+  // #900: неполная пачка — очередь разобрана, следующая копится окно FLUSH_MS (запросов к складу
+  // в разы меньше при потоковом ответе); полная — за ней хвост, он едет сразу.
+  expect(BuffOutboxSender.pause({ delivered: true, sent: 5 }, 0)).toBe(BuffOutboxSender.FLUSH_MS)
+  expect(BuffOutboxSender.pause({ delivered: true, sent: BuffOutboxSender.BATCH, more: true }, 0)).toBe(0)
+  expect(BuffOutboxSender.pause({ delivered: true, sent: 3, more: true }, 0)).toBe(0)
+  expect(BuffOutboxSender.FLUSH_MS).toBeGreaterThanOrEqual(1000)
   expect(BuffOutboxSender.pause({ delivered: true, sent: 0 }, 0)).toBe(BuffOutboxSender.IDLE_MS)
   const first = BuffOutboxSender.pause({ delivered: false, sent: 0 }, 0)
   const second = BuffOutboxSender.pause({ delivered: false, sent: 0 }, first)

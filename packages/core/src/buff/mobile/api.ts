@@ -141,10 +141,27 @@ const CLIP = 4_000
 const clip = (value: unknown): unknown => {
   if (typeof value === "string") return value.length > CLIP ? `${value.slice(0, CLIP)}…` : value
   if (Array.isArray(value)) return value.map(clip)
-  if (value && typeof value === "object")
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, clip(v)]))
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, clip(v)]))
   return value
 }
+
+// #903: обрезанное для ленты помечено — телефон спросит сообщение целиком (session.message).
+const marked = (whole: unknown, cut: unknown): unknown =>
+  JSON.stringify(cut) === JSON.stringify(whole) ? cut : { ...(cut as object), clipped: true }
+
+const clipMessage = (message: unknown): unknown => {
+  const cut = marked(message, clip(message))
+  const content = (message as { content?: unknown } | null)?.content
+  return Array.isArray(content) ? { ...(cut as object), content: content.map((part) => marked(part, clip(part))) } : cut
+}
+
+// Страница сообщений как её отдаёт сервер: списком или в `data`.
+const clipMessages = (page: unknown): unknown =>
+  Array.isArray(page)
+    ? page.map(clipMessage)
+    : Array.isArray(data<unknown[]>(page))
+      ? { ...(page as object), data: data<unknown[]>(page)!.map(clipMessage) }
+      : page
 
 /** RPC Buff, которые телефон зовёт как окно: git, побочная беседа, доверие проекта. */
 const RPC: Record<string, readonly string[]> = {
@@ -168,7 +185,8 @@ const READ_PART = 96 * 1024
 /** Текст ли файл для телефона: по типу; документы офиса (zip, в типе «xml») и PDF — байтами. */
 export const BuffMobileText = {
   isText(mime: string, part: Uint8Array): boolean {
-    if (/officedocument|opendocument|pdf|zip|msword|ms-excel|ms-powerpoint|^image\/|^audio\/|^video\//.test(mime)) return false
+    if (/officedocument|opendocument|pdf|zip|msword|ms-excel|ms-powerpoint|^image\/|^audio\/|^video\//.test(mime))
+      return false
     if (/^text\/|json|xml|javascript|typescript|yaml|toml/.test(mime)) return true
     return !part.includes(0)
   },
@@ -186,39 +204,54 @@ export function mobileApi(
 ): MobileApi {
   const projects = async () =>
     // /api/project отвечает массивом, без обёртки data.
-    ((await call("GET", "/api/project")) as ProjectInfo[])
-      .slice()
-      .sort((a, b) => b.time.updated - a.time.updated)
+    ((await call("GET", "/api/project")) as ProjectInfo[]).slice().sort((a, b) => b.time.updated - a.time.updated)
   const project = async (id: string) => {
     const p = (await projects()).find((x) => x.id === id)
     if (!p) throw new RefusalError(BuffLocale.t("No such project on this machine"))
     return p
   }
-  // Сессии проекта, как их показывает окно: без дочерних (сабагенты) и архивных; где начаты и
-  // идут ли сейчас.
-  const sessionsOf = async (projectID: string, limit: number, cursor?: string) => {
-    const [page, active] = await Promise.all([
-      call("GET", "/api/session", {
-        query: { project: projectID, limit, order: "desc", ...(cursor ? { cursor } : {}) },
-      }) as Promise<{ data: SessionInfo[]; cursor?: { next?: string } }>,
+  const sessionPage = (projectID: string, limit: number, cursor?: string) =>
+    call("GET", "/api/session", {
+      query: { project: projectID, limit, order: "desc", ...(cursor ? { cursor } : {}) },
+    }) as Promise<{ data: SessionInfo[]; cursor?: { next?: string } }>
+  const listed = (x: SessionInfo) => !x.parentID && !x.time.archived
+  // Сессии проекта, как их показывает окно: без дочерних (сабагенты) и архивных; где начаты,
+  // идут ли сейчас и ждут ли человека — разрешения или ответа, своего или сабагента (#922).
+  const sessionsOf = async (p: { id: string; canonical: string }, limit: number, cursor?: string) => {
+    const where = { "location[directory]": p.canonical }
+    const pending = (route: string) =>
+      call("GET", route, { query: where }).then(
+        (r) => {
+          const got = data<unknown>(r)
+          return (Array.isArray(got) ? (got as { sessionID?: string }[]) : []).flatMap((x) =>
+            x.sessionID ? [x.sessionID] : [],
+          )
+        },
+        () => [] as string[],
+      )
+    const [page, active, permissions, forms] = await Promise.all([
+      sessionPage(p.id, limit, cursor),
       call("GET", "/api/session/active").then(
         (r) => new Set(Object.keys(data<Record<string, unknown>>(r) ?? {})),
         () => new Set<string>(),
       ),
+      pending("/api/permission/request"),
+      pending("/api/form"),
     ])
+    const parent = new Map(page.data.flatMap((x) => (x.parentID ? [[x.id, x.parentID] as const] : [])))
+    const waiting = new Set([...permissions, ...forms].map((id) => parent.get(id) ?? id))
     return {
-      sessions: page.data
-        .filter((x) => !x.parentID && !x.time.archived)
-        .map((x) => ({
-          id: x.id,
-          title: x.title ?? "",
-          created: x.time.created,
-          updated: x.time.updated,
-          origin: sessionOrigin(x.metadata?.origin),
-          running: active.has(x.id),
-          // Режим «Настройка» (#765): сессии режима — своей группой на телефоне.
-          ...(x.agent ? { agent: x.agent } : {}),
-        })),
+      sessions: page.data.filter(listed).map((x) => ({
+        id: x.id,
+        title: x.title ?? "",
+        created: x.time.created,
+        updated: x.time.updated,
+        origin: sessionOrigin(x.metadata?.origin),
+        running: active.has(x.id),
+        ...(waiting.has(x.id) ? { waiting: true } : {}),
+        // Режим «Настройка» (#765): сессии режима — своей группой на телефоне.
+        ...(x.agent ? { agent: x.agent } : {}),
+      })),
       ...(page.cursor?.next ? { cursor: page.cursor.next } : {}),
     }
   }
@@ -235,40 +268,49 @@ export function mobileApi(
   }
   // Модели — как в композере окна (#743): по отметкам человека, иначе новейшие в семействе и без даты.
   const allModels = (directory: string) =>
-    settled(async () => data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? [])
+    settled(
+      async () =>
+        data<ModelInfo[]>(await call("GET", "/api/model", { query: { "location[directory]": directory } })) ?? [],
+    )
   const models = async (directory: string) => {
     const all = await allModels(directory)
     const choices = (await extra?.modelPrefs?.().catch(() => [])) ?? []
     // The window's choices name the catalogue id (`id`), not the API model (`modelID`): the
     // «fast» variant of a model shares its API id and must be told apart.
     return BuffModelPrefs.filter(
-      all.map((m) => ({ providerID: m.providerID, modelID: m.id, family: m.family, released: m.time?.released, model: m })),
+      all.map((m) => ({
+        providerID: m.providerID,
+        modelID: m.id,
+        family: m.family,
+        released: m.time?.released,
+        model: m,
+      })),
       choices,
     ).map((c) => c.model)
   }
   const modelKey = (m: { providerID: string; modelID?: string; id: string }) => `${m.providerID}/${m.modelID ?? m.id}`
   // Режим размышлений (#759) — вариант модели, как в окне; default и неизвестный — без варианта.
   /** Окно контекста из аргумента телефона (#835): целое число токенов > 0 — лимит; иное — всё окно (null). */
-function contextLimit(value: unknown): { context: number } | null {
-  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : 0
-  return Number.isInteger(n) && n > 0 ? { context: n } : null
-}
+  function contextLimit(value: unknown): { context: number } | null {
+    const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : 0
+    return Number.isInteger(n) && n > 0 ? { context: n } : null
+  }
 
-const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
+  const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     typeof wanted === "string" && wanted !== "default" && m?.variants?.some((v) => v.id === wanted) ? wanted : undefined
   // Агенты, которых человек выбирает сам: без сабагентов и скрытых; plan — это отметка «План».
   const agents = (directory: string) =>
     settled(async () =>
-      (data<AgentInfo[]>(await call("GET", "/api/agent", { query: { "location[directory]": directory } })) ?? []).filter(
-        (a) => a.mode !== "subagent" && !a.hidden && a.id !== "plan",
-      ),
+      (
+        data<AgentInfo[]>(await call("GET", "/api/agent", { query: { "location[directory]": directory } })) ?? []
+      ).filter((a) => a.mode !== "subagent" && !a.hidden && a.id !== "plan"),
     )
   // Последняя сессия проекта (как в списке: не сабагент, не архив) — с неё новая сессия продолжает
   // модель и агента (#706).
   const lastSession = async (projectID: string) =>
-    data<SessionInfo[]>(await call("GET", "/api/session", { query: { project: projectID, limit: 20, order: "desc" } })).find(
-      (x) => !x.parentID && !x.time.archived,
-    )
+    data<SessionInfo[]>(
+      await call("GET", "/api/session", { query: { project: projectID, limit: 20, order: "desc" } }),
+    ).find((x) => !x.parentID && !x.time.archived)
 
   const goalOf = async (session: string): Promise<unknown> => {
     const where = await directoryOf(session).catch(() => undefined)
@@ -280,7 +322,8 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     return reply?.output?.goal ?? null
   }
 
-  const ownerOf = (args: Record<string, unknown>) => (typeof args.owner === "string" && args.owner) || str(args, "session")
+  const ownerOf = (args: Record<string, unknown>) =>
+    (typeof args.owner === "string" && args.owner) || str(args, "session")
 
   const state = async (session: string): Promise<SessionState> => {
     const [messages, active, permissions, forms, goal, info, inbox] = await Promise.all([
@@ -330,7 +373,7 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     return {
       session,
       running: active.includes(session),
-      messages: clip(list(messages)) as unknown[],
+      messages: clipMessages(list(messages)) as unknown[],
       permissions: list(permissions),
       forms: list(forms),
       // Режим «Настройка» (#765): сессия режима — по агенту.
@@ -354,7 +397,8 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     const refs = Array.isArray(args.attachments) ? (args.attachments as { upload_id?: unknown }[]) : []
     return refs.map((r) => {
       const u = uploads.get(String(r.upload_id ?? ""))
-      if (!u || u.parts.filter((x) => x !== undefined).length !== u.of) throw new RefusalError(BuffLocale.t("The file did not upload completely — attach it again"))
+      if (!u || u.parts.filter((x) => x !== undefined).length !== u.of)
+        throw new RefusalError(BuffLocale.t("The file did not upload completely — attach it again"))
       uploads.delete(String(r.upload_id))
       // The prompt endpoint takes a file as a URI (PromptInput.FileAttachment, #676): inline — a data URL.
       return { uri: `data:${u.mime};base64,${u.parts.join("")}`, name: u.name }
@@ -370,7 +414,9 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     "changes.list": async (args) => {
       const where = { "location[directory]": await directoryOf(str(args, "session")) }
       const [diff, vcs] = await Promise.all([
-        call("GET", "/api/vcs/diff", { query: { ...where, mode: args.mode === "branch" ? "branch" : "working", context: 3 } }),
+        call("GET", "/api/vcs/diff", {
+          query: { ...where, mode: args.mode === "branch" ? "branch" : "working", context: 3 },
+        }),
         call("GET", "/api/vcs", { query: where }).catch(() => ({ data: {} })),
       ])
       return { files: clip(data<unknown[]>(diff) ?? []), vcs: data<unknown>(vcs) ?? {} }
@@ -378,14 +424,18 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     // MCP-серверы машины там, где идёт сессия (#861): подробности сессии на телефоне, как в окне.
     "mcp.list": async (args) => {
       const where = { "location[directory]": await directoryOf(str(args, "session")) }
-      const servers = data<{ name: string; status: { status: string } }[]>(await call("GET", "/api/mcp", { query: where })) ?? []
+      const servers =
+        data<{ name: string; status: { status: string } }[]>(await call("GET", "/api/mcp", { query: where })) ?? []
       return { servers: servers.map((x) => ({ name: x.name, ok: x.status.status === "connected" })) }
     },
     "files.list": async (args) => {
       const where = await directoryOf(str(args, "session"))
       const path = typeof args.path === "string" ? args.path.replace(/^\/+/, "") : ""
       if (path.split("/").includes("..")) throw new RefusalError(BuffLocale.t("Only inside the project"))
-      return { entries: data<unknown[]>(await call("GET", "/api/fs/list", { query: { "location[directory]": where, path } })) ?? [] }
+      return {
+        entries:
+          data<unknown[]>(await call("GET", "/api/fs/list", { query: { "location[directory]": where, path } })) ?? [],
+      }
     },
     // Файл проекта на телефон: только внутри каталога сессии (сервер отказывает в выходе за него), частями.
     "files.read": async (args) => {
@@ -395,7 +445,11 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
       if (!extra?.fetch) throw new RefusalError(BuffLocale.t("Reading files is unavailable"))
       const route = `/api/fs/read/${path.split("/").map(encodeURIComponent).join("/")}`
       const { mime, bytes } = await extra.fetch(route, { "location[directory]": where }).catch((err: unknown) => {
-        throw new RefusalError(String(err).includes("404") ? BuffLocale.t("No such file") : BuffLocale.t("The file cannot be read — it is outside the project or unavailable"))
+        throw new RefusalError(
+          String(err).includes("404")
+            ? BuffLocale.t("No such file")
+            : BuffLocale.t("The file cannot be read — it is outside the project or unavailable"),
+        )
       })
       const from = Math.max(0, Number(args.from ?? 0))
       const part = bytes.subarray(from, from + READ_PART)
@@ -446,7 +500,9 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     "session.compact": async (args) => call("POST", `/api/session/${str(args, "session")}/compact`, { body: {} }),
     "session.undo": async (args) => {
       const session = str(args, "session")
-      return call("POST", `/api/session/${session}/revert/stage`, { body: { messageID: str(args, "message"), files: true } })
+      return call("POST", `/api/session/${session}/revert/stage`, {
+        body: { messageID: str(args, "message"), files: true },
+      })
     },
     "session.redo": async (args) => {
       const session = str(args, "session")
@@ -454,7 +510,8 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
         ? call("POST", `/api/session/${session}/revert/stage`, { body: { messageID: args.message, files: true } })
         : call("DELETE", `/api/session/${session}/revert`)
     },
-    "session.rename": async (args) => call("PATCH", `/api/session/${str(args, "session")}`, { body: { title: str(args, "title") } }),
+    "session.rename": async (args) =>
+      call("PATCH", `/api/session/${str(args, "session")}`, { body: { title: str(args, "title") } }),
     // Режим разрешений сессии — правила, как у окна (BuffPermissionMode.rules).
     "session.mode": async (args) => {
       const mode = args.mode === "edit" || args.mode === "full" ? args.mode : "ask"
@@ -462,9 +519,13 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
         body: { permissions: BuffPermissionMode.rules(mode, args.plan === true) },
       })
     },
-    "session.agent": async (args) => call("POST", `/api/session/${str(args, "session")}/agent`, { body: { agent: str(args, "agent") } }),
+    "session.agent": async (args) =>
+      call("POST", `/api/session/${str(args, "session")}/agent`, { body: { agent: str(args, "agent") } }),
     // Окно контекста сессии (#835, режимы ИИ): число токенов; 0 — всё окно модели.
-    "session.context": async (args) => call("POST", `/api/session/${str(args, "session")}/context-limit`, { body: { limit: contextLimit(args.context) } }),
+    "session.context": async (args) =>
+      call("POST", `/api/session/${str(args, "session")}/context-limit`, {
+        body: { limit: contextLimit(args.context) },
+      }),
     // Смена модели (#759): названный вариант — он; не названный — вариант сессии (и выбранный в окне),
     // если он есть у новой модели.
     "session.model": async (args) => {
@@ -474,15 +535,24 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
       const info = data<SessionInfo & { location: { directory: string } }>(await call("GET", `/api/session/${session}`))
       const model = (await allModels(info.location.directory)).find((m) => modelKey(m) === `${providerID}/${id}`)
       const variant = variantOf(model, typeof args.variant === "string" ? args.variant : info.model?.variant)
-      return call("POST", `/api/session/${session}/model`, { body: { model: { id, providerID, ...(variant ? { variant } : {}) } } })
+      return call("POST", `/api/session/${session}/model`, {
+        body: { model: { id, providerID, ...(variant ? { variant } : {}) } },
+      })
     },
     attachment_upload: async (args) => {
       const id = str(args, "id")
       const seq = Number(args.seq)
       const of = Number(args.of)
-      if (!Number.isInteger(seq) || !Number.isInteger(of) || seq < 0 || seq >= of) throw new RefusalError(BuffLocale.t("A wrong part of the file"))
+      if (!Number.isInteger(seq) || !Number.isInteger(of) || seq < 0 || seq >= of)
+        throw new RefusalError(BuffLocale.t("A wrong part of the file"))
       for (const [key, u] of uploads) if (Date.now() - u.at > 30 * 60_000) uploads.delete(key)
-      const u = uploads.get(id) ?? { name: String(args.name ?? "file"), mime: String(args.mime ?? "application/octet-stream"), parts: [], of, at: Date.now() }
+      const u = uploads.get(id) ?? {
+        name: String(args.name ?? "file"),
+        mime: String(args.mime ?? "application/octet-stream"),
+        parts: [],
+        of,
+        at: Date.now(),
+      }
       u.parts[seq] = typeof args.data === "string" ? args.data : ""
       if (u.parts.reduce((n, x) => n + (x?.length ?? 0), 0) > UPLOAD_MAX) {
         uploads.delete(id)
@@ -534,7 +604,7 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
           name: p.name ?? p.canonical.split("/").pop() ?? p.canonical,
           directory: p.canonical,
           updated: p.time.updated,
-          sessions: (await sessionsOf(p.id, 200)).sessions.length,
+          sessions: (await sessionPage(p.id, 200)).data.filter(listed).length,
         })),
       ),
     }),
@@ -582,7 +652,7 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     },
     "sessions.list": async (args) => {
       const p = await project(str(args, "project"))
-      return sessionsOf(p.id, Number(args.limit ?? 50), typeof args.cursor === "string" ? args.cursor : undefined)
+      return sessionsOf(p, Number(args.limit ?? 50), typeof args.cursor === "string" ? args.cursor : undefined)
     },
     "session.get": async (args) => call("GET", `/api/session/${str(args, "session")}`),
     // Сводка сжатия для модели (#761) — целиком: в ленте она идёт обрезанной, как всё длинное.
@@ -595,12 +665,18 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     },
     // Страница таймлайна: первая — новые сверху (order=desc), дальше — по курсору назад (без order:
     // сервер не принимает оба сразу).
+    // Сообщение целиком (#903): в ленте длинное обрезано, «Показать полностью» берёт его отсюда.
+    "session.message": async (args) => ({
+      message: data<unknown>(await call("GET", `/api/session/${str(args, "session")}/message/${str(args, "message")}`)),
+    }),
     "session.messages": async (args) =>
-      clip(
+      clipMessages(
         await call("GET", `/api/session/${str(args, "session")}/message`, {
           query: {
             limit: Number(args.limit ?? 50),
-            ...(typeof args.cursor === "string" ? { cursor: args.cursor } : { order: args.order === "asc" ? "asc" : "desc" }),
+            ...(typeof args.cursor === "string"
+              ? { cursor: args.cursor }
+              : { order: args.order === "asc" ? "asc" : "desc" }),
           },
         }),
       ),
@@ -644,7 +720,9 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
       if (!text && !files.length) throw new RefusalError(BuffLocale.t("A text or a file is required"))
       // #757: «разобрать кодом» и «без файлов» больше не шлют модели этот формат.
       const omitted = [
-        ...BuffAttachment.omittedMedia([{ type: "user", metadata: { omitMedia: args.omitMedia, omitAs: args.omitAs } }]),
+        ...BuffAttachment.omittedMedia([
+          { type: "user", metadata: { omitMedia: args.omitMedia, omitAs: args.omitAs } },
+        ]),
       ]
       const metadata = omitted.length
         ? BuffAttachment.omitMetadata(
@@ -686,8 +764,7 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
         },
       })
     },
-    "session.abort": async (args) =>
-      call("POST", `/api/session/${str(args, "session")}/interrupt`, { body: {} }),
+    "session.abort": async (args) => call("POST", `/api/session/${str(args, "session")}/interrupt`, { body: {} }),
     "permission.answer": async (args) => {
       const decision = args.decision
       if (decision !== "once" && decision !== "always" && decision !== "reject")
@@ -698,8 +775,7 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     },
     // «Не сейчас» на форме MCP: форма отменяется, ход продолжается без ответа.
     // Владелец формы (#765): общая форма MCP-сервера принадлежит «global», а не сессии экрана.
-    "question.cancel": async (args) =>
-      call("DELETE", `/api/session/${ownerOf(args)}/form/${str(args, "form")}`),
+    "question.cancel": async (args) => call("DELETE", `/api/session/${ownerOf(args)}/form/${str(args, "form")}`),
     "question.answer": async (args) =>
       call("POST", `/api/session/${ownerOf(args)}/form/${str(args, "form")}/reply`, {
         body: { answer: args.answer ?? {} },
@@ -711,7 +787,8 @@ const variantOf = (m: ModelInfo | undefined, wanted: unknown) =>
     async run(record, op, args) {
       const handler = ops[op]
       if (!handler) throw new RefusalError(`not available from the phone: ${op}`)
-      const input = typeof args === "object" && args !== null && !Array.isArray(args) ? (args as Record<string, unknown>) : {}
+      const input =
+        typeof args === "object" && args !== null && !Array.isArray(args) ? (args as Record<string, unknown>) : {}
       const result = await handler(input, record)
       return { ok: true, ...(typeof result === "object" && result !== null ? (result as object) : { result }) }
     },

@@ -19,10 +19,14 @@ export type Sink = { url: string; headers: Record<string, string> }
 
 export type Post = (url: string, headers: Record<string, string>, body: string) => Promise<{ ok: boolean; status: number }>
 
-export type Outcome = { sent: number; delivered: boolean }
+export type Outcome = { sent: number; delivered: boolean; more?: boolean }
 
 /** Такт ожидания при пустой очереди: строка уходит не позже, чем через него. */
 export const IDLE_MS = 200
+/** Окно накопления после неполной пачки (#900): строки движка идут к складу пачками раз в
+ *  полторы секунды, а не на каждое изменение — при 20 прогонах это ~10 запросов в секунду
+ *  меньше. Полная пачка значит хвост в очереди — он едет без паузы. */
+export const FLUSH_MS = 1500
 /** Потолок паузы после отказов склада. */
 export const MAX_PAUSE_MS = 30_000
 /** Строк в одном запросе. */
@@ -120,13 +124,16 @@ export const flush = Effect.fn("BuffOutboxSender.flush")(function* (
   db: Db,
   options: { source: string; sink: Sink; batch: number; post: Post; maxBytes?: number; onlyBuff?: boolean },
 ) {
-  const rows = fit(yield* BuffOutbox.take(db, options.batch), options.maxBytes ?? MAX_BYTES)
+  const taken = yield* BuffOutbox.take(db, options.batch)
+  const rows = fit(taken, options.maxBytes ?? MAX_BYTES)
+  // За пачкой ещё строки: взята целиком или урезана по байтам — хвост едет без паузы (#900).
+  const more = taken.length >= options.batch || rows.length < taken.length
   if (!rows.length) return { sent: 0, delivered: true } satisfies Outcome
   const chosen = options.onlyBuff ? yield* forBuff(db, rows) : rows
   const seqs = rows.map((r) => r.seq)
   if (!chosen.length) {
     yield* BuffOutbox.ack(db, seqs)
-    return { sent: rows.length, delivered: true } satisfies Outcome
+    return { sent: rows.length, delivered: true, more } satisfies Outcome
   }
   const body = JSON.stringify({
     source: options.source,
@@ -138,13 +145,13 @@ export const flush = Effect.fn("BuffOutboxSender.flush")(function* (
   )
   if (!reply.ok) return { sent: 0, delivered: false } satisfies Outcome
   yield* BuffOutbox.ack(db, seqs)
-  return { sent: rows.length, delivered: true } satisfies Outcome
+  return { sent: rows.length, delivered: true, more } satisfies Outcome
 })
 
-/** Пауза до следующей попытки: ноль после непустой доставки (очередь может быть длиннее
- *  пачки), такт ожидания при пустой очереди, растущая пауза после отказа. */
+/** Пауза до следующей попытки: ноль, пока за пачкой есть хвост; окно накопления FLUSH_MS после
+ *  неполной пачки; такт ожидания при пустой очереди; растущая пауза после отказа. */
 export function pause(outcome: Outcome, previous: number): number {
-  if (outcome.delivered) return outcome.sent > 0 ? 0 : IDLE_MS
+  if (outcome.delivered) return outcome.more ? 0 : outcome.sent > 0 ? FLUSH_MS : IDLE_MS
   return Math.min(MAX_PAUSE_MS, Math.max(IDLE_MS * 5, previous * 2))
 }
 

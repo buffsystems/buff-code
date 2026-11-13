@@ -29,6 +29,12 @@ export const phone = {
   "Pair by link and code": "Подключить по ссылке и коду",
   "on the line": "на связи",
   "not on the line": "не на связи",
+  // #918: a pair's traffic today.
+  "{used} of {limit} today, resets at {time}": "{used} из {limit} за сутки, сброс в {time}",
+  "daily traffic used up until {time}": "суточный трафик исчерпан до {time}",
+  "{n} B": "{n} Б",
+  "{n} GB": "{n} ГБ",
+  "{n} TB": "{n} ТБ",
   "The Buff Code service is not running: the phone reaches this machine through it. Start it: buff service start":
     "Служба Buff Code не запущена, а телефон подключается к машине через неё. Запустите её: buff service start",
   "The phone settings did not load.": "Не удалось открыть настройки телефона.",

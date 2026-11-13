@@ -173,11 +173,15 @@ export const register = Effect.fn("BuffModels.register")(function* (
           context: BuffContextWindow.effective(limit.context, defaults.contextTokens) ?? model.limit.context,
           output: limit.output ?? model.limit.output,
         }
-        // Думающая модель предлагает общие уровни мышления; уровень организации по умолчанию
-        // подставляет сам коннектор, когда запрос его не называет.
+        // Думающая модель предлагает общие уровни мышления.
         model.variants = reasoning
           ? [...Variant.resolve({ ...model, package: "@opencode/ai/providers/openai-compatible" }, [{ type: "effort", values: LEVELS }])]
           : []
+        // Уровень организации (#900) — собственный уровень модели: сессия без варианта идёт на нём, выбранный вариант
+        // (свой или ключ конфига thinking) ложится поверх. Запросы коннектор больше не правит.
+        const preset = defaults.thinking ? Variant.closest(model.variants.map((v) => v.id), defaults.thinking) : undefined
+        const own = model.variants.find((v) => v.id === preset)
+        if (own) Object.assign(model, Variant.apply(model, own))
         // Модель организации актуальна по определению — её выбрал администратор. Выбор
         // моделей в десктопе показывает только последнюю модель своего семейства за полгода:
         // без даты она читается как 1970 год, без семейства не считается ничьей последней.

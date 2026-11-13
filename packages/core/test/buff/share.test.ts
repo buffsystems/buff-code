@@ -155,6 +155,26 @@ describe("document", () => {
     })
   })
 
+  test("a tool's input and output go into the document whole, however long (#903)", () => {
+    const long = "строка вывода\n".repeat(2_000)
+    const doc = buildDocument(
+      record({ tools: true }),
+      [
+        {
+          id: "a9",
+          type: "assistant",
+          time: { created: 1 },
+          content: [
+            { type: "tool", id: "t9", name: "execute", state: { status: "completed", input: long, content: [{ type: "text", text: long }] } },
+          ],
+        } as StoredMessage,
+      ],
+      { limit: 50 },
+      "Сессия",
+    )
+    expect(doc.items[0]!.parts[0]).toMatchObject({ kind: "tool", input: long, output: long })
+  })
+
   test("a subagent call names its own session (#893); other calls and a call without one do not", () => {
     const call = (id: string, name: string, metadata?: Record<string, unknown>): StoredMessage => ({
       id,

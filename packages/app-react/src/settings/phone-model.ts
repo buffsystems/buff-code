@@ -2,7 +2,7 @@
 // machine's service says (`buff.mobile`, #639) and the clock. Pure — the page polls and renders.
 
 import type { BlockReason, BuffCodeHome, PairedDevice, PairingPhase } from "@buff/ui/react"
-import type { BuffMobile } from "@opencode/schema/buff-mobile"
+import { BuffMobile } from "@opencode/schema/buff-mobile"
 
 /** Offer lifetimes as the service sets them (#631): a QR is scanned at once, a code typed within minutes. */
 export const OFFER_TTL_SEC = { qr: 5 * 60, code: 15 * 60 } as const
@@ -36,6 +36,17 @@ export function phoneRows(phones: readonly BuffMobile.Phone[], locale: string): 
     pairedAt: when(phone.paired),
     lastSeen: phone.seen ? when(phone.seen) : "—",
     status: phone.online ? "online" : "offline",
+    // The pair's traffic today, once the gateway told it (#923): the table's «Traffic today» column.
+    ...(phone.usage
+      ? {
+          usage: {
+            bytes: phone.usage.bytes,
+            limit: phone.usage.limit,
+            resets: BuffMobile.resetsAt(phone.usage.day, locale),
+            exhausted: phone.usage.exhausted,
+          },
+        }
+      : {}),
   }))
 }
 

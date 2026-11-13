@@ -195,7 +195,11 @@ describe("api", () => {
     test("session.context caps the session's window; 0 — the model's whole window", async () => {
       sent.length = 0
       await thinking.run(record, "session.context", { session: "s1", context: 200000 })
-      expect(sent.at(-1)).toEqual({ method: "POST", path: "/api/session/s1/context-limit", body: { limit: { context: 200000 } } })
+      expect(sent.at(-1)).toEqual({
+        method: "POST",
+        path: "/api/session/s1/context-limit",
+        body: { limit: { context: 200000 } },
+      })
       sent.length = 0
       await thinking.run(record, "session.context", { session: "s1", context: 0 })
       expect(sent.at(-1)).toEqual({ method: "POST", path: "/api/session/s1/context-limit", body: { limit: null } })
@@ -394,6 +398,33 @@ describe("api", () => {
     })
   })
 
+  // #922: телефон держит наверху «Недавних» и ждущие человека — разрешение или вопрос, в том числе её
+  // сабагента; спрашивается каталог проекта.
+  test("a session waiting for the person — a permission or a question, its subagent's too — says so", async () => {
+    const asked: string[] = []
+    const waiting = mobileApi(async (method, route, options) => {
+      if (route === "/api/permission/request" || route === "/api/form")
+        asked.push(`${route} ${String(options?.query?.["location[directory]"])}`)
+      if (route === "/api/permission/request") return { data: [{ id: "perm", sessionID: "c" }] }
+      if (route === "/api/form")
+        return {
+          data: [
+            { id: "f", sessionID: "b" },
+            { id: "g", sessionID: "global" },
+          ],
+        }
+      return call(method, route, options)
+    })
+    const listed = (await waiting.run(record, "sessions.list", { project: "p1" })) as unknown as {
+      sessions: { id: string; waiting?: boolean }[]
+    }
+    expect(listed.sessions.map((s) => [s.id, s.waiting ?? false])).toEqual([
+      ["a", true],
+      ["b", true],
+    ])
+    expect(asked.toSorted()).toEqual(["/api/form /work/shop", "/api/permission/request /work/shop"])
+  })
+
   test("watching a session answers its state now: running, what waits, the last messages clipped", async () => {
     const watched: string[] = []
     const watchingApi = mobileApi(call, {
@@ -501,6 +532,65 @@ describe("api", () => {
     expect(got).toMatchObject({ status: "completed", summary: long })
     expect(seen).toContain("GET /api/session/s/message/c1")
     await expect(api.run(record, "session.compaction", { session: "s", message: "u1" })).rejects.toThrow()
+  })
+
+  // #903: a part cut for the timeline says so; the phone asks for its message whole.
+  test("a part cut for the timeline is marked, the rest is not", async () => {
+    const long = "вывод ".repeat(2_000)
+    const api = mobileApi(async (method, route) => {
+      if (route === "/api/session/s/message")
+        return {
+          data: [
+            {
+              type: "assistant",
+              id: "m1",
+              content: [
+                { type: "reasoning", text: "коротко" },
+                {
+                  type: "tool",
+                  id: "t1",
+                  name: "execute",
+                  state: { status: "completed", input: { code: "x" }, content: [{ type: "text", text: long }] },
+                },
+              ],
+            },
+            { type: "user", id: "u1", text: long },
+          ],
+        }
+      return { data: [] }
+    })
+    const got = (await api.run(record, "session.messages", { session: "s" })) as unknown as {
+      data: Record<string, unknown>[]
+    }
+    const [assistant, user] = got.data
+    const [reasoning, tool] = assistant!.content as Record<string, unknown>[]
+    expect(reasoning!.clipped).toBeUndefined()
+    expect(tool!.clipped).toBe(true)
+    expect(assistant!.clipped).toBe(true)
+    expect(user!.clipped).toBe(true)
+  })
+
+  test("session.message hands the message whole", async () => {
+    const long = "вывод ".repeat(2_000)
+    const whole = {
+      type: "assistant",
+      id: "m1",
+      content: [
+        {
+          type: "tool",
+          id: "t1",
+          name: "execute",
+          state: { status: "completed", input: { code: long }, content: [{ type: "text", text: long }] },
+        },
+      ],
+    }
+    const seen: string[] = []
+    const api = mobileApi(async (method, route) => {
+      seen.push(`${method} ${route}`)
+      return route === "/api/session/s/message/m1" ? { data: whole } : { data: [] }
+    })
+    expect(await api.run(record, "session.message", { session: "s", message: "m1" })).toMatchObject({ message: whole })
+    expect(seen).toContain("GET /api/session/s/message/m1")
   })
 
   // #762: the phone sees the session's subagents and which of them work — background ones too,
@@ -716,7 +806,10 @@ function fakeGateway() {
     closed: () => new Promise(() => {}),
   }
   const subs = new Map<string, Parameters<RelayConn["subscribe"]>[1]["callback"]>()
-  return { conn, sent }
+  /** The gateway says something on a subject (its control messages to the machine). */
+  const say = (subject: string, body: object) =>
+    subs.get(subject)?.(null, { subject, data: new TextEncoder().encode(JSON.stringify(body)) })
+  return { conn, sent, say }
 }
 
 describe("agent", () => {
@@ -747,6 +840,27 @@ describe("agent", () => {
     expect(gw.sent.at(-1)?.subject).toMatch(/^relay\.cmd\.revoke\./)
     expect(gw.sent.at(-1)?.body.pairId).toBe("P1")
     expect(await agent.phones()).toEqual([])
+    await agent.stop()
+  })
+
+  // #918: the gateway tells the machine each pair's use; the phones list carries it.
+  test("each paired phone carries its pair's traffic today as the gateway told it", async () => {
+    const gw = fakeGateway()
+    const store = fileStore(path.join(await mkdtemp(path.join(os.tmpdir(), "mobile-")), "m"))
+    const agent = new MobileAgent({
+      store,
+      connect: async () => gw.conn,
+      gatewayHost: "dev.buff.systems",
+      display: () => "laptop",
+      exec: async () => ({ ok: true }),
+      now: () => 1_000,
+    })
+    const me = (await store.identity()).id
+    await store.saveDevice({ ...record, peer: me })
+    await agent.start()
+    expect((await agent.phones())[0]?.usage).toBeUndefined()
+    gw.say(`relay.ctrl.${me}`, { type: "usage", with: "phone", bytes: 300, limit: 1000, day: "2026-11-12" })
+    expect((await agent.phones())[0]?.usage).toEqual({ bytes: 300, limit: 1000, day: "2026-11-12", exhausted: false })
     await agent.stop()
   })
 
@@ -1062,9 +1176,9 @@ describe("message queue from the phone (#811)", () => {
     expect((calls.at(-1)?.body as { delivery: string }).delivery).toBe("queue")
     await api.run(record, "session.prompt", { session: "s1", text: "сейчас", delivery: "steer" })
     expect((calls.at(-1)?.body as { delivery: string }).delivery).toBe("steer")
-    await expect(api.run(record, "session.prompt", { session: "s1", text: "x", delivery: "later" })).rejects.toBeInstanceOf(
-      RefusalError,
-    )
+    await expect(
+      api.run(record, "session.prompt", { session: "s1", text: "x", delivery: "later" }),
+    ).rejects.toBeInstanceOf(RefusalError)
   })
 
   test("the session state lists the user's queued messages only", async () => {
