@@ -2,13 +2,15 @@
 // (тот же сервер, что у окна и консоли; второй реализации логики нет). Телефон — владелец машины,
 // но только в известных проектах: новая сессия — проект и модель лишь из списков службы,
 // произвольный путь не открывается.
-import { RefusalError, type DeviceRecord, type Reply } from "@buff/mobile-protocol"
+import type { DeviceRecord, Reply } from "@buff/mobile-protocol"
 import { BuffAttachment } from "@opencode/schema/buff-attachment"
+import type { BuffGoal } from "@opencode/schema/buff-goal"
 import { BuffModelPrefs } from "@opencode/schema/buff-model-prefs"
 import { BuffPermissionMode } from "@opencode/schema/buff-permission-mode"
-import { BuffLocale } from "../locale.js"
+import { inLanguage, phoneRefusal } from "./refusal.js"
+import { explain, failedTurn } from "./failure.js"
 
-/** Запрос к серверу Buff Code внутри процесса; 4xx приходит как RefusalError. */
+/** Запрос к серверу Buff Code внутри процесса; 4xx приходит отказом (RefusalError). */
 export type Call = (
   method: "GET" | "POST" | "DELETE" | "PATCH" | "PUT",
   path: string,
@@ -71,7 +73,7 @@ const SETTLE_STEP_MS = 250
 const deliveryOf = (args: Record<string, unknown>): "queue" | "steer" => {
   if (args.delivery === undefined || args.delivery === "queue") return "queue"
   if (args.delivery === "steer") return "steer"
-  throw new RefusalError(BuffLocale.t("Unknown delivery mode"))
+  throw phoneRefusal("Unknown delivery mode")
 }
 
 interface InboxItem {
@@ -83,7 +85,7 @@ interface InboxItem {
 
 const str = (args: Record<string, unknown>, key: string): string => {
   const v = args[key]
-  if (typeof v !== "string" || !v.trim()) throw new RefusalError(BuffLocale.t("The field {key} is required", { key }))
+  if (typeof v !== "string" || !v.trim()) throw phoneRefusal("The field {key} is required", { key })
   return v.trim()
 }
 
@@ -155,13 +157,14 @@ const clipMessage = (message: unknown): unknown => {
   return Array.isArray(content) ? { ...(cut as object), content: content.map((part) => marked(part, clip(part))) } : cut
 }
 
-// Страница сообщений как её отдаёт сервер: списком или в `data`.
-const clipMessages = (page: unknown): unknown =>
+// Страница сообщений как её отдаёт сервер: списком или в `data`; `each` — что сделать с сообщением.
+const mapPage = (page: unknown, each: (message: unknown) => unknown): unknown =>
   Array.isArray(page)
-    ? page.map(clipMessage)
+    ? page.map(each)
     : Array.isArray(data<unknown[]>(page))
-      ? { ...(page as object), data: data<unknown[]>(page)!.map(clipMessage) }
+      ? { ...(page as object), data: data<unknown[]>(page)!.map(each) }
       : page
+const pageMessages = (page: unknown): unknown[] => (Array.isArray(page) ? page : (data<unknown[]>(page) ?? []))
 
 /** RPC Buff, которые телефон зовёт как окно: git, побочная беседа, доверие проекта. */
 const RPC: Record<string, readonly string[]> = {
@@ -207,7 +210,7 @@ export function mobileApi(
     ((await call("GET", "/api/project")) as ProjectInfo[]).slice().sort((a, b) => b.time.updated - a.time.updated)
   const project = async (id: string) => {
     const p = (await projects()).find((x) => x.id === id)
-    if (!p) throw new RefusalError(BuffLocale.t("No such project on this machine"))
+    if (!p) throw phoneRefusal("No such project on this machine")
     return p
   }
   const sessionPage = (projectID: string, limit: number, cursor?: string) =>
@@ -318,8 +321,12 @@ export function mobileApi(
     const reply = (await call("POST", "/api/rpc/buff.goal/get", {
       query: { "location[directory]": where },
       body: { input: { session } },
-    }).catch(() => undefined)) as { output?: { goal?: unknown } } | undefined
-    return reply?.output?.goal ?? null
+    }).catch(() => undefined)) as { output?: { goal?: BuffGoal.Goal } } | undefined
+    const goal = reply?.output?.goal
+    if (!goal?.cause) return goal ?? null
+    // Цель на паузе после упавшего хода (#929): причина — словами на обоих языках.
+    const known = await providerNames(where).catch(() => new Map<string, string>())
+    return { ...goal, failure: explain(goal.cause, known.get(goal.cause.providerID)) }
   }
 
   const ownerOf = (args: Record<string, unknown>) =>
@@ -373,7 +380,7 @@ export function mobileApi(
     return {
       session,
       running: active.includes(session),
-      messages: clipMessages(list(messages)) as unknown[],
+      messages: (await phonePage(session, list(messages))) as unknown[],
       permissions: list(permissions),
       forms: list(forms),
       // Режим «Настройка» (#765): сессия режима — по агенту.
@@ -398,7 +405,7 @@ export function mobileApi(
     return refs.map((r) => {
       const u = uploads.get(String(r.upload_id ?? ""))
       if (!u || u.parts.filter((x) => x !== undefined).length !== u.of)
-        throw new RefusalError(BuffLocale.t("The file did not upload completely — attach it again"))
+        throw phoneRefusal("The file did not upload completely — attach it again")
       uploads.delete(String(r.upload_id))
       // The prompt endpoint takes a file as a URI (PromptInput.FileAttachment, #676): inline — a data URL.
       return { uri: `data:${u.mime};base64,${u.parts.join("")}`, name: u.name }
@@ -407,6 +414,40 @@ export function mobileApi(
 
   const directoryOf = async (session: string) =>
     data<{ location: { directory: string } }>(await call("GET", `/api/session/${session}`)).location.directory
+
+  // Имена провайдеров для людей (#929) — по каталогу, один раз: отказ хода называет провайдера так,
+  // как его видит окно. Не прочиталось — назовём по id и спросим в следующий раз.
+  const names = new Map<string, Promise<Map<string, string>>>()
+  const providerNames = (directory: string) => {
+    const known = names.get(directory)
+    if (known) return known
+    const read = call("GET", "/api/provider", { query: { "location[directory]": directory } }).then((r) => {
+      const list = data<{ id: string; name?: string }[]>(r) ?? []
+      return new Map(list.flatMap((p) => (p.name ? [[p.id, p.name] as const] : [])))
+    })
+    names.set(directory, read)
+    read.catch(() => names.delete(directory))
+    return read
+  }
+  // Отказ хода на обоих языках (#929) — из необрезанной ошибки, рядом с обрезанным сообщением.
+  const explainer = async (session: string, messages: readonly unknown[]) => {
+    const known = messages.some((m) => failedTurn(m))
+      ? await directoryOf(session)
+          .then(providerNames)
+          .catch(() => new Map<string, string>())
+      : new Map<string, string>()
+    return (message: unknown, shown: unknown = message): unknown => {
+      const failed = failedTurn(message)
+      return failed
+        ? { ...(shown as object), failure: explain(failed, known.get(failed.providerID)) }
+        : shown
+    }
+  }
+  /** Страница сообщений для телефона: длинное обрезано, отказы хода объяснены. */
+  const phonePage = async (session: string, page: unknown) => {
+    const explained = await explainer(session, pageMessages(page))
+    return mapPage(page, (message) => explained(message, clipMessage(message)))
+  }
 
   const ops: Record<string, (args: Record<string, unknown>, record: DeviceRecord) => Promise<unknown>> = {
     "session.state": async (args) => state(str(args, "session")),
@@ -431,7 +472,7 @@ export function mobileApi(
     "files.list": async (args) => {
       const where = await directoryOf(str(args, "session"))
       const path = typeof args.path === "string" ? args.path.replace(/^\/+/, "") : ""
-      if (path.split("/").includes("..")) throw new RefusalError(BuffLocale.t("Only inside the project"))
+      if (path.split("/").includes("..")) throw phoneRefusal("Only inside the project")
       return {
         entries:
           data<unknown[]>(await call("GET", "/api/fs/list", { query: { "location[directory]": where, path } })) ?? [],
@@ -441,15 +482,13 @@ export function mobileApi(
     "files.read": async (args) => {
       const where = await directoryOf(str(args, "session"))
       const path = str(args, "path").replace(/^\.?\/+/, "")
-      if (path.split("/").includes("..")) throw new RefusalError(BuffLocale.t("Only inside the project"))
-      if (!extra?.fetch) throw new RefusalError(BuffLocale.t("Reading files is unavailable"))
+      if (path.split("/").includes("..")) throw phoneRefusal("Only inside the project")
+      if (!extra?.fetch) throw phoneRefusal("Reading files is unavailable")
       const route = `/api/fs/read/${path.split("/").map(encodeURIComponent).join("/")}`
       const { mime, bytes } = await extra.fetch(route, { "location[directory]": where }).catch((err: unknown) => {
-        throw new RefusalError(
-          String(err).includes("404")
-            ? BuffLocale.t("No such file")
-            : BuffLocale.t("The file cannot be read — it is outside the project or unavailable"),
-        )
+        throw String(err).includes("404")
+          ? phoneRefusal("No such file")
+          : phoneRefusal("The file cannot be read — it is outside the project or unavailable")
       })
       const from = Math.max(0, Number(args.from ?? 0))
       const part = bytes.subarray(from, from + READ_PART)
@@ -465,7 +504,7 @@ export function mobileApi(
     },
     "terminal.open": async (args, record) => {
       const session = str(args, "session")
-      if (!extra?.terminals) throw new RefusalError(BuffLocale.t("The terminal is unavailable"))
+      if (!extra?.terminals) throw phoneRefusal("The terminal is unavailable")
       return extra.terminals.open(record.device, session, await directoryOf(session))
     },
     "terminal.input": async (args, record) => {
@@ -484,7 +523,7 @@ export function mobileApi(
     rpc: async (args) => {
       const id = str(args, "id")
       const method = str(args, "method")
-      if (!RPC[id]?.includes(method)) throw new RefusalError(`not available from the phone: ${id}.${method}`)
+      if (!RPC[id]?.includes(method)) throw phoneRefusal("Not available from the phone: {op}", { op: `${id}.${method}` })
       // Каталог — сессии или проекта: автоматизации и сценарии живут на уровне проекта.
       const where =
         typeof args.session === "string" && args.session
@@ -544,7 +583,7 @@ export function mobileApi(
       const seq = Number(args.seq)
       const of = Number(args.of)
       if (!Number.isInteger(seq) || !Number.isInteger(of) || seq < 0 || seq >= of)
-        throw new RefusalError(BuffLocale.t("A wrong part of the file"))
+        throw phoneRefusal("A wrong part of the file")
       for (const [key, u] of uploads) if (Date.now() - u.at > 30 * 60_000) uploads.delete(key)
       const u = uploads.get(id) ?? {
         name: String(args.name ?? "file"),
@@ -556,7 +595,7 @@ export function mobileApi(
       u.parts[seq] = typeof args.data === "string" ? args.data : ""
       if (u.parts.reduce((n, x) => n + (x?.length ?? 0), 0) > UPLOAD_MAX) {
         uploads.delete(id)
-        throw new RefusalError(BuffLocale.t("The file is larger than 20 MB"))
+        throw phoneRefusal("The file is larger than 20 MB")
       }
       uploads.set(id, u)
       return {}
@@ -660,17 +699,20 @@ export function mobileApi(
       const m = data<{ type?: string; status?: string; summary?: string }>(
         await call("GET", `/api/session/${str(args, "session")}/message/${str(args, "message")}`),
       )
-      if (m?.type !== "compaction") throw new RefusalError(BuffLocale.t("No such compaction in the session"))
+      if (m?.type !== "compaction") throw phoneRefusal("No such compaction in the session")
       return { status: m.status, summary: m.summary ?? "" }
     },
     // Страница таймлайна: первая — новые сверху (order=desc), дальше — по курсору назад (без order:
     // сервер не принимает оба сразу).
     // Сообщение целиком (#903): в ленте длинное обрезано, «Показать полностью» берёт его отсюда.
-    "session.message": async (args) => ({
-      message: data<unknown>(await call("GET", `/api/session/${str(args, "session")}/message/${str(args, "message")}`)),
-    }),
+    "session.message": async (args) => {
+      const session = str(args, "session")
+      const message = data<unknown>(await call("GET", `/api/session/${session}/message/${str(args, "message")}`))
+      return { message: (await explainer(session, [message]))(message) }
+    },
     "session.messages": async (args) =>
-      clipMessages(
+      phonePage(
+        str(args, "session"),
         await call("GET", `/api/session/${str(args, "session")}/message`, {
           query: {
             limit: Number(args.limit ?? 50),
@@ -685,10 +727,10 @@ export function mobileApi(
       const p = await project(str(args, "project"))
       const wanted = str(args, "model")
       const model = (await models(p.canonical)).find((m) => modelKey(m) === wanted)
-      if (!model) throw new RefusalError(BuffLocale.t("No such model in this Buff Code"))
+      if (!model) throw phoneRefusal("No such model in this Buff Code")
       const agent = typeof args.agent === "string" && args.agent ? args.agent : undefined
       if (agent && !(await agents(p.canonical)).some((a) => a.id === agent))
-        throw new RefusalError(BuffLocale.t("No such agent in this Buff Code"))
+        throw phoneRefusal("No such agent in this Buff Code")
       // Режим разрешений и «план» — как у окна: правила сессии и агент plan (он важнее выбранного).
       const mode = args.mode === "edit" || args.mode === "full" ? args.mode : "ask"
       const plan = args.plan === true
@@ -717,7 +759,7 @@ export function mobileApi(
     "session.prompt": async (args) => {
       const files = filesOf(args)
       const text = typeof args.text === "string" ? args.text.trim() : ""
-      if (!text && !files.length) throw new RefusalError(BuffLocale.t("A text or a file is required"))
+      if (!text && !files.length) throw phoneRefusal("A text or a file is required")
       // #757: «разобрать кодом» и «без файлов» больше не шлют модели этот формат.
       const omitted = [
         ...BuffAttachment.omittedMedia([
@@ -750,7 +792,7 @@ export function mobileApi(
       const listed = await call("GET", `/api/session/${session}/message`, { query: { limit: 20, order: "desc" } })
       const messages = Array.isArray(listed) ? (listed as StoredUser[]) : (data<StoredUser[]>(listed) ?? [])
       const message = messages.find((m) => m.type === "user" && m.id === str(args, "message"))
-      if (!message) throw new RefusalError(BuffLocale.t("The message to repeat is not found"))
+      if (!message) throw phoneRefusal("The message to repeat is not found")
       const { model: _model, ...metadata } = message.metadata ?? {}
       const files = (message.files ?? []).map((file) => ({
         uri: `data:${file.mime};base64,${file.data}`,
@@ -768,7 +810,7 @@ export function mobileApi(
     "permission.answer": async (args) => {
       const decision = args.decision
       if (decision !== "once" && decision !== "always" && decision !== "reject")
-        throw new RefusalError(BuffLocale.t("The decision is once, always or reject"))
+        throw phoneRefusal("The decision is once, always or reject")
       return call("POST", `/api/session/${str(args, "session")}/permission/${str(args, "request")}/reply`, {
         body: { decision, ...(typeof args.message === "string" ? { message: args.message } : {}) },
       })
@@ -785,12 +827,17 @@ export function mobileApi(
   return {
     state,
     async run(record, op, args) {
-      const handler = ops[op]
-      if (!handler) throw new RefusalError(`not available from the phone: ${op}`)
       const input =
         typeof args === "object" && args !== null && !Array.isArray(args) ? (args as Record<string, unknown>) : {}
-      const result = await handler(input, record)
-      return { ok: true, ...(typeof result === "object" && result !== null ? (result as object) : { result }) }
+      // Отказ — на языке телефона (#929): команда несёт его в `lang`.
+      try {
+        const handler = ops[op]
+        if (!handler) throw phoneRefusal("Not available from the phone: {op}", { op })
+        const result = await handler(input, record)
+        return { ok: true, ...(typeof result === "object" && result !== null ? (result as object) : { result }) }
+      } catch (err) {
+        throw inLanguage(err, input)
+      }
     },
   }
 }

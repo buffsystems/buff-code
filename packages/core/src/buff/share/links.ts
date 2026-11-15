@@ -18,7 +18,7 @@ import {
   type Reply,
   type ShareRefusal,
 } from "@buff/mobile-protocol"
-import { BuffLocale } from "../locale.js"
+import { phoneRefusal } from "../mobile/refusal.js"
 import { buildDocument, fileChunk, sentFile, type StoredMessage } from "./document.js"
 import { hashPassword, verifyPassword, type ShareRecord, type ShareStore } from "./store.js"
 
@@ -121,8 +121,8 @@ export class ShareLinks {
 
   async create(input: CreateInput): Promise<ShareView> {
     const title = (input.title ?? "").trim().slice(0, TITLE_MAX)
-    if (!title) throw new RefusalError(BuffLocale.t("The title is required"))
-    if (!(await this.p.session(input.session))) throw new RefusalError(BuffLocale.t("The session is not found"))
+    if (!title) throw phoneRefusal("The title is required")
+    if (!(await this.p.session(input.session))) throw phoneRefusal("The session is not found")
     const messages = [...new Set((input.messages ?? []).filter((m) => typeof m === "string" && m))]
     const record: ShareRecord = {
       id: (this.p.newId ?? newShareId)(),
@@ -149,7 +149,7 @@ export class ShareLinks {
     const next: ShareRecord = { ...record }
     if (patch.title !== undefined) {
       const title = patch.title.trim().slice(0, TITLE_MAX)
-      if (!title) throw new RefusalError(BuffLocale.t("The title is required"))
+      if (!title) throw phoneRefusal("The title is required")
       next.title = title
     }
     if (patch.pass !== undefined) next.pass = patch.pass ? hashPassword(patch.pass) : null
@@ -218,10 +218,10 @@ export class ShareLinks {
       const chunk =
         fileChunk(opened.record, messages, a.file, a.from) ??
         (await this.sentChunk(opened.record, messages, a.file, a.from))
-      if (!chunk) throw new RefusalError(BuffLocale.t("No such file"))
+      if (!chunk) throw phoneRefusal("No such file")
       return { ok: true, chunk }
     }
-    throw new RefusalError(`not available to the share viewer: ${op}`)
+    throw phoneRefusal("Not available to the link viewer: {op}", { op })
   }
 
   /**
@@ -319,18 +319,14 @@ export class ShareLinks {
 
   private async live(id: string): Promise<ShareRecord> {
     const record = await this.p.store.get(id)
-    if (!record || record.gone) throw new RefusalError(BuffLocale.t("The link is not found"))
+    if (!record || record.gone) throw phoneRefusal("The link is not found")
     return record
   }
 
   private noGateway(): RefusalError {
-    return new RefusalError(
-      BuffLocale.t(
-        "No link to the gateway {gateway}: the link cannot be published — check the internet and try again.",
-        {
-          gateway: this.p.gatewayHost,
-        },
-      ),
+    return phoneRefusal(
+      "No link to the gateway {gateway}: the link cannot be published — check the internet and try again.",
+      { gateway: this.p.gatewayHost },
     )
   }
 
@@ -357,7 +353,7 @@ export class ShareLinks {
 function expiry(value: number | null | undefined): number | null {
   if (value === undefined || value === null) return null
   if (!Number.isSafeInteger(value) || value <= 0)
-    throw new RefusalError(BuffLocale.t("The expiry is not a moment in time"))
+    throw phoneRefusal("The expiry is not a moment in time")
   return value
 }
 
@@ -365,7 +361,7 @@ function parsed<T>(parse: (v: unknown) => T, value: unknown): T {
   try {
     return parse(value)
   } catch (err) {
-    if (err instanceof ProtocolError) throw new RefusalError(`share: ${err.code}`)
+    if (err instanceof ProtocolError) throw phoneRefusal("A wrong request to the link: {code}", { code: err.code })
     throw err
   }
 }

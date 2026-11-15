@@ -38,6 +38,9 @@ const BUFF = "buff"
 /** Ход упал до первого шага модели: в истории нет ответа, только отметка о неудаче. */
 export const TURN_FAILED = "turn-failed"
 const NOT_MEMBER = /^not a member of\s*(.*)$/
+/** Слова прокси о его собственном сетевом сбое или базе — не об отказе ключа (#886). */
+const PROXY_DOWN =
+  /connection attempts failed|connection slots are reserved|connection ?refused|could not connect to|ECONNREFUSED|ETIMEDOUT/i
 
 function details(error: TurnError, t: BuffI18n.T): string {
   return [
@@ -75,10 +78,10 @@ function reading(error: TurnError, t: BuffI18n.T): Pick<TurnFailure, "text" | "a
       action: "top-up",
     }
   if (error.status === 401)
-    return { text: t("The Buff sign-in is no longer valid: {message}", { message: error.message }), action: "sign-in" }
+    return { text: t("The Buff sign-in is no longer valid: {message}", { message: shortQuote(error.message) }), action: "sign-in" }
   if (error.type === "provider.transport")
     return { text: t("No connection to the company connector. Check the network and try again.") }
-  return { text: error.message }
+  return { text: shortQuote(error.message) }
 }
 
 /**
@@ -86,10 +89,22 @@ function reading(error: TurnError, t: BuffI18n.T): Pick<TurnFailure, "text" | "a
  * или входа в Buff, — и что сделать. Слова провайдера не толкуются, а цитируются.
  */
 function ownReading(error: TurnError, provider: string, t: BuffI18n.T): Pick<TurnFailure, "text" | "action"> {
-  const said = error.message.trim().replace(/\.$/, "")
+  const said = shortQuote(error.message)
   if (!said) return { text: "" }
+  // Сетевой сбой (#929): слова рантайма («ConnectionRefused: Unable to connect…») человеку ничего не
+  // говорят — они остаются в подробностях, а текст говорит, что проверить.
+  if (error.type === "provider.transport")
+    return {
+      text: t(
+        "{provider} is unreachable: cannot connect to its address. Check that the provider's server is running and the address is right, then retry.",
+        { provider },
+      ),
+    }
   const quoted = error.status === undefined ? said : t("response {status}: {message}", { status: error.status, message: said })
   const words = { provider, said: quoted }
+  // Прокси вроде LiteLLM отвечает 401, когда его проверка ключа сама не достучалась до своей базы или
+  // сети (#886): ключ тут ни при чём — это сбой на его стороне.
+  if (PROXY_DOWN.test(said)) return { text: t("Failure on the {provider} side ({said}). Retry later.", words) }
   if (error.type === "provider.auth" || error.status === 401 || error.status === 403)
     return {
       text: t(
@@ -109,10 +124,6 @@ function ownReading(error: TurnError, provider: string, t: BuffI18n.T): Pick<Tur
     return { text: t("{provider} limited the request rate ({said}). Wait and retry.", words) }
   if (error.status === 404)
     return { text: t("{provider} does not know this model ({said}). Choose another model.", words) }
-  if (error.type === "provider.transport")
-    return {
-      text: t("{provider} is unreachable: no connection to its address ({said}). Check the network and the provider address.", words),
-    }
   if (error.type === "provider.internal" || (error.status !== undefined && error.status >= 500))
     return { text: t("Failure on the {provider} side ({said}). Retry later.", words) }
   if (error.type === "provider.content-filter")

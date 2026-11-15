@@ -917,6 +917,16 @@ it.effect("classifies native fetch failures as request transport errors", () =>
   }),
 )
 
+// #929: Bun's fetch names its network failures by code, without a wrapping TypeError.
+for (const code of ["ConnectionRefused", "ConnectionClosed", "FailedToOpenSocket", "Timeout"])
+  it.effect(`classifies Bun's native ${code} as a transport error`, () =>
+    Effect.gen(function* () {
+      const cause = Object.assign(new Error("Unable to connect. Is the computer able to access the url?"), { code })
+      const error = yield* streamFailure(cause)
+      expect(error.reason).toMatchObject({ _tag: "Transport", transport: "http", operation: "request", code })
+    }),
+  )
+
 it.effect("classifies mid-stream socket drops as read transport errors", () =>
   Effect.gen(function* () {
     const cause = Object.assign(new Error("terminated"), {

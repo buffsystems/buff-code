@@ -97,4 +97,11 @@ export const phone = {
   "The agent asked a question": "Агент задал вопрос",
   "The turn is done": "Ход завершён",
   "The session failed": "Ошибка в сессии",
+  // #929: отказы, что раньше шли только по-английски.
+  "Not available from the phone: {op}": "Недоступно с телефона: {op}",
+  "Public links are not served by this machine": "Эта машина не обслуживает публичные ссылки",
+  "The Buff Code service is not running": "Служба Buff Code не запущена",
+  "The machine is not connected to the gateway": "Машина не подключена к шлюзу",
+  "Not available to the link viewer: {op}": "Недоступно при просмотре ссылки: {op}",
+  "A wrong request to the link: {code}": "Неверный запрос к ссылке: {code}",
 }

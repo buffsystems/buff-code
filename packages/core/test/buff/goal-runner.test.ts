@@ -5,7 +5,7 @@ import { GoalRunner } from "../../src/buff/goal/runner"
 
 function world(verdicts: string[] = [], failure?: Error) {
   const goals = new Map<string, BuffGoal.Goal>()
-  const prompts: { session: string; text: string; summary: string }[] = []
+  const prompts: { session: string; text: string; summary: string; note?: GoalRunner.Note }[] = []
   const notes: { session: string; text: string }[] = []
   const checks: string[] = []
   const changes: (BuffGoal.Goal | undefined)[] = []
@@ -16,7 +16,7 @@ function world(verdicts: string[] = [], failure?: Error) {
       put: async (session, goal) => void goals.set(session, goal),
       remove: async (session) => void goals.delete(session),
     },
-    prompt: async (session, text, summary) => void prompts.push({ session, text, summary }),
+    prompt: async (session, text, summary, note) => void prompts.push({ session, text, summary, ...(note ? { note } : {}) }),
     generate: async (_, prompt) => {
       checks.push(prompt)
       if (failure) throw failure
@@ -94,6 +94,30 @@ describe("a goal", () => {
     expect(w.prompts.length).toBe(2)
     await w.runner.clear("s")
     expect(w.goals.has("s")).toBe(false)
+  })
+  // #929: a failed turn pauses the goal with the reason in words, and keeps the cause for the screens.
+  test("a failed turn: the reason in words, the cause kept and carried by the next iteration's note", async () => {
+    const w = world()
+    await w.runner.set("s", "Цель")
+    const cause = {
+      error: { type: "provider.transport", message: "ConnectionRefused: Unable to connect. Is the computer able to access the url?" },
+      providerID: "litellm",
+    }
+    await w.runner.turn("s", "failed", cause)
+    const reason =
+      "litellm недоступен: не удаётся подключиться к его адресу. Проверьте, что сервер провайдера запущен и адрес указан верно, затем повторите."
+    expect(w.goals.get("s")).toMatchObject({ status: "paused", reason, cause })
+    await w.runner.resume("s")
+    expect(w.prompts[1]).toMatchObject({ summary: `Итерация 2: ${reason}`, note: { iteration: 2, cause } })
+    expect(w.prompts[1]!.text).toContain(reason)
+    expect(w.prompts[0]!.note).toBeUndefined()
+  })
+  test("a failed turn without a known cause still pauses", async () => {
+    const w = world()
+    await w.runner.set("s", "Цель")
+    await w.runner.turn("s", "failed")
+    expect(w.goals.get("s")).toMatchObject({ status: "paused" })
+    expect(w.goals.get("s")).not.toHaveProperty("cause")
   })
   test("turns of sessions without a goal are ignored", async () => {
     const w = world()

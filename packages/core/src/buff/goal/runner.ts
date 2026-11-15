@@ -1,6 +1,7 @@
 export * as GoalRunner from "./runner.js"
 
 import { BuffGoal } from "@opencode/schema/buff-goal"
+import { turnFailure } from "@opencode/schema/buff-turn-failure"
 import checkText from "./prompts/check.md" with { type: "text" }
 import checkRetryText from "./prompts/check-retry.md" with { type: "text" }
 import continueText from "./prompts/continue.md" with { type: "text" }
@@ -13,14 +14,23 @@ import { BuffLocale } from "../locale.js"
  * ход с причиной, объявление. Нечитаемый ответ проверки — пауза с причиной, а не цикл.
  */
 
+/** Отметка итерации после упавшего хода (#929): её номер и причина — экраны скажут её своими словами. */
+export interface Note {
+  readonly iteration: number
+  readonly cause: BuffGoal.Cause
+}
+
 export interface Deps {
   readonly store: {
     readonly get: (session: string) => Promise<BuffGoal.Goal | undefined>
     readonly put: (session: string, goal: BuffGoal.Goal) => Promise<void>
     readonly remove: (session: string) => Promise<void>
   }
-  /** Указание модели в сессии — будит её; `summary` — что видит человек рядом с «Цель» (#711). */
-  readonly prompt: (session: string, text: string, summary: string) => Promise<void>
+  /**
+   * Указание модели в сессии — будит её; `summary` — что видит человек рядом с «Цель» (#711);
+   * `note` — причина итерации, когда это упавший ход (#929).
+   */
+  readonly prompt: (session: string, text: string, summary: string, note?: Note) => Promise<void>
   /** Ответ модели по контексту сессии, без записи в историю. */
   readonly generate: (session: string, prompt: string) => Promise<string>
   /** Отметка в сессии, не будит модель. */
@@ -77,6 +87,7 @@ export function make(deps: Deps) {
         session,
         render(continueText, values),
         BuffLocale.t("Iteration {iteration}: {reason}", { iteration: values.iteration, reason: values.reason }),
+        ...(goal.cause ? [{ iteration: goal.iteration, cause: goal.cause }] : []),
       )
     if (action === "done") return deps.announce(session, BuffLocale.t("Goal reached: {reason}", { reason: values.reason }))
     // Нечитаемый ответ бывает сбоем формата: спросить ещё раз; снова нечитаемый — пауза с ответом.
@@ -108,10 +119,14 @@ export function make(deps: Deps) {
       await apply(session, { type: "set", text: parsed.text })
       return {}
     },
-    /** Ход сессии кончился; сессии без цели не трогаются. */
-    turn: async (session: string, outcome: "succeeded" | "failed" | "interrupted", reason?: string) => {
+    /**
+     * Ход сессии кончился; сессии без цели не трогаются. Упавший ход (#929) ставит паузу с причиной
+     * словами `turnFailure` на языке машины и хранит её причину для экранов.
+     */
+    turn: async (session: string, outcome: "succeeded" | "failed" | "interrupted", cause?: BuffGoal.Cause) => {
       if (!(await deps.store.get(session))) return
-      await apply(session, { type: "turn", outcome, ...(reason ? { reason } : {}) })
+      const reason = cause && turnFailure(cause.error, cause.providerID, BuffLocale.t).text
+      await apply(session, { type: "turn", outcome, ...(reason && cause ? { reason, cause } : {}) })
     },
     pause: async (session: string) => ({ goal: await apply(session, { type: "pause" }) }),
     resume: async (session: string) => ({

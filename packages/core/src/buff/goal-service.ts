@@ -3,6 +3,7 @@ export * as BuffGoalService from "./goal-service.js"
 import { Context, Effect, Layer, Schema, Stream } from "effect"
 import type { Scope } from "effect"
 import { BuffGoal } from "@opencode/schema/buff-goal"
+import type { SessionError } from "@opencode/schema/session-error"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { Bus } from "../bus.js"
 import { KV } from "../kv.js"
@@ -39,13 +40,14 @@ const make = Effect.gen(function* () {
       remove: (session) => run(kv.remove(key(session))).then(() => undefined),
     },
     // Служебная отметка «Цель», а не сообщение человека: будит модель, человек видит её свёрнутой.
-    prompt: (session, text, summary) =>
+    // Причина итерации после упавшего хода (#929) — в отметке: телефон скажет её на своём языке.
+    prompt: (session, text, summary, note) =>
       run(
         sessions.synthetic({
           sessionID: id(session),
           text,
           description: BuffLocale.t("Goal"),
-          metadata: { source: "buff-goal", summary },
+          metadata: { source: "buff-goal", summary, ...(note ? { iteration: note.iteration, cause: note.cause } : {}) },
         }),
       ).then(() => undefined),
     generate: (session, prompt) => run(sessions.generate({ sessionID: id(session), prompt })),
@@ -70,6 +72,24 @@ const make = Effect.gen(function* () {
       () => undefined,
     )
 
+  // Чей провайдер упал (#929): модель последнего ответа хода, без него — модель сессии.
+  const causeOf = async (session: string, error: SessionError.Error): Promise<BuffGoal.Cause> => {
+    const last = await run(
+      sessions.messages({ sessionID: id(session), limit: 1, order: "desc", type: "assistant" }),
+    ).then(
+      (list) => list[0],
+      () => undefined,
+    )
+    const providerID =
+      (last?.type === "assistant" ? last.model.providerID : undefined) ??
+      (await run(sessions.get(id(session))).then(
+        (info) => info.model?.providerID,
+        () => undefined,
+      )) ??
+      ""
+    return { error, providerID }
+  }
+
   const watch = bus
     .subscribe([SessionEvent.Execution.Succeeded, SessionEvent.Execution.Failed, SessionEvent.Execution.Interrupted])
     .pipe(
@@ -83,11 +103,9 @@ const make = Effect.gen(function* () {
               : event.type === "session.execution.failed"
                 ? "failed"
                 : "interrupted"
-          const reason =
-            event.type === "session.execution.failed"
-              ? BuffLocale.t("The turn stopped with an error: {message}", { message: event.data.error.message })
-              : undefined
-          await runner.turn(session, outcome, reason).catch(() => undefined)
+          const cause =
+            event.type === "session.execution.failed" ? await causeOf(session, event.data.error) : undefined
+          await runner.turn(session, outcome, cause).catch(() => undefined)
         }),
       ),
     )

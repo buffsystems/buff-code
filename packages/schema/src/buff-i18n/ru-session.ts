@@ -138,8 +138,8 @@ export const session = {
     "{provider} ограничил частоту запросов ({said}). Подождите и повторите.",
   "{provider} does not know this model ({said}). Choose another model.":
     "{provider} не знает эту модель ({said}). Выберите другую модель.",
-  "{provider} is unreachable: no connection to its address ({said}). Check the network and the provider address.":
-    "{provider} недоступен: нет связи с его адресом ({said}). Проверьте сеть и адрес провайдера.",
+  "{provider} is unreachable: cannot connect to its address. Check that the provider's server is running and the address is right, then retry.":
+    "{provider} недоступен: не удаётся подключиться к его адресу. Проверьте, что сервер провайдера запущен и адрес указан верно, затем повторите.",
   "Failure on the {provider} side ({said}). Retry later.": "Сбой на стороне {provider} ({said}). Повторите позже.",
   "{provider} declined the request by its content filter ({said}).":
     "{provider} отклонил запрос своим фильтром содержимого ({said}).",
@@ -300,7 +300,6 @@ export const session = {
     "Сначала отправьте первое сообщение сессии: сообщение коммита сочиняется в её контексте.",
   "The model did not suggest a message — write it yourself or try again.":
     "Модель не предложила сообщение — напишите его сами или попробуйте ещё раз.",
-  "The turn stopped with an error: {message}": "Ход прервался ошибкой: {message}",
   "Goal: {text}": "Цель: {text}",
   "Session goal: the agent works in iterations until the check accepts the goal":
     "Цель сессии: агент работает итерациями, пока проверка не засчитает цель",

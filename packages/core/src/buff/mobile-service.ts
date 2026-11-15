@@ -12,6 +12,7 @@ import { Bus } from "../bus.js"
 import { MobileAgent, type AgentStatus, type Phone } from "./mobile/agent.js"
 import { sentMessages } from "./mobile/delta.js"
 import { peerLog } from "./mobile/log.js"
+import { inLanguage, phoneRefusal } from "./mobile/refusal.js"
 import { mobileApi, type Call, type Fetch, type MobileApi, type Terminals } from "./mobile/api.js"
 import { lookupHome, type SignedIn } from "./mobile/home.js"
 import { machineNotice, noticeKindOf, type NoticeKind } from "./mobile/notify.js"
@@ -48,7 +49,8 @@ function loopback(url: string, password: string): Call {
     const body = text ? (JSON.parse(text) as unknown) : null
     if (res.status >= 400 && res.status < 500) {
       const message = (body as { message?: string; error?: string } | null)?.message ?? (body as { error?: string } | null)?.error
-      throw new RefusalError(message || BuffLocale.t("The request was refused ({status})", { status: res.status }))
+      // Слова сервера — как есть (перевод найдёт их, если они в каталоге); без слов — свой отказ (#929).
+      throw message ? phoneRefusal(message) : phoneRefusal("The request was refused ({status})", { status: res.status })
     }
     if (!res.ok) throw new Error(`server ${res.status}`)
     return body
@@ -118,7 +120,7 @@ function terminals(server: { url: string; password: string }, call: Call, push: 
     },
     async input(device, session, text) {
       const t = open.get(key(device, session))
-      if (!t || t.ws.readyState !== 1) throw new RefusalError(BuffLocale.t("The terminal is not open"))
+      if (!t || t.ws.readyState !== 1) throw phoneRefusal("The terminal is not open")
       t.ws.send(text)
     },
     async resize(device, session, rows, cols) {
@@ -185,10 +187,10 @@ export interface ShareBridge {
 
 const noShares = (): ShareBridge => ({
   serve: async () => {
-    throw new RefusalError("share links are not served by this machine")
+    throw phoneRefusal("Public links are not served by this machine")
   },
   phone: async () => {
-    throw new RefusalError("share links are not served by this machine")
+    throw phoneRefusal("Public links are not served by this machine")
   },
 })
 
@@ -264,7 +266,7 @@ const make = Effect.gen(function* () {
     return typeof id === "string" ? id : undefined
   }
   const need = () => {
-    if (!agent) throw new RefusalError(BuffLocale.t("The Buff Code service is not running — the phone works through it."))
+    if (!agent) throw phoneRefusal("The Buff Code service is not running — the phone works through it.")
     return agent
   }
   return {
@@ -286,7 +288,9 @@ const make = Effect.gen(function* () {
     gateway: {
       host: gatewayHost,
       command: (command: string, body: object): Promise<Reply> =>
-        agent ? agent.command(command, body) : Promise.resolve({ ok: false, error: "relay: service not running" }),
+        agent
+          ? agent.command(command, body)
+          : Promise.resolve({ ok: false, error: BuffLocale.t("The Buff Code service is not running") }),
       connect: (): Promise<void> => (agent ? agent.connect() : Promise.resolve()),
       connected: (): boolean => agent?.connected ?? false,
       problem: (): string | null => agent?.status(0).problem ?? null,
@@ -320,12 +324,13 @@ const make = Effect.gen(function* () {
             gatewayHost: host,
             display: () => os.hostname(),
             // Сбой команды телефона — в журнал службы: на телефон он уходит без подробностей.
-            // Зритель шлюза (#816) и команды ссылок с телефона идут в службу ссылок, не в API телефона.
+            // Зритель шлюза (#816) и команды ссылок с телефона идут в службу ссылок, не в API телефона;
+            // отказ ссылок телефону — на его языке (#929), как у API телефона (тот переводит сам).
             exec: (record, op, args) =>
               (record.viewer
                 ? (shares ?? noShares()).serve(op, args)
                 : op.startsWith("shares.")
-                  ? (shares ?? noShares()).phone(op, args)
+                  ? (shares ?? noShares()).phone(op, args).catch((err: unknown) => Promise.reject(inLanguage(err, args)))
                   : run.run(record, op, args)
               ).catch((err: unknown) => {
                 if (!(err instanceof RefusalError)) log.error("mobile: command failed", { op, err: String(err) })

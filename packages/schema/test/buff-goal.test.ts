@@ -1,5 +1,6 @@
 // Цель сессии (#463), как в ZCode: ход → проверка → не достигнута — следующий ход; пауза, продолжить, сбросить.
 import { describe, expect, test } from "bun:test"
+import { Schema } from "effect"
 import { BuffGoal } from "../src/buff-goal.js"
 import { BuffI18n } from "../src/buff-i18n.js"
 
@@ -112,5 +113,30 @@ describe("words", () => {
     expect(BuffGoal.parse("   ", ru)).toEqual({ problem: "Напишите цель после команды: /goal <чего добиться>." })
     expect(ru(BuffGoal.INTERRUPTED)).toBe("Ход остановлен — цель на паузе.")
     expect(BuffGoal.line(goal({ status: "paused" }))).toBe("Goal · iteration 1 · Paused: Все тесты зелёные")
+  })
+})
+
+// #929: the cause of a failed turn stays on the goal, so every screen can say it in its own words.
+describe("the cause of a failed turn", () => {
+  const cause = { error: { type: "provider.transport", message: "ConnectionRefused: Unable to connect" }, providerID: "litellm" }
+  const failed = BuffGoal.next(goal(), { type: "turn", outcome: "failed", reason: "LiteLLM недоступен", cause }, at).goal!
+
+  test("a failed turn keeps it beside the reason", () => {
+    expect(failed).toEqual(goal({ status: "paused", reason: "LiteLLM недоступен", cause, updated: at }))
+  })
+  test("resume and a bare pause keep it: the next iteration is about the same reason", () => {
+    expect(BuffGoal.next(failed, { type: "resume", idle: true }, at).goal).toMatchObject({ iteration: 2, cause })
+    expect(BuffGoal.next({ ...failed, status: "active" }, { type: "pause" }, at).goal).toMatchObject({ cause })
+  })
+  test("a new reason drops it", () => {
+    const active = { ...failed, status: "checking" as const }
+    expect(BuffGoal.next(active, { type: "verdict", complete: false, reason: "ещё нет" }, at).goal).not.toHaveProperty("cause")
+    expect(BuffGoal.next(failed, { type: "verdict", complete: false, reason: "ещё нет" }, at).goal).not.toHaveProperty("cause")
+    expect(BuffGoal.next(active, { type: "pause", reason: "нет решения" }, at).goal).not.toHaveProperty("cause")
+    expect(BuffGoal.next({ ...failed, status: "active" }, { type: "turn", outcome: "interrupted" }, at).goal).not.toHaveProperty("cause")
+  })
+  test("a goal stored before the cause existed still reads", () => {
+    expect(Schema.decodeUnknownSync(BuffGoal.Goal)(goal({ reason: "старое" }))).toEqual(goal({ reason: "старое" }))
+    expect(Schema.decodeUnknownSync(BuffGoal.Goal)(failed)).toEqual(failed)
   })
 })

@@ -9,13 +9,13 @@ import { BuffServerAuth } from "@opencode/schema/buff-server-auth"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import type { BuffShare } from "@opencode/schema/buff-share"
 import { Bus } from "../bus.js"
-import { BuffLocale } from "./locale.js"
 import { BuffMobileService } from "./mobile-service.js"
 import { ShareLinks, type CreateInput, type ShareView, type UpdateInput } from "./share/links.js"
 import { phoneCommand } from "./share/phone.js"
 import { fileShareStore } from "./share/store.js"
 import type { StoredMessage } from "./share/document.js"
 import { peerLog } from "./mobile/log.js"
+import { phoneRefusal } from "./mobile/refusal.js"
 
 /**
  * Публичные ссылки Buff Code (#816, эпик #769) — одна служба на машину, в управляемой службе
@@ -37,7 +37,7 @@ const make = Effect.gen(function* () {
   let links: ShareLinks | null = null
   const need = () => {
     if (!links)
-      throw new RefusalError(BuffLocale.t("The Buff Code service is not running — public links are made through it."))
+      throw phoneRefusal("The Buff Code service is not running — public links are made through it.")
     return links
   }
   const log = yield* peerLog
@@ -164,7 +164,7 @@ function loopback(url: string, password: string): Call {
     const res = await fetch(target, { method, headers: { authorization: auth } })
     const text = await res.text()
     const body = text ? (JSON.parse(text) as unknown) : null
-    if (res.status >= 400 && res.status < 500) throw new RefusalError(`server ${res.status}`)
+    if (res.status >= 400 && res.status < 500) throw phoneRefusal("The request was refused ({status})", { status: res.status })
     if (!res.ok) throw new Error(`server ${res.status}`)
     return body
   }

@@ -33,6 +33,8 @@ test("каждая строка, переданная в перевод, ест�
     /BuffI18n\.n\(\s*[^,()]+,\s*[^,()]+,\s*"((?:[^"\\]|\\.)+)"/g,
     /buffNativeText\(\s*"((?:[^"\\]|\\.)+)"/g,
     /BuffLocale\.t\(\s*"((?:[^"\\]|\\.)+)"/g,
+    // #929: отказ команды телефона — английский исходник, перевод на языке телефона.
+    /phoneRefusal\(\s*"((?:[^"\\]|\\.)+)"/g,
   ]
   const missing = SOURCES.flatMap((dir) => files(join(root, "packages", dir))).flatMap((path) => {
     const source = readFileSync(path, "utf8")

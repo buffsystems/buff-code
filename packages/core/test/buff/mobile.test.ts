@@ -19,6 +19,9 @@ import {
 import { MobileAgent } from "../../src/buff/mobile/agent"
 import { mobileApi, BuffMobileText, sessionOrigin, type Call } from "../../src/buff/mobile/api"
 import { fileStore } from "../../src/buff/mobile/store"
+import { inLanguage } from "../../src/buff/mobile/refusal"
+import { phoneCommand } from "../../src/buff/share/phone"
+import type { ShareLinks } from "../../src/buff/share/links"
 
 const record: DeviceRecord = {
   peer: "m",
@@ -1191,5 +1194,167 @@ describe("message queue from the phone (#811)", () => {
     expect(calls.at(-1)).toEqual({ method: "DELETE", path: "/api/session/s1/inbox/q1", body: undefined })
     await api.run(record, "session.queue.send", { session: "s1", id: "q1" })
     expect(calls.at(-1)).toEqual({ method: "PATCH", path: "/api/session/s1/inbox/q1", body: { delivery: "steer" } })
+  })
+})
+
+// #929: a failed turn reaches the phone already explained, in both languages — the phone picks its own.
+describe("failures in the phone's words (#929)", () => {
+  const REFUSED = "ConnectionRefused: Unable to connect. Is the computer able to access the url?"
+  const failed = (id: string, error: Record<string, unknown>, providerID = "litellm") => ({
+    type: "assistant",
+    id,
+    model: { id: "glm", providerID },
+    content: [],
+    error,
+  })
+  const seen: string[] = []
+  const api = mobileApi(async (method, route) => {
+    seen.push(`${method} ${route}`)
+    if (route === "/api/session/s") return { data: { id: "s", location: { directory: "/work/shop" } } }
+    if (route === "/api/provider") return { data: [{ id: "litellm", name: "LiteLLM" }] }
+    if (route === "/api/session/s/message")
+      return {
+        data: [
+          failed("a1", { type: "provider.transport", message: REFUSED }),
+          failed("a2", { type: "provider.auth", message: "x".repeat(5_000), status: 401 }, "openrouter"),
+          failed("a3", { type: "aborted", message: "interrupted" }),
+          { type: "user", id: "u1", text: "привет" },
+        ],
+      }
+    if (route === "/api/session/s/message/a1") return { data: failed("a1", { type: "provider.transport", message: REFUSED }) }
+    return { data: [] }
+  })
+  const page = async () =>
+    ((await api.run(record, "session.messages", { session: "s" })) as unknown as { data: Record<string, unknown>[] })
+      .data
+
+  test("a failed message carries the reason in both languages, the raw words only in the details", async () => {
+    const [refused] = await page()
+    expect(refused!.failure).toEqual({
+      ru: {
+        text: "LiteLLM недоступен: не удаётся подключиться к его адресу. Проверьте, что сервер провайдера запущен и адрес указан верно, затем повторите.",
+        details: `Тип: provider.transport\nСообщение: ${REFUSED}`,
+      },
+      en: {
+        text: "LiteLLM is unreachable: cannot connect to its address. Check that the provider's server is running and the address is right, then retry.",
+        details: `Type: provider.transport\nMessage: ${REFUSED}`,
+      },
+    })
+  })
+
+  test("the action comes along; an unknown provider is named by its id; the reason is not clipped", async () => {
+    const [, key] = await page()
+    const failure = key!.failure as { ru: { text: string; action?: string; details: string }; en: { text: string } }
+    expect(failure.ru.action).toBe("replace-key")
+    expect(failure.en.text).toStartWith("openrouter rejected the key (response 401: ")
+    expect(failure.ru.details).toEndWith("x".repeat(5_000))
+  })
+
+  test("an interrupted turn and other messages carry no failure", async () => {
+    const [, , aborted, user] = await page()
+    expect(aborted!.failure).toBeUndefined()
+    expect(user!.failure).toBeUndefined()
+  })
+
+  test("the session state and the whole message carry it too; provider names are read once per folder", async () => {
+    seen.length = 0
+    const state = await api.state("s")
+    expect((state.messages[0] as Record<string, unknown>).failure).toMatchObject({ en: { text: expect.stringContaining("LiteLLM") } })
+    const whole = (await api.run(record, "session.message", { session: "s", message: "a1" })) as unknown as {
+      message: Record<string, unknown>
+    }
+    expect(whole.message.failure).toMatchObject({ ru: { text: expect.stringContaining("LiteLLM недоступен") } })
+    expect(seen.filter((x) => x === "GET /api/provider")).toHaveLength(0)
+  })
+})
+
+// #929: a goal paused by a failed turn, and the next iteration's note, are explained for the phone too.
+describe("a goal's failed turn in the phone's words (#929)", () => {
+  const cause = { error: { type: "provider.auth", message: "Invalid API key", status: 401 }, providerID: "openrouter" }
+  const api = mobileApi(async (method, route) => {
+    if (route === "/api/session/g") return { data: { id: "g", location: { directory: "/work/shop" } } }
+    if (route === "/api/provider") return { data: [{ id: "openrouter", name: "OpenRouter" }] }
+    if (route === "/api/rpc/buff.goal/get")
+      return { output: { goal: { text: "Цель", status: "paused", iteration: 1, reason: "…", cause, started: 0, updated: 0 } } }
+    if (route === "/api/session/g/message")
+      return {
+        data: [
+          {
+            type: "synthetic",
+            id: "n1",
+            text: "The goal is not reached yet…",
+            metadata: { source: "buff-goal", summary: "Iteration 2: …", iteration: 2, cause },
+          },
+          { type: "synthetic", id: "n0", text: "…", metadata: { source: "buff-goal", summary: "Цель" } },
+          { type: "synthetic", id: "n9", text: "…", metadata: { source: "buff-goal", iteration: 2, cause: { bad: 1 } } },
+        ],
+      }
+    return { data: [] }
+  })
+  const key = {
+    ru: "OpenRouter отклонил ключ (ответ 401: Invalid API key). Дело в ключе провайдера, а не в Buff Code и не во входе в Buff Systems. Проверьте, что ключ для запросов к моделям (у OpenRouter — API Key, не Management Key), и замените его.",
+    en: "OpenRouter rejected the key (response 401: Invalid API key). The problem is the provider key, not Buff Code and not the Buff Systems sign-in. Check that the key is for model requests (for OpenRouter — an API Key, not a Management Key) and replace it.",
+  }
+
+  test("the goal carries the reason in both languages", async () => {
+    const state = await api.state("g")
+    expect((state.goal as Record<string, unknown>).failure).toEqual({
+      ru: { text: key.ru, action: "replace-key", details: "Тип: provider.auth\nКод ответа: 401\nСообщение: Invalid API key" },
+      en: { text: key.en, action: "replace-key", details: "Type: provider.auth\nResponse code: 401\nMessage: Invalid API key" },
+    })
+  })
+
+  test("the iteration note reads whole in the phone's language; other notes and a broken cause carry nothing", async () => {
+    const [note, plain, broken] = (await api.state("g")).messages as Record<string, unknown>[]
+    expect(note!.failure).toMatchObject({
+      ru: { text: `Итерация 2: ${key.ru}`, details: expect.stringContaining("Invalid API key") },
+      en: { text: `Iteration 2: ${key.en}` },
+    })
+    expect(plain!.failure).toBeUndefined()
+    expect(broken!.failure).toBeUndefined()
+  })
+})
+
+// #929: a refusal of a phone's command is in the phone's language, whatever the machine speaks.
+describe("refusals in the phone's language (#929)", () => {
+  const api = mobileApi(async (_method, route) => {
+    if (route === "/api/project") return [{ id: "p1", canonical: "/work/shop", time: { updated: 2 } }]
+    return { data: [] }
+  })
+  const refusal = (op: string, args: Record<string, unknown>) =>
+    api.run(record, op, args).then(
+      () => undefined,
+      (err: unknown) => err as Error,
+    )
+
+  test("a refusal follows args.lang", async () => {
+    const ru = await refusal("session.state", { lang: "ru" })
+    const en = await refusal("session.state", { lang: "en" })
+    expect(ru).toBeInstanceOf(RefusalError)
+    expect(ru!.message).toBe("Нужно поле session")
+    expect(en!.message).toBe("The field session is required")
+    expect((await refusal("models.list", { project: "nope", lang: "en" }))!.message).toBe("No such project on this machine")
+  })
+
+  test("what the phone cannot call is refused in its language too", async () => {
+    expect((await refusal("rm.rf", { lang: "ru" }))!.message).toBe("Недоступно с телефона: rm.rf")
+    expect((await refusal("rm.rf", { lang: "en" }))!.message).toBe("Not available from the phone: rm.rf")
+    expect((await refusal("rpc", { id: "buff.secret", method: "read", lang: "ru" }))!.message).toBe(
+      "Недоступно с телефона: buff.secret.read",
+    )
+  })
+
+  test("a refusal of the links service is translated at the same boundary", async () => {
+    const err = await phoneCommand({} as ShareLinks, "shares.nope", {}).catch((e: unknown) => e)
+    expect((inLanguage(err, { lang: "ru" }) as Error).message).toBe("Недоступно с телефона: shares.nope")
+    expect((inLanguage(err, { lang: "en" }) as Error).message).toBe("Not available from the phone: shares.nope")
+    const other = new Error("boom")
+    expect(inLanguage(other, { lang: "ru" })).toBe(other)
+  })
+
+  test("without a language the machine's one is used", async () => {
+    const err = await refusal("rm.rf", {})
+    expect(err).toBeInstanceOf(RefusalError)
+    expect(["Недоступно с телефона: rm.rf", "Not available from the phone: rm.rf"]).toContain(err!.message)
   })
 })

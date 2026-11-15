@@ -6,6 +6,8 @@ import {
   type SessionMessageInfo,
 } from "@opencode/client/promise"
 import { runNonInteractivePrompt } from "../../src/run/noninteractive"
+import { turnFailure } from "@opencode/schema/buff-turn-failure"
+import { t } from "../../src/buff/locale"
 
 type V2Event = EventSubscribeOutput
 type FormInfo = Extract<V2Event, { type: "form.created" }>["data"]["form"]
@@ -486,10 +488,12 @@ describe("runNonInteractivePrompt", () => {
       turn: (messageID) => [prompted(messageID), stepStarted(), executionFailed("Execution failed")],
     })
 
+    // #929: a transport failure reads as «unreachable», the runtime's words stay in the details.
+    const said = turnFailure({ type: "provider.transport", message: "Execution failed" }, "test", t).text
     expect(output.stdout).toBe("")
     expect(output.stderr).toContain("> build · test-model")
-    expect(output.stderr).toContain("Execution failed")
-    expect(output.stderr.indexOf("> build · test-model")).toBeLessThan(output.stderr.indexOf("Execution failed"))
+    expect(output.stderr).toContain(said)
+    expect(output.stderr.indexOf("> build · test-model")).toBeLessThan(output.stderr.indexOf(said))
   })
 
   // #562: отказ своего провайдера — словами, чья это проблема; JSON для программ остаётся как пришёл.

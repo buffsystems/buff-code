@@ -867,6 +867,7 @@ const NETWORK_ERROR_CODES = new Set([
   "ConnectionRefused",
   "ConnectionClosed",
   "FailedToOpenSocket",
+  "Timeout",
 ])
 const NETWORK_ERROR_MESSAGES = new Set([
   "fetch failed",

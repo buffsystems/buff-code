@@ -249,7 +249,7 @@ export class MobileAgent {
   }
 
   private request(command: string, body: object): Promise<Reply> {
-    return this.link?.request(command, body) ?? Promise.resolve({ ok: false, error: "relay: not connected" })
+    return this.link?.request(command, body) ?? Promise.resolve({ ok: false, error: BuffLocale.t("The machine is not connected to the gateway") })
   }
 
   private async ensure(): Promise<LocalPeer> {

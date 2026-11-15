@@ -70,6 +70,19 @@ test("a key the provider rejects is the provider key, not Buff", () => {
   expect(own({ type: "provider.auth", message: "not a member of ", status: 403 }).action).toBe("replace-key")
 })
 
+test("a proxy that answers 401 for its own network or database failure is not blamed on the key (#886)", () => {
+  // LiteLLM answers 401 when its auth check cannot reach its database or the upstream.
+  for (const message of [
+    "Authentication Error - All connection attempts failed",
+    "Authentication Error - remaining connection slots are reserved for non-replication superuser connections",
+  ]) {
+    const got = turnFailure({ type: "provider.auth", message, status: 401 }, "litellm", ru, "LiteLLM")
+    expect(got.action).toBeUndefined()
+    expect(got.text).toStartWith("Сбой на стороне LiteLLM")
+    expect(got.text).not.toContain("ключ")
+  }
+})
+
 test("the provider id stands in for a missing name", () => {
   expect(turnFailure({ type: "provider.auth", message: "bad key", status: 401 }, "litellm", ru).text).toStartWith(
     "litellm отклонил ключ (ответ 401: bad key).",
@@ -87,7 +100,7 @@ test("each provider failure names the provider and what to do", () => {
     "OpenRouter не знает эту модель (ответ 404: No such model). Выберите другую модель.",
   )
   expect(own({ type: "provider.transport", message: "fetch failed" }).text).toBe(
-    "OpenRouter недоступен: нет связи с его адресом (fetch failed). Проверьте сеть и адрес провайдера.",
+    "OpenRouter недоступен: не удаётся подключиться к его адресу. Проверьте, что сервер провайдера запущен и адрес указан верно, затем повторите.",
   )
   expect(own({ type: "provider.internal", message: "upstream error", status: 502 }).text).toBe(
     "Сбой на стороне OpenRouter (ответ 502: upstream error). Повторите позже.",
@@ -203,4 +216,49 @@ test("the provider's words are quoted short: first line, without the wrappers of
     "Модель не приняла запрос с файлами brand.png (ответ 400: Invalid request). Возможно, она не читает такие файлы — выберите, как продолжить.",
   )
   expect(failure.details).toContain("LiteLLM: model group 'glm' failed")
+})
+
+// #929: the runtime's own words of a network failure tell a person nothing — they go to the details.
+test("an unreachable provider says what to check, without the runtime's words", () => {
+  const refused = {
+    type: "provider.transport",
+    message: "ConnectionRefused: Unable to connect. Is the computer able to access the url?",
+  }
+  const ru = own(refused)
+  expect(ru.text).toBe(
+    "OpenRouter недоступен: не удаётся подключиться к его адресу. Проверьте, что сервер провайдера запущен и адрес указан верно, затем повторите.",
+  )
+  expect(ru.details).toBe(
+    "Тип: provider.transport\nСообщение: ConnectionRefused: Unable to connect. Is the computer able to access the url?",
+  )
+  expect(turnFailure(refused, "litellm", BuffI18n.english, "LiteLLM").text).toBe(
+    "LiteLLM is unreachable: cannot connect to its address. Check that the provider's server is running and the address is right, then retry.",
+  )
+})
+
+test("a proxy that answers 401 with Bun's ConnectionRefused is not blamed on the key (#929)", () => {
+  const got = turnFailure(
+    { type: "provider.auth", message: "Authentication Error - ConnectionRefused", status: 401 },
+    "litellm",
+    ru,
+    "LiteLLM",
+  )
+  expect(got.action).toBeUndefined()
+  expect(got.text).toStartWith("Сбой на стороне LiteLLM")
+})
+
+test("other failures quote the provider short: the first line, without proxy wrappers", () => {
+  const long = "litellm.BadRequestError: OpenAIException - Bad input\nTraceback (most recent call last): …"
+  expect(own({ type: "provider.invalid-request", message: long, status: 400 }).text).toBe(
+    "OpenRouter отклонил запрос (ответ 400: Bad input).",
+  )
+  expect(own({ type: "unknown", message: "x".repeat(400) }).text).toBe(
+    `Ошибка в Buff Code (${"x".repeat(159)}…). Скопируйте подробности и передайте в поддержку.`,
+  )
+  expect(buff({ type: "provider.auth", message: "Device revoked\nstack…", status: 401 }).text).toBe(
+    "Вход в Buff больше не действует: Device revoked",
+  )
+  expect(buff({ type: "provider.internal", message: "upstream timeout\nat line 1", status: 502 }).text).toBe(
+    "upstream timeout",
+  )
 })
