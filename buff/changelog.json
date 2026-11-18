@@ -1,5 +1,46 @@
 [
   {
+    "tag": "0.26.0",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Сообщения приходят на телефон целиком",
+            "description": "Длинный ответ модели, ваше сообщение и размышления больше не обрываются на середине. Сокращённым приходит только длинный вывод команды — он догружается, когда вы раскрываете её карточку."
+          },
+          {
+            "title": "Нужная сессия — на первом экране машины",
+            "description": "В приложении для телефона главный экран машины открывается списком «Недавние»: сессии всех проектов, сверху те, что ждут вас, с поиском по названию сессии и проекта. Рядом вид «Проекты» с сортировкой по последней сессии или по названию."
+          },
+          {
+            "title": "Файлы сессии удобно читать с телефона",
+            "description": "Текст файла выделяется и копируется целиком, Markdown открывается оформленным, а SVG, формулы MathML и XHTML — нарисованными; исходник в одном касании."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "Messages reach the phone whole",
+            "description": "A long answer of the model, your own message and the model's thoughts are no longer cut in the middle. Only a command's long output comes shortened — the rest loads when you open its card."
+          },
+          {
+            "title": "The session you need is on the machine's first screen",
+            "description": "In the phone app a machine opens with «Recent»: the sessions of all projects, those waiting for you on top, with a search by session and project name. Next to it, «Projects» sorted by the last session or by name."
+          },
+          {
+            "title": "Session files read well on the phone",
+            "description": "A file's text is selected and copied as a whole, Markdown opens rendered, and SVG, MathML formulas and XHTML open drawn; the source is one tap away."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "tag": "0.24.4",
     "highlights": [
       {

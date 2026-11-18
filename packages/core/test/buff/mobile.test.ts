@@ -428,7 +428,7 @@ describe("api", () => {
     expect(asked.toSorted()).toEqual(["/api/form /work/shop", "/api/permission/request /work/shop"])
   })
 
-  test("watching a session answers its state now: running, what waits, the last messages clipped", async () => {
+  test("watching a session answers its state now: running, what waits, the last messages whole", async () => {
     const watched: string[] = []
     const watchingApi = mobileApi(call, {
       watch: (device, session) => void watched.push(`${device}:${session}`),
@@ -439,7 +439,8 @@ describe("api", () => {
     expect(got.running).toBe(true)
     expect(got.permissions).toEqual([{ id: "perm", action: "bash", resources: ["rm -rf build"] }])
     const text = (got.messages as { content: { text: string }[] }[])[0]!.content[0]!.text
-    expect(text.length).toBeLessThan(4_100)
+    // #937: the answer's text is not cut for the phone.
+    expect(text.length).toBe(5000)
   })
 
   // #711: the session's goal rides along with its state, so the phone shows the goal bar.
@@ -537,8 +538,11 @@ describe("api", () => {
     await expect(api.run(record, "session.compaction", { session: "s", message: "u1" })).rejects.toThrow()
   })
 
-  // #903: a part cut for the timeline says so; the phone asks for its message whole.
-  test("a part cut for the timeline is marked, the rest is not", async () => {
+  // #937: what is written to be read — the model's answer, its reasoning, the person's message —
+  // reaches the phone whole, whatever its length: a cut answer is a cap, and caps are not allowed.
+  // Only a tool's output, megabytes at times and folded on the phone, comes cut and says so (#903):
+  // the phone asks for the message whole when the card is opened.
+  test("text reaches the phone whole; only a tool's output is cut, and marked", async () => {
     const long = "вывод ".repeat(2_000)
     const api = mobileApi(async (method, route) => {
       if (route === "/api/session/s/message")
@@ -548,7 +552,8 @@ describe("api", () => {
               type: "assistant",
               id: "m1",
               content: [
-                { type: "reasoning", text: "коротко" },
+                { type: "reasoning", text: long },
+                { type: "text", text: long },
                 {
                   type: "tool",
                   id: "t1",
@@ -558,6 +563,7 @@ describe("api", () => {
               ],
             },
             { type: "user", id: "u1", text: long },
+            { type: "assistant", id: "m2", content: [{ type: "text", text: long }] },
           ],
         }
       return { data: [] }
@@ -565,12 +571,28 @@ describe("api", () => {
     const got = (await api.run(record, "session.messages", { session: "s" })) as unknown as {
       data: Record<string, unknown>[]
     }
-    const [assistant, user] = got.data
-    const [reasoning, tool] = assistant!.content as Record<string, unknown>[]
-    expect(reasoning!.clipped).toBeUndefined()
+    const [assistant, user, plain] = got.data
+    const [reasoning, text, tool] = assistant!.content as Record<string, unknown>[]
+    expect(reasoning).toEqual({ type: "reasoning", text: long })
+    expect(text).toEqual({ type: "text", text: long })
     expect(tool!.clipped).toBe(true)
+    expect(JSON.stringify(tool).length).toBeLessThan(long.length)
+    // The message is marked for its tool, so the phone knows there is more to ask for.
     expect(assistant!.clipped).toBe(true)
-    expect(user!.clipped).toBe(true)
+    expect(user).toEqual({ type: "user", id: "u1", text: long })
+    expect(plain).toEqual({ type: "assistant", id: "m2", content: [{ type: "text", text: long }] })
+  })
+
+  // #937: a change is read line by line — a patch cut in the middle is not the change.
+  test("changes reach the phone with their patches whole", async () => {
+    const patch = "+строка\n".repeat(2_000)
+    const api = mobileApi(async (method, route) => {
+      if (route === "/api/vcs/diff") return { data: [{ file: "a.ts", patch }] }
+      if (route === "/api/session/s") return { data: { location: { directory: "/p" } } }
+      return { data: {} }
+    })
+    const got = (await api.run(record, "changes.list", { session: "s" })) as unknown as { files: { patch: string }[] }
+    expect(got.files[0]!.patch).toBe(patch)
   })
 
   test("session.message hands the message whole", async () => {

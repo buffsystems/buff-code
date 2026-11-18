@@ -138,7 +138,10 @@ export interface SessionState {
   queued: { id: string; text: string; files: number }[]
 }
 
-// Кадр до телефона ограничен: длинный вывод инструмента идёт обрезанным, целиком — по запросу.
+// Вывод инструмента бывает мегабайтами, а на телефоне он свёрнут: в ленте он идёт началом и помечен
+// (#903) — открыв карточку, телефон спрашивает сообщение целиком (session.message). Всё, что
+// написано, чтобы его читали, — ответ модели, её размышления, сообщение человека, изменения —
+// идёт целиком при любой длине (#937): обрезанный текст — потолок, а потолки запрещены.
 const CLIP = 4_000
 const clip = (value: unknown): unknown => {
   if (typeof value === "string") return value.length > CLIP ? `${value.slice(0, CLIP)}…` : value
@@ -147,14 +150,19 @@ const clip = (value: unknown): unknown => {
   return value
 }
 
-// #903: обрезанное для ленты помечено — телефон спросит сообщение целиком (session.message).
-const marked = (whole: unknown, cut: unknown): unknown =>
-  JSON.stringify(cut) === JSON.stringify(whole) ? cut : { ...(cut as object), clipped: true }
+const isTool = (part: unknown): boolean => (part as { type?: unknown } | null)?.type === "tool"
 
+/** Сообщение для ленты: вывод его инструментов — началом и с пометкой, остальное как есть. */
 const clipMessage = (message: unknown): unknown => {
-  const cut = marked(message, clip(message))
   const content = (message as { content?: unknown } | null)?.content
-  return Array.isArray(content) ? { ...(cut as object), content: content.map((part) => marked(part, clip(part))) } : cut
+  if (!Array.isArray(content)) return message
+  const parts = content.map((part) => {
+    if (!isTool(part)) return part
+    const cut = clip(part)
+    return JSON.stringify(cut) === JSON.stringify(part) ? part : { ...(cut as object), clipped: true }
+  })
+  const clipped = parts.some((part, i) => part !== content[i])
+  return { ...(message as object), content: parts, ...(clipped ? { clipped: true } : {}) }
 }
 
 // Страница сообщений как её отдаёт сервер: списком или в `data`; `each` — что сделать с сообщением.
@@ -443,7 +451,7 @@ export function mobileApi(
         : shown
     }
   }
-  /** Страница сообщений для телефона: длинное обрезано, отказы хода объяснены. */
+  /** Страница сообщений для телефона: вывод инструментов — началом, отказы хода объяснены. */
   const phonePage = async (session: string, page: unknown) => {
     const explained = await explainer(session, pageMessages(page))
     return mapPage(page, (message) => explained(message, clipMessage(message)))
@@ -460,7 +468,7 @@ export function mobileApi(
         }),
         call("GET", "/api/vcs", { query: where }).catch(() => ({ data: {} })),
       ])
-      return { files: clip(data<unknown[]>(diff) ?? []), vcs: data<unknown>(vcs) ?? {} }
+      return { files: data<unknown[]>(diff) ?? [], vcs: data<unknown>(vcs) ?? {} }
     },
     // MCP-серверы машины там, где идёт сессия (#861): подробности сессии на телефоне, как в окне.
     "mcp.list": async (args) => {
