@@ -37,10 +37,12 @@ const setup = Effect.gen(function* () {
   )
   const config = Context.get(yield* Layer.build(Config.testLayer()), Config.Test)
   const host = yield* PluginHost.make(yield* Plugin.Service, "buff.skill")
-  yield* BuffSkillPlugin.register(host, { settle: "0 millis", userDirectory: user }).pipe(
+  // Личная папка проекта (#951) — в конфигурации пользователя.
+  const personal = path.join(user, "projects", "prj_one")
+  yield* BuffSkillPlugin.register(host, { settle: "0 millis", userDirectory: user, localDirectory: personal }).pipe(
     Effect.provideService(Config.Service, config),
   )
-  return { rpc: (yield* Rpc.Service).client(BuffSkill.Rpc), project, user, config }
+  return { rpc: (yield* Rpc.Service).client(BuffSkill.Rpc), project, user, personal, config }
 })
 
 describe("BuffSkill (#445)", () => {
@@ -70,6 +72,45 @@ describe("BuffSkill (#445)", () => {
       const file = path.join(project, ".buffcode", "skills", "release-notes", "SKILL.md")
       expect(yield* exists(file)).toBe(true)
       expect((yield* rpc.list()).skills.map((skill) => [skill.id, skill.scope])).toEqual([["release-notes", "project"]])
+    }),
+  )
+
+  // #951: навык «только у меня, только в этом проекте» — в личной папке проекта.
+  it.live("a skill kept for this project only lives in the project's personal directory and moves with a change", () =>
+    Effect.gen(function* () {
+      const { rpc, user, project, personal } = yield* setup
+      yield* rpc.save({ scope: "local", id: "release-notes", ...notes })
+      const file = path.join(personal, "skills", "release-notes", "SKILL.md")
+      expect(yield* text(file)).toBe(BuffSkill.fileText(notes))
+      expect(yield* Effect.promise(() => fs.readdir(project))).toEqual([])
+      expect((yield* rpc.list()).skills.map((skill) => [skill.id, skill.scope, skill.path])).toEqual([
+        ["release-notes", "local", file],
+      ])
+      yield* rpc.save({
+        scope: "user",
+        id: "release-notes",
+        ...notes,
+        previous: { scope: "local", id: "release-notes" },
+      })
+      expect(yield* exists(file)).toBe(false)
+      expect((yield* rpc.list()).skills.map((skill) => [skill.id, skill.scope])).toEqual([["release-notes", "user"]])
+      expect(yield* exists(path.join(user, "skills", "release-notes", "SKILL.md"))).toBe(true)
+    }),
+  )
+
+  it.live("a skill moved from all projects to this project only leaves no copy behind", () =>
+    Effect.gen(function* () {
+      const { rpc, user, personal } = yield* setup
+      yield* rpc.save({ scope: "user", id: "release-notes", ...notes })
+      yield* rpc.save({
+        scope: "local",
+        id: "release-notes",
+        ...notes,
+        previous: { scope: "user", id: "release-notes" },
+      })
+      expect(yield* exists(path.join(user, "skills", "release-notes"))).toBe(false)
+      expect(yield* exists(path.join(personal, "skills", "release-notes", "SKILL.md"))).toBe(true)
+      expect((yield* rpc.list()).skills.map((skill) => [skill.id, skill.scope])).toEqual([["release-notes", "local"]])
     }),
   )
 

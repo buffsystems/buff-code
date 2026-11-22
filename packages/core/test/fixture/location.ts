@@ -4,12 +4,12 @@ import { AbsolutePath } from "@opencode/core/schema"
 import { Effect, Layer } from "effect"
 import { tmpdir } from "./tmpdir"
 
-export function location(ref: Location.Ref, input: { projectDirectory?: AbsolutePath; vcs?: Project.Vcs } = {}) {
+export function location(ref: Location.Ref, input: { projectDirectory?: AbsolutePath; vcs?: Project.Vcs; projectID?: Project.ID } = {}) {
   const directory = input.projectDirectory ?? ref.directory
   return {
     directory: ref.directory,
     workspaceID: ref.workspaceID,
-    project: { id: Project.ID.global, directory, canonical: directory },
+    project: { id: input.projectID ?? Project.ID.global, directory, canonical: directory },
     vcs: input.vcs,
   } satisfies Location.Interface
 }

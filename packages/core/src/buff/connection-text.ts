@@ -16,11 +16,26 @@ type ToolLike = { readonly server: string; readonly name: string; readonly descr
 
 const names = (tools: ReadonlyArray<ToolLike>) => tools.map((tool) => tool.name).join(", ")
 
+/** Где подключение действует — словами: модель области не выбирает, но должна понимать список. */
+const WHERE: Record<BuffMcp.Entry["scope"], string> = {
+  builtin: "built-in, not editable",
+  user: "all projects",
+  project: "project repository",
+  local: "this project only",
+}
+
+/** Куда сохранено (#951): модель передаёт это человеку — и где видимость меняют. */
+export function saved(scope: BuffMcp.Scope, project: string): string {
+  if (scope === "local")
+    return `Saved for this project only («${project}»): other projects do not see it. The user can make it available in all projects in this project's settings, MCP servers — tell them so.`
+  return scope === "project" ? "Saved in the project's repository configuration." : "Saved for all projects."
+}
+
 export function list(entries: ReadonlyArray<BuffMcp.Entry>, tools: ReadonlyArray<ToolLike>): string {
   if (!entries.length) return "No connections yet."
   const lines = entries.map((entry) => {
     const own = tools.filter((tool) => tool.server === entry.name)
-    const scope = entry.scope === "builtin" ? "built-in, not editable" : entry.scope
+    const scope = WHERE[entry.scope]
     const kind =
       entry.config?.type === "remote"
         ? entry.config.oauth === false

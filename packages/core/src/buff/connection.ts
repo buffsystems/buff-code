@@ -1,5 +1,6 @@
 export * as BuffConnectionPlugin from "./connection.js"
 
+import path from "node:path"
 import { Duration, Effect, Schema } from "effect"
 import type { Scope } from "effect"
 import { ToolFailure } from "@opencode/ai"
@@ -20,6 +21,7 @@ import { QuestionTool } from "../tool/plugin/question.js"
 import { BuffConnectionScript } from "./connection-script.js"
 import { BuffConnectionText } from "./connection-text.js"
 import { BuffLocale } from "./locale.js"
+import { BuffProjectDir } from "./project-dir.js"
 import { BuffSecret } from "./secret.js"
 import authText from "./setup/prompts/connection-auth.md" with { type: "text" }
 import instructionsText from "./setup/prompts/connection-instructions.md" with { type: "text" }
@@ -57,7 +59,6 @@ export const plain = <A>(value: A): A => JSON.parse(JSON.stringify(value)) as A
 const Name = Schema.String.annotate({ description: "The connection's name" })
 
 export const SaveInput = Schema.Struct({
-  scope: BuffMcp.Scope.annotate({ description: "user — all projects; project — this project only" }),
   name: Name,
   config: McpSchema.ServerConfig,
 })
@@ -73,7 +74,7 @@ export const TestInput = Schema.Struct({
   tool: Schema.String.annotate({ description: "A harmless tool to call once; empty to only reconnect and list" }),
   args: Schema.Record(Schema.String, Schema.Unknown).annotate({ description: "Arguments of the trial call" }),
 })
-export const TargetInput = Schema.Struct({ scope: BuffMcp.Scope, name: Name })
+export const TargetInput = Schema.Struct({ name: Name })
 export const AuthInput = Schema.Struct({ name: Name })
 export const InstructionsInput = Schema.Struct({
   name: Name,
@@ -85,6 +86,16 @@ const Text = Schema.Struct({ text: Schema.String })
 export function confirmed(event: { readonly action: string; readonly effect: "allow" | "deny" | "ask" }) {
   const ours = event.action === BuffConnection.SAVE_ACTION || event.action === BuffConnection.REMOVE_ACTION
   return ours && event.effect === "allow" ? "ask" : event.effect
+}
+
+/**
+ * Где хранить подключение из чата (#951) — решает место разговора, а не модель: в проекте новое
+ * подключение действует только в нём, вне проекта — везде. Уже существующее остаётся где было:
+ * повторное сохранение его чинит, а не переносит.
+ */
+export function scopeFor(existing: BuffMcp.Entry["scope"] | undefined, inProject: boolean): BuffMcp.Scope {
+  if (existing && existing !== "builtin") return existing
+  return inProject ? "local" : "user"
 }
 
 export const Plugin = define<
@@ -110,6 +121,9 @@ export const Plugin = define<
     const sessions = yield* Session.Service
     const servers = ctx.rpc(BuffMcp.Rpc)
     const skills = ctx.rpc(BuffSkill.Rpc)
+    /** Личная папка проекта; вне проекта её нет — и подключение сохраняется для всех. */
+    const personal = yield* BuffProjectDir.personalFor(ctx.location.project)
+    const project = path.basename(ctx.location.project.directory)
     type Context = { sessionID: string; agent: string; messageID: string; id: string }
 
     yield* ctx.permission.hook("evaluate", (event) =>
@@ -121,14 +135,19 @@ export const Plugin = define<
     const setupOnly = (context: Context) =>
       context.agent === BuffSetup.AGENT ? Effect.void : fail("Connection tools are only for Setup mode.")
     const rpcFailure = (error: { readonly message: string }) => new ToolFailure({ message: error.message })
-    const entryOf = (name: string) =>
+    const found = (name: string) =>
       servers.list().pipe(
         Effect.mapError(rpcFailure),
-        Effect.flatMap((entries) => {
-          const entry = entries.find((item) => item.name === name)
-          return entry ? Effect.succeed(entry) : fail(`No connection named «${name}». Call connection_list.`)
-        }),
+        Effect.map((entries) => entries.find((item) => item.name === name)),
       )
+    const entryOf = (name: string) =>
+      found(name).pipe(
+        Effect.flatMap((entry) =>
+          entry ? Effect.succeed(entry) : fail(`No connection named «${name}». Call connection_list.`),
+        ),
+      )
+    const scopeOf = (name: string) =>
+      found(name).pipe(Effect.map((entry) => scopeFor(entry?.scope, personal !== undefined)))
     /** Статус после попытки соединения: ждём, пока он перестанет быть «подключается». */
     const settled = (name: string) =>
       Effect.gen(function* () {
@@ -197,15 +216,16 @@ export const Plugin = define<
         const name = input.name.trim()
         const problem = BuffMcp.nameProblem(name, BuffLocale.t) ?? BuffMcp.configProblem(input.config, BuffLocale.t)
         if (problem) return yield* fail(problem)
+        const scope = yield* scopeOf(name)
         // Настройки в запросе разрешения — простым JSON: класс схемы не пройдёт в ответ API (#765, e2e).
         yield* ask(
           context,
           BuffConnection.SAVE_ACTION,
-          BuffConnection.saveConfirmation({ ...input, name }, BuffLocale.t),
-          { scope: input.scope, name, config: plain(input.config) },
+          BuffConnection.saveConfirmation({ name, scope, project, config: input.config }, BuffLocale.t),
+          { scope, name, config: plain(input.config) },
         )
-        yield* servers.save({ scope: input.scope, name, config: input.config }).pipe(Effect.mapError(rpcFailure))
-        return yield* report(name)
+        yield* servers.save({ scope, name, config: input.config }).pipe(Effect.mapError(rpcFailure))
+        return `${BuffConnectionText.saved(scope, project)}\n${yield* report(name)}`
       }),
     )
 
@@ -231,16 +251,18 @@ export const Plugin = define<
         const name = input.name.trim()
         const problem = BuffMcp.nameProblem(name, BuffLocale.t) ?? BuffConnectionScript.problem(input.code)
         if (problem) return yield* fail(problem)
-        const files = BuffConnectionScript.paths(global.config, name)
+        const scope = yield* scopeOf(name)
+        // Скрипт подключения «только в этом проекте» лежит в личной папке проекта, рядом с записью.
+        const files = BuffConnectionScript.paths(scope === "local" && personal ? personal : global.config, name)
         const config = BuffConnectionScript.config(files, input.environment)
         yield* ask(
           context,
           BuffConnection.SAVE_ACTION,
           [
-            ...BuffConnection.saveConfirmation({ name, scope: "user", config }, BuffLocale.t),
+            ...BuffConnection.saveConfirmation({ name, scope, project, config }, BuffLocale.t),
             BuffLocale.t("File: {file}", { file: files.script }),
           ],
-          { scope: "user", name, config, script: files.script },
+          { scope, name, config, script: files.script },
         )
         const unwritable = (error: Error) =>
           new ToolFailure({ message: `Could not write the script: ${error.message}` })
@@ -248,22 +270,23 @@ export const Plugin = define<
         if (BuffConnectionScript.stale(current))
           yield* fs.writeWithDirs(files.runner, BuffConnectionScript.stamped).pipe(Effect.mapError(unwritable))
         yield* fs.writeWithDirs(files.script, input.code).pipe(Effect.mapError(unwritable))
-        yield* servers.save({ scope: "user", name, config }).pipe(Effect.mapError(rpcFailure))
-        return `Script saved to ${files.script}; edit it there to improve the connection, then run connection_test.\n${yield* report(name)}`
+        yield* servers.save({ scope, name, config }).pipe(Effect.mapError(rpcFailure))
+        return `Script saved to ${files.script}; edit it there to improve the connection, then run connection_test.\n${BuffConnectionText.saved(scope, project)}\n${yield* report(name)}`
       }),
     )
 
     yield* add(BuffConnection.TOOLS.remove, removeText, TargetInput, (input, context) =>
       Effect.gen(function* () {
         const entry = yield* entryOf(input.name)
+        if (entry.scope === "builtin") return yield* fail(`«${input.name}» is built in and cannot be removed.`)
         const ids = entry.config ? BuffConnection.referencedSecrets(entry.config) : []
         yield* ask(
           context,
           BuffConnection.REMOVE_ACTION,
           BuffConnection.removeConfirmation({ name: input.name, secrets: ids.length }, BuffLocale.t),
-          { scope: input.scope, name: input.name },
+          { scope: entry.scope, name: input.name },
         )
-        yield* servers.remove({ scope: input.scope, name: input.name }).pipe(Effect.mapError(rpcFailure))
+        yield* servers.remove({ scope: entry.scope, name: input.name }).pipe(Effect.mapError(rpcFailure))
         yield* Effect.forEach(ids, (id) => secrets.remove(id))
         return `Connection «${input.name}» removed${ids.length ? ` with ${ids.length} secret(s)` : ""}.`
       }),
@@ -346,7 +369,8 @@ export const Plugin = define<
     yield* add(BuffConnection.TOOLS.instructions, instructionsText, InstructionsInput, (input) =>
       Effect.gen(function* () {
         const entry = yield* entryOf(input.name)
-        const scope = entry.scope === "project" ? "project" : "user"
+        // Инструкции лежат там же, где подключение: в другом проекте без него они не нужны (#951).
+        const scope = entry.scope === "builtin" ? "user" : entry.scope
         const id = BuffConnection.skillID(input.name)
         yield* skills
           .save({

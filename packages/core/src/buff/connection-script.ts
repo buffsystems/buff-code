@@ -52,6 +52,20 @@ export function isScript(serverConfig: Mcp.ServerConfig): boolean {
   )
 }
 
+/**
+ * Запись подключения после переезда скрипта из `from` в `to` (#951: сменили, кому оно видно).
+ * Не скрипт, скрипт лежит не в `from` или переезжать некуда — `undefined`: запись не трогаем.
+ */
+export function moved(
+  serverConfig: Mcp.ServerConfig,
+  from: { readonly script: string },
+  to: { readonly runner: string; readonly script: string },
+): Mcp.ServerConfig | undefined {
+  if (serverConfig.type !== "local" || !isScript(serverConfig)) return undefined
+  if (serverConfig.command[2] !== from.script || from.script === to.script) return undefined
+  return { ...serverConfig, command: [SELF, to.runner, to.script, ...serverConfig.command.slice(3)] }
+}
+
 /** Что модель должна соблюсти в модуле; пустой код или без `tools` — отказ словами. */
 export function problem(code: string): string | undefined {
   if (!code.trim()) return "The script is empty."

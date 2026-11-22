@@ -23,12 +23,14 @@ import { createSkillState } from "./skill-state"
 
 const GROUP_TITLE: Record<BuffSkill.Origin, string> = {
   project: "Project skills",
+  local: "Your skills — in this project only",
   user: "Your skills — in all projects",
   external: "Attached skills",
   builtin: "Built-in skills",
 }
 const GROUP_EMPTY: Record<BuffSkill.Scope, string> = {
   project: "This project has no skills of its own.",
+  local: "No skills kept for this project only.",
   user: "No skills of your own yet.",
 }
 const SCOPE_OPTIONS = [
@@ -37,11 +39,13 @@ const SCOPE_OPTIONS = [
 ] as const
 const SKILL_NOTE: Record<BuffSkill.Scope, string> = {
   project: "The skill goes to the project's .buffcode directory and to the repository — the whole team gets the skill.",
+  local: "The skill stays on this machine and works in this project only.",
   user: "The skill stays on this machine, in your configuration.",
 }
 const ATTACH_NOTE: Record<BuffSkill.Scope, string> = {
   project:
     "The attachment entry goes to the project's .buffcode directory and to the repository — the whole team gets the skill.",
+  local: "The attachment entry stays on this machine and works in this project only.",
   user: "The attachment entry stays on this machine, in your configuration.",
 }
 

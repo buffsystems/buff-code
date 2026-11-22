@@ -12,6 +12,9 @@ export const CONFIG_FILES = ["opencode.json", "opencode.jsonc", "buffcode.json",
 export const USER_CONFIG_FILE = "buffcode.jsonc"
 export const PROJECT_CONFIG_FILE = "buffcode.json"
 
+/** Личные папки проектов в конфигурации пользователя (#951): `<конфигурация>/projects/<id проекта>`. */
+export const PERSONAL_PROJECTS_DIR = "projects"
+
 /** Каталог Buff Code в проекте (и в домашнем каталоге — для планов). */
 export const DIR = ".buffcode"
 export const LEGACY_DIR = ".opencode"

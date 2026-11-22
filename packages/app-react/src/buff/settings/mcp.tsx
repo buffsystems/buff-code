@@ -21,12 +21,25 @@ import { at, useBuffList } from "./rpc"
 
 const SCOPE_TITLE: Record<BuffMcp.Entry["scope"], string> = {
   project: "Project servers",
+  local: "Your servers — in this project only",
   user: "Your servers — in all projects",
   builtin: "Buff Code servers",
 }
 const SCOPE_EMPTY: Record<BuffMcp.Scope, string> = {
   project: "This project has no servers of its own.",
+  local: "No servers kept for this project only.",
   user: "No servers of your own yet.",
+}
+
+const SCOPE_CHOICE: Record<BuffMcp.Scope, string> = {
+  project: "In the project",
+  local: "On my machine — this project only",
+  user: "On my machine — for all projects",
+}
+const SCOPE_HINT: Record<BuffMcp.Scope, string> = {
+  project: "The entry goes to the project's buffcode.json and to the repository — do not put keys in it.",
+  local: "The entry stays on this machine and works in this project only.",
+  user: "The entry stays on this machine, in your configuration.",
 }
 
 type Draft = { -readonly [Key in keyof McpForm]: McpForm[Key] }
@@ -121,8 +134,7 @@ function ServerDialog(props: {
   const t = i18n.buff.t
   const stored = props.entry?.scope !== "builtin" ? props.entry : undefined
   const [form, setForm] = useState<Draft>(() => {
-    const scope = stored?.scope === "project" || stored?.scope === "user" ? stored.scope : undefined
-    if (stored?.config && scope) return formFromConfig(stored.name, scope, stored.config)
+    if (stored?.config && stored.scope !== "builtin") return formFromConfig(stored.name, stored.scope, stored.config)
     return { ...emptyForm(props.scopes[0] ?? "user"), name: stored?.name ?? "", mode: stored ? "json" : "fields" }
   })
   const [problem, setProblem] = useState<string>()
@@ -136,10 +148,8 @@ function ServerDialog(props: {
     const read = formToServers(form, stored?.config, t)
     if ("problem" in read) return setProblem(read.problem)
     setSaving(true)
-    const previous =
-      stored && (stored.scope === "project" || stored.scope === "user")
-        ? { scope: stored.scope, name: stored.name }
-        : undefined
+    // Another place than before moves the server there (#951) — with its script and instructions.
+    const previous = stored && stored.scope !== "builtin" ? { scope: stored.scope, name: stored.name } : undefined
     await props.controller
       .save(read.servers, form.scope, previous)
       .then(props.onClose, (error: unknown) => setProblem(formatServerError(error, undefined, t("Could not save."))))
@@ -171,21 +181,10 @@ function ServerDialog(props: {
         <Input value={form.name} placeholder="github" onChange={(event) => edit("name")(event.currentTarget.value)} />
       </Field>
       {props.scopes.length > 1 && (
-        <Field
-          group
-          label={t("Where to keep")}
-          hint={
-            form.scope === "project"
-              ? t("The entry goes to the project's buffcode.json and to the repository — do not put keys in it.")
-              : t("The entry stays on this machine, in your configuration.")
-          }
-        >
+        <Field group label={t("Where to keep")} hint={t(SCOPE_HINT[form.scope])}>
           <Choice
             value={form.scope}
-            options={[
-              { value: "project", label: t("In the project") },
-              { value: "user", label: t("On my machine — for all projects") },
-            ]}
+            options={props.scopes.map((scope) => ({ value: scope, label: t(SCOPE_CHOICE[scope]) }))}
             onPick={edit("scope")}
           />
         </Field>
@@ -408,6 +407,12 @@ export function BuffMcpSection(props: { server: Server; directory?: string; scop
           </div>
         )
       })}
+      {/* Outside a project's settings its own servers are not listed (#951): say where they are. */}
+      {!props.scopes.includes("local") && (
+        <span className="ui-note" data-slot="buff-mcp-local-note">
+          {t("Servers kept for one project only are in that project's settings: Settings → Projects.")}
+        </span>
+      )}
     </div>
   )
 }

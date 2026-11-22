@@ -19,3 +19,20 @@ describe("каталог Buff Code внутри проекта или домаш
     }
   })
 })
+
+// #951: личная папка проекта — в конфигурации пользователя, по идентификатору проекта.
+describe("личная папка проекта", () => {
+  const dirs = { config: "/home/u/.config/buffcode", home: "/home/u" }
+
+  test("у проекта — <конфигурация>/projects/<id>", () => {
+    expect(BuffProjectDir.personal(dirs, { id: "abc123", directory: "/work/repo" })).toBe(
+      path.join(dirs.config, "projects", "abc123"),
+    )
+  })
+
+  test("вне проекта её нет: домашняя папка, папка конфигурации, проект без идентификатора", () => {
+    expect(BuffProjectDir.personal(dirs, { id: "h0me", directory: "/home/u" })).toBeUndefined()
+    expect(BuffProjectDir.personal(dirs, { id: "c0nf", directory: dirs.config })).toBeUndefined()
+    expect(BuffProjectDir.personal(dirs, { id: "global", directory: "/work/empty" })).toBeUndefined()
+  })
+})

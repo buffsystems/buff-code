@@ -112,3 +112,62 @@ describe("removing", () => {
     expect(await BuffMcpFlow.remove(ui(["files", false]).dialogs, entries)).toBeUndefined()
   })
 })
+
+// #951: «только в этом проекте» ↔ «во всех проектах» — отдельным шагом, настройки сервера те же.
+describe("changing who sees a server", () => {
+  const files = { type: "local" as const, command: ["npx", "files"] }
+
+  test("a server kept for this project only becomes available in all projects", async () => {
+    const { dialogs, asked } = ui(["files", "user"])
+    expect(await BuffMcpFlow.move(dialogs, [entry("files", "local", files), entry("buff", "builtin")])).toEqual({
+      scope: "user",
+      servers: [{ name: "files", config: files }],
+      previous: { scope: "local", name: "files" },
+    })
+    expect(asked).toEqual(["Какому серверу сменить видимость", "Где сервер «files» будет доступен"])
+  })
+
+  test("the place it is in now is not offered", async () => {
+    const offered: string[][] = []
+    const answers = ["files", undefined]
+    const dialogs: BuffMcpFlow.Ui = {
+      select: (dialog) => {
+        offered.push(dialog.options.map((option) => String(option.value)))
+        return Promise.resolve(answers.shift() as never)
+      },
+      prompt: () => Promise.resolve(undefined),
+      confirm: () => Promise.resolve(undefined),
+    }
+    await BuffMcpFlow.move(dialogs, [entry("files", "user", files)])
+    expect(offered).toEqual([["files"], ["local", "project"]])
+  })
+
+  test("leaving a question changes nothing; no own servers — said so", async () => {
+    expect(await BuffMcpFlow.move(ui(["files", undefined]).dialogs, [entry("files", "local", files)])).toBeUndefined()
+    expect(await BuffMcpFlow.move(ui([]).dialogs, [entry("buff", "builtin")])).toEqual({
+      problem: "Своих серверов нет: серверы Buff Code не правятся.",
+    })
+  })
+
+  test("the list tells the three places apart", async () => {
+    const descriptions: (string | undefined)[] = []
+    const dialogs: BuffMcpFlow.Ui = {
+      select: (dialog) => {
+        descriptions.push(...dialog.options.map((option) => option.description))
+        return Promise.resolve(undefined)
+      },
+      prompt: () => Promise.resolve(undefined),
+      confirm: () => Promise.resolve(undefined),
+      t: (text, params) => BuffI18n.t("ru", text, params),
+    }
+    await BuffMcpFlow.move(dialogs, [entry("a", "user", files), entry("b", "project", files), entry("c", "local", files)])
+    expect(descriptions).toEqual(["у меня", "в проекте", "у меня, только этот проект"])
+  })
+})
+
+describe("adding for this project only", () => {
+  test("the third place to keep a server", async () => {
+    const { dialogs } = ui(["local", "local", "files", "npx files"])
+    expect(await BuffMcpFlow.add(dialogs)).toMatchObject({ scope: "local", servers: [{ name: "files" }] })
+  })
+})

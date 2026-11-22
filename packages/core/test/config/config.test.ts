@@ -45,13 +45,14 @@ function testLayer(
   credentialNode = emptyCredentialNode,
   wellknownNode = emptyWellknownNode,
   options?: Config.Options,
+  projectID?: Project.ID,
 ) {
   const locationLayer = Layer.succeed(
     Location.Service,
     Location.Service.of(
       location(
         { directory: AbsolutePath.make(directory) },
-        { projectDirectory: AbsolutePath.make(projectDirectory), vcs },
+        { projectDirectory: AbsolutePath.make(projectDirectory), vcs, ...(projectID ? { projectID } : {}) },
       ),
     ),
   )
@@ -222,6 +223,50 @@ describe("Config", () => {
                 }),
               ),
             ),
+          ),
+        )
+      }),
+    ),
+  )
+
+  // Buff (#951): личная папка проекта — между конфигурацией пользователя и файлами репозитория.
+  it.live("loads the project's personal directory above global and below the repository files", () =>
+    Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
+      Effect.flatMap((tmp) => {
+        const global = path.join(tmp.path, "global")
+        const project = path.join(tmp.path, "project")
+        const personal = path.join(global, "projects", "prj_one")
+        const shells = Effect.gen(function* () {
+          const config = yield* Config.Service
+          return (yield* config.entries()).flatMap((entry) =>
+            entry.type === "document" && entry.info.shell ? [entry.info.shell] : [],
+          )
+        })
+        const layer = (id: string) =>
+          testLayer(
+            project,
+            global,
+            project,
+            undefined,
+            undefined,
+            emptyCredentialNode,
+            emptyWellknownNode,
+            undefined,
+            Project.ID.make(id),
+          )
+        return Effect.promise(async () => {
+          await fs.mkdir(personal, { recursive: true })
+          await fs.mkdir(project, { recursive: true })
+          await fs.writeFile(path.join(global, "opencode.json"), JSON.stringify({ shell: "global" }))
+          await fs.writeFile(path.join(personal, "buffcode.jsonc"), JSON.stringify({ shell: "personal" }))
+          await fs.writeFile(path.join(project, "opencode.json"), JSON.stringify({ shell: "project" }))
+        }).pipe(
+          Effect.andThen(
+            Effect.gen(function* () {
+              expect(yield* shells.pipe(Effect.provide(layer("prj_one")))).toEqual(["global", "personal", "project"])
+              // Другой проект чужую личную папку не читает.
+              expect(yield* shells.pipe(Effect.provide(layer("prj_two")))).toEqual(["global", "project"])
+            }),
           ),
         )
       }),

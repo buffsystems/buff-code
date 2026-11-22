@@ -48,10 +48,21 @@ export const skillID = (name: string): string =>
 
 /** Строки запроса разрешения на сохранение — что именно поставим или запустим. */
 export function saveConfirmation(
-  input: { readonly name: string; readonly scope: BuffMcp.Scope; readonly config: Mcp.ServerConfig },
+  input: {
+    readonly name: string
+    readonly scope: BuffMcp.Scope
+    readonly config: Mcp.ServerConfig
+    /** Название проекта — для подключения «только в этом проекте» (#951). */
+    readonly project?: string
+  },
   t: BuffI18n.T,
 ): string[] {
-  const where = input.scope === "project" ? t("this project") : t("all projects")
+  const where =
+    input.scope === "local"
+      ? t("only the project «{project}»", { project: input.project ?? "" })
+      : input.scope === "project"
+        ? t("this project")
+        : t("all projects")
   const lines = [t("Save connection «{name}» for {where}", { name: input.name, where })]
   if (input.config.type === "local") {
     lines.push(t("Run: {command}", { command: input.config.command.join(" ") }))

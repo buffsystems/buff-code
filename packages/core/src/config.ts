@@ -221,6 +221,9 @@ export const layer = (options?: Options) =>
         // Global entries sit below explicit and direct files; project
         // directories rank above them.
         const globalSupplementary = sources.global ? yield* loadDirectory(sources.global).pipe(Effect.orDie) : []
+        const personalSupplementary = sources.personal?.present
+          ? yield* loadDirectory(sources.personal.path).pipe(Effect.orDie)
+          : []
         const projectSupplementary = yield* Effect.forEach(
           sources.project.filter((root) => root.present),
           (root) => loadDirectory(root.path),
@@ -231,6 +234,7 @@ export const layer = (options?: Options) =>
         return [
           ...(yield* loadWellknown().pipe(Effect.orDie)),
           ...globalSupplementary,
+          ...personalSupplementary,
           ...explicit,
           ...direct,
           ...projectSupplementary,

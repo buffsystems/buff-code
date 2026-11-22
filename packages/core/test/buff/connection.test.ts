@@ -49,6 +49,20 @@ describe("the person confirms saving and removing", () => {
       "Его секреты тоже удаляются: 2",
     ])
   })
+  // #951: подключение из чата в проекте — только для этого проекта, и подтверждение об этом говорит.
+  test("a connection kept for this project only names the project", () => {
+    const lines = BuffConnection.saveConfirmation(
+      { name: "mail", scope: "local", project: "shop", config: { type: "local", command: ["srv"] } },
+      ru,
+    )
+    expect(lines[0]).toBe("Сохранить подключение «mail» для: только проект «shop»")
+    expect(
+      BuffConnection.saveConfirmation(
+        { name: "mail", scope: "local", project: "shop", config: { type: "local", command: ["srv"] } },
+        BuffI18n.english,
+      )[0],
+    ).toBe("Save connection «mail» for only the project «shop»")
+  })
   test("allowed by any rule — still asked; denied stays denied", () => {
     expect(BuffConnectionPlugin.confirmed({ action: BuffConnection.SAVE_ACTION, effect: "allow" })).toBe("ask")
     expect(BuffConnectionPlugin.confirmed({ action: BuffConnection.REMOVE_ACTION, effect: "deny" })).toBe("deny")
@@ -65,6 +79,29 @@ describe("the person confirms saving and removing", () => {
   test("the skill id of a connection is a valid skill id", () => {
     expect(BuffConnection.skillID("My_Mail 2")).toBe("connection-my-mail-2")
     expect(BuffConnection.skillID("---")).toBe("connection-x")
+  })
+})
+
+// #951: где сохранить, решает место разговора, а не модель.
+describe("where a connection set up in a chat is kept", () => {
+  test("a chat in a project keeps a new connection for that project only; outside a project — for all", () => {
+    expect(BuffConnectionPlugin.scopeFor(undefined, true)).toBe("local")
+    expect(BuffConnectionPlugin.scopeFor(undefined, false)).toBe("user")
+  })
+  test("a connection that already exists stays where it is — saving again only fixes it", () => {
+    expect(BuffConnectionPlugin.scopeFor("user", true)).toBe("user")
+    expect(BuffConnectionPlugin.scopeFor("project", true)).toBe("project")
+    expect(BuffConnectionPlugin.scopeFor("local", false)).toBe("local")
+  })
+  test("the name of a built-in server is not an existing connection of the user's", () => {
+    expect(BuffConnectionPlugin.scopeFor("builtin", true)).toBe("local")
+  })
+  test("the model hears where the connection was saved and where that can be changed", () => {
+    expect(BuffConnectionText.saved("local", "shop")).toBe(
+      "Saved for this project only («shop»): other projects do not see it. The user can make it available in all projects in this project's settings, MCP servers — tell them so.",
+    )
+    expect(BuffConnectionText.saved("user", "shop")).toBe("Saved for all projects.")
+    expect(BuffConnectionText.saved("project", "shop")).toBe("Saved in the project's repository configuration.")
   })
 })
 
@@ -105,13 +142,15 @@ describe("what the model hears", () => {
           status: { status: "failed", error: "fetch failed: ECONNREFUSED" },
         },
         { name: "buff", scope: "builtin", status: { status: "needs_auth", error: "Unauthorized" } },
+        { name: "crm", scope: "local", config: { type: "local", command: ["srv"] }, status: { status: "connected" } },
       ],
       tools,
     )
-    expect(text).toContain("- mail (user; local): Connected\n  tools (2): search, read")
-    expect(text).toContain("- r (project; remote, key): Did not start: The server at this address does not respond.")
+    expect(text).toContain("- mail (all projects; local): Connected\n  tools (2): search, read")
+    expect(text).toContain("- r (project repository; remote, key): Did not start: The server at this address does not respond.")
     expect(text).toContain("(fetch failed: ECONNREFUSED)")
     expect(text).toContain("- buff (built-in, not editable): Sign-in needed: Unauthorized")
+    expect(text).toContain("- crm (this project only; local): Connected")
     expect(BuffConnectionText.list([], [])).toBe("No connections yet.")
   })
   test("a status report lists tools with one-line descriptions only when connected", () => {

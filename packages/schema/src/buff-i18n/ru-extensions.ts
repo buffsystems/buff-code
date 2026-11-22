@@ -105,6 +105,12 @@ export const extensions = {
   "Latin letters, digits, hyphen.": "Латинские буквы, цифры, дефис.",
   "Where to keep the server": "Где хранить сервер",
   "stays on this machine": "остаётся на этой машине",
+  "On my machine — this project only": "У меня — только в этом проекте",
+  "stays on this machine, other projects do not see it": "остаётся на этой машине, другим проектам не виден",
+  "with me, this project only": "у меня, только этот проект",
+  "Which server to change the visibility of": "Какому серверу сменить видимость",
+  "Where «{name}» will be available": "Где сервер «{name}» будет доступен",
+  "The entry of «{name}» cannot be read: fix it first.": "Запись сервера «{name}» не читается: сначала исправьте её.",
   "In this project": "В этом проекте",
   "goes to the repository — without keys": "уедет в репозиторий — без ключей",
   "What to connect": "Что подключаем",
@@ -319,6 +325,7 @@ export const extensions = {
   "Enter a directory with skills or an address where they are published.":
     "Укажите каталог с навыками или адрес, по которому они опубликованы.",
   "my skill": "мой",
+  "my skill, this project only": "мой, только этот проект",
   attached: "подключён",
   "built-in skill": "встроенный",
   "turn off": "выключить",
@@ -349,6 +356,7 @@ export const extensions = {
   "The configuration file cannot be read: it has a markup error. Fix it by hand.":
     "Файл конфигурации не читается: в нём ошибка разметки. Исправьте его вручную.",
   "There is no server «{name}» in this scope.": "Сервера «{name}» нет в этой области.",
+  "There is no project here: save it for all projects.": "Здесь нет проекта: сохраните для всех проектов.",
   "{file} is not a memory file of this directory.": "Файл {file} — не файл памяти этого каталога.",
   "The skill «{id}» is not among yours: only your own skills can be edited.":
     "Навыка «{id}» нет среди ваших: править можно только свои навыки.",
@@ -376,6 +384,7 @@ export const extensions = {
   "Server «{name}» deleted": "Сервер «{name}» удалён",
   "MCP: add a server": "MCP: добавить сервер",
   "MCP: edit a server": "MCP: изменить сервер",
+  "MCP: change who sees a server": "MCP: сменить видимость сервера",
   "MCP: delete a server": "MCP: удалить сервер",
   "Written to {file}": "Записано в {file}",
   "All memory": "Вся память",
@@ -476,6 +485,10 @@ export const extensions = {
   "Create hook": "Создать хук",
   "Project servers": "Серверы проекта",
   "Your servers — in all projects": "Ваши серверы — во всех проектах",
+  "Your servers — in this project only": "Ваши серверы — только в этом проекте",
+  "No servers kept for this project only.": "Серверов только для этого проекта нет.",
+  "Servers kept for one project only are in that project's settings: Settings → Projects.":
+    "Серверы, которые действуют только в одном проекте, — в настройках этого проекта: «Настройки» → «Проекты».",
   "Buff Code servers": "Серверы Buff Code",
   "This project has no servers of its own.": "В этом проекте своих серверов нет.",
   "No servers of your own yet.": "Своих серверов пока нет.",
@@ -488,6 +501,8 @@ export const extensions = {
   "The entry goes to the project's buffcode.json and to the repository — do not put keys in it.":
     "Запись попадёт в buffcode.json проекта и уедет в репозиторий — не кладите в неё ключи.",
   "The entry stays on this machine, in your configuration.": "Запись останется на этой машине, в вашей конфигурации.",
+  "The entry stays on this machine and works in this project only.":
+    "Запись останется на этой машине и действует только в этом проекте.",
   "Server description": "Описание сервера",
   "An entry from another agent's settings will do, and so will a whole mcpServers block — then every server in it is saved.":
     "Подойдёт и запись из настроек другого агента, и целый блок mcpServers — тогда сохранятся все серверы из него.",
@@ -507,6 +522,12 @@ export const extensions = {
     "По одной в строке, в виде ИМЯ=значение. {env:ИМЯ} подставит переменную окружения.",
   "Project skills": "Навыки проекта",
   "Your skills — in all projects": "Ваши навыки — во всех проектах",
+  "Your skills — in this project only": "Ваши навыки — только в этом проекте",
+  "No skills kept for this project only.": "Навыков только для этого проекта нет.",
+  "The skill stays on this machine and works in this project only.":
+    "Навык останется на этой машине и действует только в этом проекте.",
+  "The attachment entry stays on this machine and works in this project only.":
+    "Запись о подключении останется на этой машине и действует только в этом проекте.",
   "Attached skills": "Подключённые навыки",
   "Built-in skills": "Встроенные навыки",
   "This project has no skills of its own.": "В этом проекте своих навыков нет.",

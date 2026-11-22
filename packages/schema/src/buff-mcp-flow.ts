@@ -46,13 +46,33 @@ const name = (t: BuffI18n.T) => ({
   placeholder: "github",
 })
 
+/** Три места для сервера — одними словами при добавлении и при смене видимости (#951). */
+const PLACES: Record<BuffMcp.Scope, (t: BuffI18n.T) => Option<BuffMcp.Scope>> = {
+  user: (t) => ({
+    title: t("On my machine — for all projects"),
+    value: "user",
+    description: t("stays on this machine"),
+  }),
+  local: (t) => ({
+    title: t("On my machine — this project only"),
+    value: "local",
+    description: t("stays on this machine, other projects do not see it"),
+  }),
+  project: (t) => ({
+    title: t("In this project"),
+    value: "project",
+    description: t("goes to the repository — without keys"),
+  }),
+}
+
 export async function add(ui: Ui): Promise<Saved | Problem | undefined> {
   const t = tr(ui)
   const scope = await ui.select<BuffMcp.Scope>({
     title: t("Where to keep the server"),
     options: [
-      { title: t("On my machine — for all projects"), value: "user", description: t("stays on this machine") },
-      { title: t("In this project"), value: "project", description: t("goes to the repository — without keys") },
+      PLACES.user(t),
+      PLACES.local(t),
+      PLACES.project(t),
     ],
   })
   if (!scope) return
@@ -104,7 +124,8 @@ const own = (entries: readonly BuffMcp.Entry[]) => entries.filter((entry) => ent
 const nothing = (t: BuffI18n.T): Problem => ({
   problem: t("You have no servers of your own: Buff Code servers are not edited."),
 })
-const where = (entry: BuffMcp.Entry, t: BuffI18n.T) => (entry.scope === "project" ? t("in the project") : t("with me"))
+const where = (entry: BuffMcp.Entry, t: BuffI18n.T) =>
+  t(entry.scope === "project" ? "in the project" : entry.scope === "local" ? "with me, this project only" : "with me")
 
 async function pick(ui: Ui, title: string, entries: readonly BuffMcp.Entry[]) {
   const t = tr(ui)
@@ -133,6 +154,23 @@ export async function edit(ui: Ui, entries: readonly BuffMcp.Entry[]): Promise<S
   const servers = read.servers.map((server) => ({ name: server.name ?? entry.name, config: server.config }))
   const problem = checked(servers, t)
   return problem ? { problem } : { scope, servers, previous: { scope, name: entry.name } }
+}
+
+/** Сменить, кому сервер виден (#951): настройки те же, запись переезжает в другое место. */
+export async function move(ui: Ui, entries: readonly BuffMcp.Entry[]): Promise<Saved | Problem | undefined> {
+  const t = tr(ui)
+  const mine = own(entries)
+  if (!mine.length) return nothing(t)
+  const entry = await pick(ui, t("Which server to change the visibility of"), mine)
+  if (!entry) return
+  if (!entry.config) return { problem: t("The entry of «{name}» cannot be read: fix it first.", { name: entry.name }) }
+  const from = entry.scope as BuffMcp.Scope
+  const scope = await ui.select<BuffMcp.Scope>({
+    title: t("Where «{name}» will be available", { name: entry.name }),
+    options: (["user", "local", "project"] as const).filter((place) => place !== from).map((place) => PLACES[place](t)),
+  })
+  if (!scope) return
+  return { scope, servers: [{ name: entry.name, config: entry.config }], previous: { scope: from, name: entry.name } }
 }
 
 export async function remove(ui: Ui, entries: readonly BuffMcp.Entry[]): Promise<Target | Problem | undefined> {

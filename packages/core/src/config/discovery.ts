@@ -8,6 +8,7 @@ import { Location } from "../location.js"
 import { AbsolutePath } from "../schema.js"
 import type { Options } from "../config.js"
 import { BuffNames } from "@opencode/schema/buff-names"
+import { BuffProjectDir } from "../buff/project-dir.js"
 
 // Buff (#510): свои имена файлов и каталога проекта — buffcode; апстримные читаются и дальше.
 export const names: string[] = [...BuffNames.CONFIG_FILES]
@@ -15,6 +16,8 @@ export const names: string[] = [...BuffNames.CONFIG_FILES]
 /** Eligible sources in priority order, including paths that may appear later. */
 export interface Sources {
   readonly global?: AbsolutePath
+  /** Buff (#951): личная папка проекта в конфигурации пользователя — «только у меня, в этом проекте». */
+  readonly personal?: { readonly path: AbsolutePath; readonly present: boolean }
   readonly explicit?: AbsolutePath
   readonly direct: readonly AbsolutePath[]
   readonly project: readonly { readonly path: AbsolutePath; readonly present: boolean }[]
@@ -52,6 +55,8 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   )
 
   const globalEnabled = options?.global !== false
+  const personal =
+    globalEnabled && options?.project !== false ? yield* BuffProjectDir.personalFor(location.project) : undefined
   const globalFiles = yield* Effect.forEach(names, (name) => fs.resolve(path.join(globalDirectory, name)))
   // Global sources must not re-enter through the project walk.
   const visible = discovered
@@ -64,6 +69,9 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
 
   return {
     global: globalEnabled ? globalDirectory : undefined,
+    ...(personal
+      ? { personal: { path: AbsolutePath.make(personal), present: yield* fs.isDir(personal) } }
+      : {}),
     explicit: options?.file ? AbsolutePath.make(path.resolve(options.file)) : undefined,
     direct: visible
       .filter((item) => ![".agents", ".claude"].includes(path.basename(item)) && !BuffNames.isProjectDir(path.basename(item)))

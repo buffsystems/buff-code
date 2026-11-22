@@ -438,6 +438,7 @@ export const session = {
   // #765: инструменты подключений — подтверждения и форма входа.
   "Save connection «{name}» for {where}": "Сохранить подключение «{name}» для: {where}",
   "this project": "этот проект",
+  "only the project «{project}»": "только проект «{project}»",
   "all projects": "все проекты",
   "Run: {command}": "Запуск: {command}",
   "Environment: {names}": "Переменные окружения: {names}",

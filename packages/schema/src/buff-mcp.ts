@@ -11,14 +11,17 @@ import { define } from "./rpc.js"
  * вставленного JSON, проверка, слова статуса. Хранит и пишет ядро (`core/src/buff/mcp.ts`).
  */
 
-/** Где лежит сервер: у пользователя (все проекты) или в проекте (уезжает в его репозиторий). */
-export const Scope = Schema.Literals(["user", "project"])
+/**
+ * Где лежит сервер: у пользователя (все проекты), в проекте (уезжает в его репозиторий) или
+ * `local` (#951) — у пользователя, но только для этого проекта: в репозиторий не попадает.
+ */
+export const Scope = Schema.Literals(["user", "project", "local"])
 export type Scope = typeof Scope.Type
 
 export const Entry = Schema.Struct({
   name: Schema.String,
   /** `builtin` — сервер самого Buff Code: виден, но не правится. */
-  scope: Schema.Literals(["user", "project", "builtin"]),
+  scope: Schema.Literals(["user", "project", "local", "builtin"]),
   /** Файл, в котором сервер записан; у встроенных его нет. */
   file: Schema.optional(Schema.String),
   /** Запись как в файле: подстановки `{env:…}` не раскрыты, секреты не попадают в форму. */

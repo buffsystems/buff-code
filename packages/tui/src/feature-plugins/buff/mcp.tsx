@@ -6,13 +6,13 @@ import { failureMessage } from "@opencode/schema/buff-failure"
 import { t } from "./locale"
 
 /**
- * MCP-серверы из консоли (#444): /mcp-add, /mcp-edit, /mcp-remove (и из палитры) — те же
+ * MCP-серверы из консоли (#444): /mcp-add, /mcp-edit, /mcp-move, /mcp-remove (и из палитры) — те же
  * действия, что в настройках окна. Список со статусами — прежнее окно /mcps. Шаги — общие
  * (`BuffMcpFlow`), хранит ядро (rpc `buff.mcp`).
  */
 
 /** Подсказка в окне списка серверов: чем их добавляют и правят. */
-export const MCP_COMMANDS_HINT = "/mcp-add · /mcp-edit · /mcp-remove"
+export const MCP_COMMANDS_HINT = "/mcp-add · /mcp-edit · /mcp-move · /mcp-remove"
 
 function Commands(props: { context: Context }) {
   const { context } = props
@@ -72,6 +72,10 @@ function Commands(props: { context: Context }) {
       command("add", t("MCP: add a server"), () => save(() => BuffMcpFlow.add(ui))),
       command("edit", t("MCP: edit a server"), () =>
         save(async () => BuffMcpFlow.edit(ui, await rpc.list(undefined, at()))),
+      ),
+      // #951: «только в этом проекте» ↔ «во всех проектах».
+      command("move", t("MCP: change who sees a server"), () =>
+        save(async () => BuffMcpFlow.move(ui, await rpc.list(undefined, at()))),
       ),
       command("remove", t("MCP: delete a server"), remove),
     ],

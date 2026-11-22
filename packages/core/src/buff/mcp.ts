@@ -3,23 +3,30 @@ export * as BuffMcpPlugin from "./mcp.js"
 import { Duration, Effect, Option, Schema } from "effect"
 import type { Scope } from "effect"
 import { define, type Context } from "@opencode/plugin/effect/plugin"
+import { BuffConnection } from "@opencode/schema/buff-connection"
 import { BuffMcp } from "@opencode/schema/buff-mcp"
+import { BuffSkill } from "@opencode/schema/buff-skill"
 import { ServerConfig } from "@opencode/schema/mcp"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Config } from "../config.js"
 import { BuffConfigFiles } from "./config-files.js"
+import { BuffConnectionScript } from "./connection-script.js"
 import { Mcp } from "../mcp/index.js"
 import { BuffMcpFile } from "./mcp-file.js"
+import { BuffProjectDir } from "./project-dir.js"
 import { BuffLocale } from "./locale.js"
 
 /**
  * Управление MCP-серверами из интерфейса (#444). Серверы по-прежнему живут в файлах
  * конфигурации — пользователя (все проекты) или проекта — и подключаются сами, когда файл
  * меняется; здесь их читают и правят по просьбе экранов. Серверы, которых в файлах нет,
- * подключил сам Buff Code: они видны, но не правятся.
+ * подключил сам Buff Code: они видны, но не правятся. Третье место (#951) — личная папка
+ * проекта: сервер у пользователя, но только для этого проекта; при смене области вместе с
+ * записью переезжают скрипт подключения и инструкции к нему.
  */
 
+type Target = { readonly scope: BuffMcp.Scope; readonly name: string }
 type Placed = { readonly scope: BuffMcp.Scope; readonly file: string; readonly raw: unknown }
 
 const decodeConfig = Schema.decodeUnknownOption(ServerConfig)
@@ -30,14 +37,18 @@ export interface Options {
   readonly settle: Duration.Input
   /** Каталог конфигурации пользователя — общий для всех проектов. */
   readonly userDirectory: string
+  /** Личная папка проекта (#951); вне проекта её нет. */
+  readonly localDirectory?: string | undefined
 }
 
 export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, options: Options) {
   const mcp = yield* Mcp.Service
-  const { scopeOf, text, files, fileFor, rewrite } = BuffConfigFiles.make({
+  const fs = yield* FSUtil.Service
+  const skills = ctx.rpc(BuffSkill.Rpc)
+  const { scopeOf, text, files, fileFor, rewrite, write } = BuffConfigFiles.make<BuffMcp.Scope>({
     config: yield* Config.Service,
-    fs: yield* FSUtil.Service,
-    dirs: { user: options.userDirectory, project: ctx.location.directory },
+    fs,
+    dirs: { user: options.userDirectory, project: ctx.location.directory, local: options.localDirectory },
   })
 
   /** Где записан каждый сервер; при повторе побеждает более сильный файл. */
@@ -77,6 +88,35 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
       yield* rewrite(file, (before) => BuffMcpFile.withServer(before, name, undefined))
   })
 
+  /** Где лежит скрипт подключения области: в личной папке проекта либо у пользователя. */
+  const scriptFiles = (target: Target) => {
+    const directory = target.scope === "local" ? options.localDirectory : options.userDirectory
+    return directory === undefined ? undefined : BuffConnectionScript.paths(directory, target.name)
+  }
+
+  /** Скрипт — в папку новой области (с раннером); старый файл убирается, когда запись уже переехала. */
+  const scriptMove = Effect.fnUntraced(function* (serverConfig: ServerConfig, previous: Target, next: Target) {
+    const from = scriptFiles(previous)
+    const to = scriptFiles(next)
+    const config = from && to ? BuffConnectionScript.moved(serverConfig, from, to) : undefined
+    const code = from && config ? yield* text(from.script) : undefined
+    if (!from || !to || !config || code === undefined) return undefined
+    if (BuffConnectionScript.stale(yield* text(to.runner))) yield* write(to.runner, BuffConnectionScript.stamped)
+    yield* write(to.script, code)
+    return { config, drop: fs.remove(from.script, { force: true }).pipe(Effect.ignore) }
+  })
+
+  /** Инструкции к подключению (навык) — в ту же область, что и оно; нет инструкций — нечего нести. */
+  const instructionsMove = (previous: Target, next: Target) => {
+    const from = { scope: previous.scope, id: BuffConnection.skillID(previous.name) }
+    return skills.read(from).pipe(
+      Effect.flatMap((parts) =>
+        skills.save({ scope: next.scope, id: BuffConnection.skillID(next.name), ...parts, previous: from }),
+      ),
+      Effect.ignore,
+    )
+  }
+
   const check = Effect.fnUntraced(function* (name: string, serverConfig?: ServerConfig) {
     const problem =
       BuffMcp.nameProblem(name, BuffLocale.t) ??
@@ -95,10 +135,14 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
           yield* check(input.name, input.config)
           const current = (yield* placed).get(input.name)
           const file = current?.scope === input.scope ? current.file : yield* fileFor(input.scope)
-          yield* rewrite(file, (before) => BuffMcpFile.withServer(before, input.name, input.config))
           const previous = input.previous
+          const rescoped = previous && previous.scope !== input.scope ? previous : undefined
+          const script = rescoped ? yield* scriptMove(input.config, rescoped, input) : undefined
+          yield* rewrite(file, (before) => BuffMcpFile.withServer(before, input.name, script?.config ?? input.config))
           if (previous && (previous.scope !== input.scope || previous.name !== input.name))
             yield* erase(previous.scope, previous.name)
+          if (script) yield* script.drop
+          if (rescoped) yield* instructionsMove(rescoped, input)
           yield* settled
           yield* changed
           return undefined
@@ -134,6 +178,11 @@ export const Plugin = define<Config.Service | Mcp.Service | FSUtil.Service | Glo
   id: "buff.mcp",
   // Ядро перечитывает изменённый файл с задержкой и затем переподключает серверы.
   effect: Effect.fn(function* (ctx) {
-    yield* register(ctx, { settle: "400 millis", userDirectory: (yield* Global.Service).config })
+    const global = yield* Global.Service
+    yield* register(ctx, {
+      settle: "400 millis",
+      userDirectory: global.config,
+      localDirectory: yield* BuffProjectDir.personalFor(ctx.location.project),
+    })
   }),
 })

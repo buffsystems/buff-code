@@ -34,6 +34,8 @@ export interface Options {
   readonly settle: Duration.Input
   /** Каталог конфигурации пользователя — общий для всех проектов. */
   readonly userDirectory: string
+  /** Личная папка проекта (#951); вне проекта её нет. */
+  readonly localDirectory?: string | undefined
 }
 
 /** Свой навык на диске. */
@@ -42,16 +44,24 @@ type Own = { readonly id: string; readonly scope: BuffSkill.Scope; readonly file
 export const register = Effect.fn("BuffSkill.register")(function* (ctx: Context, options: Options) {
   const skills = yield* Skill.Service
   const fs = yield* FSUtil.Service
-  const files = BuffConfigFiles.make({
+  const files = BuffConfigFiles.make<BuffSkill.Scope>({
     config: yield* Config.Service,
     fs,
-    dirs: { user: options.userDirectory, project: ctx.location.project.directory },
+    dirs: { user: options.userDirectory, project: ctx.location.project.directory, local: options.localDirectory },
   })
-  /** Каталог, в котором ядро ищет навыки области: рядом с конфигурацией пользователя и в каталоге Buff Code проекта. */
-  const roots: Record<BuffSkill.Scope, string> = {
+  /**
+   * Каталог, в котором ядро ищет навыки области: рядом с конфигурацией пользователя, в каталоге
+   * Buff Code проекта и в личной папке проекта (вне проекта её нет).
+   */
+  const roots: Record<BuffSkill.Scope, string | undefined> = {
     user: options.userDirectory,
     project: BuffProjectDir.of(ctx.location.project.directory),
+    local: options.localDirectory,
   }
+  const scopes = (["user", "project", "local"] as const).flatMap((scope) => {
+    const root = roots[scope]
+    return root === undefined ? [] : [{ scope, root }]
+  })
 
   // --- выключенные ---------------------------------------------------------------------------
 
@@ -81,33 +91,37 @@ export const register = Effect.fn("BuffSkill.register")(function* (ctx: Context,
       ? path.basename(file, ".md")
       : path.basename(path.dirname(file))
 
-  const own = Effect.gen(function* () {
-    const found = new Map<string, Own>()
-    for (const scope of ["user", "project"] as const)
-      for (const directory of [path.join(roots[scope], "skill"), path.join(roots[scope], "skills")]) {
+  /** Все свои навыки на диске; один идентификатор может лежать в нескольких областях сразу. */
+  const everywhere = Effect.gen(function* () {
+    const found: Own[] = []
+    for (const { scope, root } of scopes)
+      for (const directory of [path.join(root, "skill"), path.join(root, "skills")]) {
         if (!(yield* fs.isDir(directory))) continue
         const matches = yield* fs
           .scan("{*.md,**/SKILL.md}", { cwd: directory, absolute: true })
           .pipe(Effect.orElseSucceed(() => [] as string[]))
         for (const file of matches.toSorted()) {
           const text = yield* files.text(file)
-          if (text) found.set(idOf(directory, file), { id: idOf(directory, file), scope, file, text })
+          if (text) found.push({ id: idOf(directory, file), scope, file, text })
         }
       }
     return found
   })
+  /** Свой навык именно этой области: копия в другой области — другой навык. */
+  const own = (scope: BuffSkill.Scope, id: string) =>
+    everywhere.pipe(Effect.map((found) => found.findLast((skill) => skill.scope === scope && skill.id === id)))
 
   const originOf = (file: string): BuffSkill.Origin => {
     if (file.startsWith("/builtin/")) return "builtin"
-    if (files.inside(roots.user, file)) return "user"
-    return files.inside(roots.project, file) ? "project" : "external"
+    // Личная папка лежит внутри конфигурации пользователя — её проверяем первой.
+    return scopes.toReversed().find((item) => files.inside(item.root, file))?.scope ?? "external"
   }
 
   const list = Effect.gen(function* () {
-    const mine = yield* own
+    const mine = yield* everywhere
     const entries = new Map<string, BuffSkill.Entry>()
     // Свои навыки — с диска: файл уже записан, а ядро могло его ещё не перечитать.
-    for (const skill of mine.values()) {
+    for (const skill of mine) {
       const parts = BuffSkill.fileParts(skill.text)
       entries.set(skill.id, {
         id: skill.id,
@@ -141,8 +155,8 @@ export const register = Effect.fn("BuffSkill.register")(function* (ctx: Context,
 
   /** Убрать свой навык с диска: каталог навыка целиком либо одиночный файл. */
   const erase = Effect.fnUntraced(function* (scope: BuffSkill.Scope, id: string) {
-    const skill = (yield* own).get(id)
-    if (!skill || skill.scope !== scope) return
+    const skill = yield* own(scope, id)
+    if (!skill) return
     const target = path.basename(skill.file) === "SKILL.md" ? path.dirname(skill.file) : skill.file
     yield* fs.remove(target, { recursive: true, force: true }).pipe(
       Effect.mapError(
@@ -171,8 +185,8 @@ export const register = Effect.fn("BuffSkill.register")(function* (ctx: Context,
       list: () => list,
       read: (input, call) =>
         Effect.gen(function* () {
-          const skill = (yield* own).get(input.id)
-          if (!skill || skill.scope !== input.scope)
+          const skill = yield* own(input.scope, input.id)
+          if (!skill)
             return yield* refuse(
               "invalid",
               BuffLocale.t("The skill «{id}» is not among yours: only your own skills can be edited.", {
@@ -186,15 +200,17 @@ export const register = Effect.fn("BuffSkill.register")(function* (ctx: Context,
         Effect.gen(function* () {
           const problem = BuffSkill.problem(input, BuffLocale.t)
           if (problem) return yield* refuse("invalid", problem)
-          const current = (yield* own).get(input.id)
-          const kept = current?.scope === input.scope ? current : undefined
+          const root = roots[input.scope]
+          if (root === undefined)
+            return yield* refuse("invalid", BuffLocale.t("There is no project here: save it for all projects."))
+          const kept = yield* own(input.scope, input.id)
           const written = {
             name: input.name.trim() || input.id,
             description: input.description.trim(),
             body: input.body,
           }
           yield* files.write(
-            kept?.file ?? path.join(roots[input.scope], "skills", input.id, "SKILL.md"),
+            kept?.file ?? path.join(root, "skills", input.id, "SKILL.md"),
             kept ? BuffSkill.fileEdited(kept.text, written) : BuffSkill.fileText(written),
           )
           const previous = input.previous
@@ -226,6 +242,11 @@ export const register = Effect.fn("BuffSkill.register")(function* (ctx: Context,
 export const Plugin = define<Config.Service | Skill.Service | FSUtil.Service | Global.Service | Scope.Scope>({
   id: "buff.skill",
   effect: Effect.fn(function* (ctx) {
-    yield* register(ctx, { settle: "400 millis", userDirectory: (yield* Global.Service).config })
+    const global = yield* Global.Service
+    yield* register(ctx, {
+      settle: "400 millis",
+      userDirectory: global.config,
+      localDirectory: yield* BuffProjectDir.personalFor(ctx.location.project),
+    })
   }),
 })

@@ -23,6 +23,26 @@ describe("files and configuration", () => {
     expect(BuffConnectionScript.isScript({ type: "local", command: ["npx", "x"] })).toBe(false)
     expect("environment" in BuffConnectionScript.config(files, {})).toBe(false)
   })
+  // #951: смена видимости подключения переносит его скрипт в папку новой области.
+  test("a script connection moved to another folder runs its script from there, settings kept", () => {
+    const from = BuffConnectionScript.paths("/home/u/.config/buff/projects/prj", "mail")
+    const to = BuffConnectionScript.paths("/home/u/.config/buff", "post")
+    const config = BuffConnectionScript.config(from, { TOKEN: "{secret:sec_1}" })
+    expect(BuffConnectionScript.moved(config, from, to)).toEqual({
+      type: "local",
+      command: ["buff", to.runner, to.script],
+      environment: { TOKEN: "{secret:sec_1}" },
+    })
+  })
+  test("nothing to move: not a script, a script kept elsewhere, or the same place", () => {
+    const from = BuffConnectionScript.paths("/home/u/.config/buff/projects/prj", "mail")
+    const to = BuffConnectionScript.paths("/home/u/.config/buff", "mail")
+    expect(BuffConnectionScript.moved({ type: "local", command: ["npx", "x"] }, from, to)).toBeUndefined()
+    expect(BuffConnectionScript.moved({ type: "remote", url: "https://x.example/mcp" }, from, to)).toBeUndefined()
+    const elsewhere = BuffConnectionScript.config(BuffConnectionScript.paths("/somewhere", "mail"), {})
+    expect(BuffConnectionScript.moved(elsewhere, from, to)).toBeUndefined()
+    expect(BuffConnectionScript.moved(BuffConnectionScript.config(from, {}), from, from)).toBeUndefined()
+  })
   test("the runner on disk is rewritten when missing or from another Buff Code", () => {
     expect(BuffConnectionScript.stale(undefined)).toBe(true)
     expect(BuffConnectionScript.stale("// buff-runner 000000000000\nold")).toBe(true)

@@ -47,11 +47,13 @@ export function SettingsExtensions(props: {
   }
   const directory = props.project ? scope.project?.worktree : scope.directory
   const scopes = props.project ? (["project", "user"] as const) : (["user"] as const)
+  // Servers and skills have a third place in a project (#951): the person's own, this project only.
+  const places = props.project ? (["project", "local", "user"] as const) : (["user"] as const)
   const section = () => {
-    if (current === "mcps") return <BuffMcpSection server={scope.server} directory={directory} scopes={scopes} />
+    if (current === "mcps") return <BuffMcpSection server={scope.server} directory={directory} scopes={places} />
     if (current === "plugins")
       return <Plugins server={scope.server} directory={props.project ? directory : undefined} />
-    if (current === "skills") return <BuffSkillSection server={scope.server} directory={directory} scopes={scopes} />
+    if (current === "skills") return <BuffSkillSection server={scope.server} directory={directory} scopes={places} />
     if (current === "commands" || current === "agents")
       return (
         <BuffCustomSection

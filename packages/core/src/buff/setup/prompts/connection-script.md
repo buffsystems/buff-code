@@ -1,4 +1,4 @@
-Create or replace a script connection: a small TypeScript module you write, run by Buff Code itself — no Node, Python, packages or terminal on the user's computer. Saved for all projects; the user confirms before it is written and started. Setup mode only.
+Create or replace a script connection: a small TypeScript module you write, run by Buff Code itself — no Node, Python, packages or terminal on the user's computer. Kept by the same rule as `connection_save`, not by your choice: for this project only when the setup conversation was opened inside a project, for all projects otherwise; an existing name is replaced where it already lives. The file sits with the connection in the user's configuration folder. The user confirms before it is written and started. Setup mode only.
 
 Call it when no ready MCP server fits the service, or a published one needs a runtime this computer lacks. Keep it minimal: the tools the user asked for over the service's API, nothing speculative. After saving, test with `connection_test` (a harmless call), fix and save again until it passes. To improve it later, edit the file named in the reply and run `connection_test` — that restarts it.
 
@@ -28,4 +28,4 @@ Available in the script: `fetch`, `URL`, `TextEncoder`/`TextDecoder`, `btoa`/`at
 - code: the whole module.
 - environment: variables the script reads; values may be `{secret:<id>}` tokens.
 
-Returns the file path, the status after the first start and the tools the script offers.
+Returns where it was saved (this project only or all projects — tell the user), the file path, the status after the first start and the tools the script offers.

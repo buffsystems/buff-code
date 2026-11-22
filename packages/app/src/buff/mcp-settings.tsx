@@ -25,11 +25,13 @@ import "./mcp-settings.css"
 
 const SCOPE_TITLE: Record<BuffMcp.Entry["scope"], string> = {
   project: "Project servers",
+  local: "Your servers — in this project only",
   user: "Your servers — in all projects",
   builtin: "Buff Code servers",
 }
 const SCOPE_EMPTY: Record<BuffMcp.Scope, string> = {
   project: "This project has no servers of its own.",
+  local: "No servers kept for this project only.",
   user: "No servers of your own yet.",
 }
 

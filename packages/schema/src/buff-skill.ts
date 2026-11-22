@@ -12,15 +12,18 @@ import { define } from "./rpc.js"
  * (`core/src/buff/skill.ts`).
  */
 
-/** Где лежит свой навык: у пользователя (все проекты) или в проекте (уезжает в репозиторий). */
-export const Scope = Schema.Literals(["user", "project"])
+/**
+ * Где лежит свой навык: у пользователя (все проекты), в проекте (уезжает в репозиторий) или
+ * `local` (#951) — у пользователя, но только для этого проекта.
+ */
+export const Scope = Schema.Literals(["user", "project", "local"])
 export type Scope = typeof Scope.Type
 
 /**
- * Откуда навык: свой (`user`, `project`), из подключённого каталога или каталога другого
+ * Откуда навык: свой (`user`, `project`, `local`), из подключённого каталога или каталога другого
  * агента (`external`), от самого Buff Code или плагина (`builtin`). Правятся только свои.
  */
-export const Origin = Schema.Literals(["user", "project", "external", "builtin"])
+export const Origin = Schema.Literals(["user", "project", "local", "external", "builtin"])
 export type Origin = typeof Origin.Type
 
 export const Entry = Schema.Struct({
@@ -150,6 +153,7 @@ export function fileText(skill: Written): string {
 const SCOPE_LABEL: Record<Origin, string> = {
   project: "project",
   user: "my skill",
+  local: "my skill, this project only",
   external: "attached",
   builtin: "built-in skill",
 }

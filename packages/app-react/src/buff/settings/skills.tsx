@@ -20,27 +20,32 @@ import { at, useBuffList } from "./rpc"
 
 const GROUP_TITLE: Record<BuffSkill.Origin, string> = {
   project: "Project skills",
+  local: "Your skills — in this project only",
   user: "Your skills — in all projects",
   external: "Attached skills",
   builtin: "Built-in skills",
 }
 const GROUP_EMPTY: Record<BuffSkill.Origin, string> = {
   project: "This project has no skills of its own.",
+  local: "No skills kept for this project only.",
   user: "No skills of your own yet.",
   external: "",
   builtin: "",
 }
-const SCOPE_OPTIONS = [
-  { value: "project", label: "In the project" },
-  { value: "user", label: "On my machine — for all projects" },
-] as const
+const SCOPE_CHOICE: Record<BuffSkill.Scope, string> = {
+  project: "In the project",
+  local: "On my machine — this project only",
+  user: "On my machine — for all projects",
+}
 const SKILL_NOTE: Record<BuffSkill.Scope, string> = {
   project: "The skill goes to the project's .buffcode directory and to the repository — the whole team gets the skill.",
+  local: "The skill stays on this machine and works in this project only.",
   user: "The skill stays on this machine, in your configuration.",
 }
 const ATTACH_NOTE: Record<BuffSkill.Scope, string> = {
   project:
     "The attachment entry goes to the project's .buffcode directory and to the repository — the whole team gets the skill.",
+  local: "The attachment entry stays on this machine and works in this project only.",
   user: "The attachment entry stays on this machine, in your configuration.",
 }
 
@@ -48,7 +53,7 @@ type Draft = { id: string; name: string; description: string; body: string; scop
 type Controller = ReturnType<typeof useSkillController>
 
 const ownScope = (scope: BuffSkill.Origin): BuffSkill.Scope | undefined =>
-  scope === "user" || scope === "project" ? scope : undefined
+  scope === "user" || scope === "project" || scope === "local" ? scope : undefined
 
 function useSkillController(server: Server, directory: string | undefined) {
   const i18n = useI18n()
@@ -98,7 +103,7 @@ function ScopeChoice(props: {
     <Field group label={props.label} hint={props.note}>
       <Choice
         value={props.value}
-        options={SCOPE_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))}
+        options={props.scopes.map((scope) => ({ value: scope, label: t(SCOPE_CHOICE[scope]) }))}
         onPick={props.onPick}
       />
     </Field>
