@@ -50,7 +50,9 @@ const registry: Record<string, ComponentType<ToolProps>> = {
   [BuffPlan.TOOL]: PlanTool,
 }
 
-export function toolRenderer(name: string) {
+/** The renderer of a call: by its name, or the file card for any call that handed a file over (#950). */
+export function toolRenderer(name: string, metadata?: Record<string, unknown>) {
+  if (BuffSendFile.sentOf(metadata)) return SendFileTool
   return registry[name] ?? GenericTool
 }
 
@@ -71,7 +73,7 @@ export function ToolDisplay(props: ToolProps & { id: string; error?: string }) {
         : taskID
       : undefined
   const error = toolDisplayError(props, i18n.t("ui.toolErrorCard.failed"))
-  const Render = toolRenderer(props.tool)
+  const Render = toolRenderer(props.tool, props.metadata)
   // Buff (#470): a question or plan left unanswered is a quiet line, also when Buff Code closed
   // while the form waited — not an English failure card.
   const note = error ? formAbortNote(props.tool, error) : undefined

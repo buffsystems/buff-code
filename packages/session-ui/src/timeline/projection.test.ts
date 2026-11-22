@@ -386,6 +386,49 @@ describe("Buff cards", () => {
     }
   })
 
+  // #950: draw_image hands its picture over the same way (metadata.sent) — a card, not «Used N».
+  test("any call that handed a file over is a row of its own", () => {
+    const drawn: SessionMessageAssistantTool = {
+      type: "tool",
+      id: "t2",
+      name: "draw_image",
+      state: {
+        status: "completed",
+        input: {},
+        content: [{ type: "text", text: "ok" }],
+        metadata: { sent: { file: "cat.png", name: "cat.png", mime: "image/png", bytes: 10 } },
+      },
+      time: { created: 1 },
+    }
+    const read: SessionMessageAssistantTool = {
+      ...drawn,
+      id: "t1",
+      name: "read",
+      state: { status: "completed", input: {}, content: [{ type: "text", text: "ok" }] },
+    }
+    const messages = [
+      { id: "user-1", type: "user", text: "draw", time: { created: 1 } },
+      {
+        id: "assistant-1",
+        type: "assistant",
+        agent: "build",
+        model: { id: "m", providerID: "p" },
+        content: [read, drawn],
+        time: { created: 2, completed: 3 },
+      },
+    ] satisfies SessionMessageInfo[]
+    for (const timelineDetail of [timelinePresets.find((preset) => preset.id === "detailed")!.value, undefined]) {
+      const result = createTimelineProjection({
+        sessionMessages: messages,
+        status: { type: "idle" },
+        reasoningMode: "full",
+        ...(timelineDetail ? { timelineDetail } : {}),
+      })
+      const keys = result.rows.map((row) => TimelineRow.key(row))
+      expect(keys.some((key) => key.includes("t2") && !key.includes("context"))).toBe(true)
+    }
+  })
+
   // Окно контекста (#836): смена потолка — отдельная строка-разделитель, как смена модели, а не
   // часть группы «Used N».
   test("a context limit change is a row of its own where notices are grouped, like a model switch", () => {

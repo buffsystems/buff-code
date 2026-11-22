@@ -491,9 +491,92 @@
   .tool-plan[data-full="true"] .tool-plan__text {
     max-height: none;
   }
-  .tool-send-file__path {
+  /* A file the agent handed over (#950): a card like the phone's; a picture shows on top of it. */
+  .sent-file {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    padding: 0.25rem 0;
+  }
+  .sent-file__card {
+    display: flex;
+    flex: 0 1 30rem;
+    min-width: 0;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    overflow: hidden;
+  }
+  .sent-file__picture {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--muted);
+    cursor: zoom-in;
+  }
+  .sent-file__picture img {
+    display: block;
+    max-width: 100%;
+    max-height: 20rem;
+  }
+  .sent-file__main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    text-align: left;
+    cursor: pointer;
+  }
+  .sent-file__main:hover {
+    background: var(--muted);
+  }
+  .sent-file__main:focus-visible,
+  .sent-file__picture:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+  .sent-file__icon {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-sm);
+    background: var(--brand-soft, var(--muted));
+    color: var(--brand-soft-foreground, var(--foreground));
+  }
+  .sent-file__text {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .sent-file__caption,
+  .sent-file__note {
     color: var(--muted-foreground);
+    font-size: 0.75rem;
+  }
+  .sent-file__name {
+    font-weight: 500;
     overflow-wrap: anywhere;
+  }
+  .sent-file__chevron {
+    flex: none;
+    color: var(--muted-foreground);
+  }
+  .sent-file__actions {
+    display: flex;
+    gap: 0.25rem;
   }
   .tool-plan__actions {
     display: flex;

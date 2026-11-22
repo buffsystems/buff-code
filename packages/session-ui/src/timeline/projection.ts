@@ -721,8 +721,11 @@ function groupContent(
   return groups
 }
 
-// Buff (#808): файл, отданный агентом, — тоже своя карточка: в свёрнутой группе его не видно.
+// Buff (#808, #950): файл, отданный агентом, — тоже своя карточка: в свёрнутой группе его не видно.
+// Отдаёт не только send_file — draw_image кладёт картинку туда же, в metadata.sent.
 const BUFF_CARDS = new Set(["plan_exit", "todo_update", BuffSendFile.TOOL])
+const buffCard = (content: Extract<Content, { type: "tool" }>) =>
+  BUFF_CARDS.has(content.name) || ("metadata" in content.state && !!BuffSendFile.sentOf(content.state.metadata))
 
 function toolGroupType(
   content: Extract<Content, { type: "tool" }>,
@@ -732,7 +735,7 @@ function toolGroupType(
   detail?: TimelineDetail,
 ) {
   // Buff (#463, #808): план, список дел и отданный файл — свои карточки, не в общей группе «Used N».
-  if (BUFF_CARDS.has(content.name)) return undefined
+  if (buffCard(content)) return undefined
   if (detail) {
     if (content.name === "question" && !currentToolFailed(content)) return undefined
     const category = timelineCategory(content)!

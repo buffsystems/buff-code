@@ -39,12 +39,14 @@ export function handOver(directory: string, wanted: string, note: string): BuffS
   if (!stat.isFile()) return { error: BuffLocale.t("Only a file can be sent, not a folder.") }
   if (stat.size > BuffSendFile.MAX_BYTES) return { error: BuffLocale.t("The file is larger than 20 MB") }
   const name = path.basename(real)
+  const line = note.trim()
+  // Без пустого ключа (#950): `undefined` — не JSON, и вызов с пустой подписью не завершался.
   return {
     file: path.relative(root, real).split(path.sep).join("/"),
     name,
     mime: BuffSendFile.mimeOf(name),
     bytes: stat.size,
-    note: note.trim() || undefined,
+    ...(line ? { note: line } : {}),
   }
 }
 

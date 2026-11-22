@@ -2607,8 +2607,8 @@ function ToolPart(props: { part: SessionMessageAssistantTool; images?: boolean }
       <Match when={props.part.name === BuffPlan.TOOL}>
         <PlanCard {...toolprops} />
       </Match>
-      {/* Buff (#708): файл, который агент отдал человеку. */}
-      <Match when={props.part.name === BuffSendFile.TOOL}>
+      {/* Buff (#708, #950): файл, который агент отдал человеку, — send_file или картинка draw_image. */}
+      <Match when={props.part.name === BuffSendFile.TOOL || !!BuffSendFile.sentOf(toolprops.metadata)}>
         <SendFile {...toolprops} />
       </Match>
       <Match when={true}>

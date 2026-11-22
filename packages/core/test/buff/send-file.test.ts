@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Schema } from "effect"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Location } from "@opencode/core/location"
 import { Session } from "@opencode/core/session"
@@ -37,6 +37,12 @@ describe("send_file (#708)", () => {
     }
     expect(BuffSendFilePlugin.handOver(dir, "docs/Программа.docx", "Черновик")).toEqual(sent)
     expect(BuffSendFilePlugin.handOver(dir, path.join(dir, "docs/Программа.docx"), " ")).toEqual({ ...sent, note: undefined })
+  })
+
+  test("an empty note leaves no note key — the call's metadata must stay JSON (#950)", async () => {
+    const dir = await folder()
+    expect(BuffSendFilePlugin.handOver(dir, "docs/Программа.docx", "")).not.toHaveProperty("note")
+    expect(BuffSendFilePlugin.handOver(dir, "docs/Программа.docx", "  ")).not.toHaveProperty("note")
   })
 
   test("nothing outside the folder, no folders, nothing missing, nothing too big", async () => {
@@ -90,6 +96,22 @@ describe("send_file as a tool", () => {
         sent: { file: "отчёт.pdf", name: "отчёт.pdf", mime: "application/pdf", bytes: 8, note: "Итог" },
       })
       expect(JSON.stringify(result.content)).not.toContain("%PDF")
+    }),
+  )
+
+  // #950: «empty if the name says it» — an empty note hung the call (undefined is not JSON metadata).
+  it.effect("an empty note completes the call with JSON metadata", () =>
+    Effect.gen(function* () {
+      const registry = yield* Tool.Service
+      const result = yield* executeTool(registry, {
+        sessionID: Session.ID.make("ses_send_file_test"),
+        ...toolIdentity,
+        call: { type: "tool-call", id: "call-send-bare", name: "send_file", input: { path: "отчёт.pdf", note: "" } },
+      })
+      expect(result.status).toBe("completed")
+      expect(Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Json))(result.metadata)).toEqual({
+        sent: { file: "отчёт.pdf", name: "отчёт.pdf", mime: "application/pdf", bytes: 8 },
+      })
     }),
   )
 })

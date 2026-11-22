@@ -7,7 +7,16 @@ import { BuffQuestion } from "@opencode/schema/buff-question"
 import { BuffSendFile } from "@opencode/schema/buff-send-file"
 import { BuffTodo } from "@opencode/schema/buff-todo"
 import { getFilename } from "@opencode/util/path"
-import { Check, Circle, CircleDot, SquareArrowOutUpRight } from "lucide-react"
+import {
+  Check,
+  ChevronRight,
+  Circle,
+  CircleDot,
+  File as FileIcon,
+  FileImage,
+  FileText,
+  SquareArrowOutUpRight,
+} from "lucide-react"
 import { useEffect, useRef, useState, type MouseEvent } from "react"
 import { createMarkdownImages } from "../markdown/images"
 import { previewImages, usePreviewImage, useReadImage } from "../markdown/image-preview"
@@ -420,47 +429,110 @@ export function TodoTool(props: ToolProps) {
   )
 }
 
-/** Buff (#708, #808): a file the agent handed over — its name and size; Preview in the window; on this computer, Open and Show in folder. */
+/**
+ * Buff (#708, #808, #950): a file the agent handed over — send_file, or draw_image's picture. A card
+ * like the phone's: a picture shows itself, other files their type, name, size and the agent's note;
+ * a click previews it in the window, a picture opens large; on this computer, Open and Show in folder.
+ */
 export function SendFileTool(props: ToolProps) {
   const i18n = useI18n()
   const platform = usePlatform()
   const timeline = useTimeline()
   const directory = useSessionDirectory()
   const sent = BuffSendFile.sentOf(props.metadata)
+  if (!sent)
+    return (
+      <BasicTool
+        {...passThrough(props)}
+        hasContent={false}
+        trigger={{ title: i18n.buff.t("File for you"), subtitle: String(props.input.path ?? props.input.file ?? "") }}
+      />
+    )
   const local = platform.platform === "desktop" && isLocalServer(timeline.server.conn)
-  const full = sent ? `${directory.replace(/[\\/]+$/, "")}/${sent.file}` : ""
+  const full = `${directory.replace(/[\\/]+$/, "")}/${sent.file}`
+  const kind = BuffSendFile.kindOf(sent.mime)
+  const Icon = kind === "image" ? FileImage : kind === "text" ? FileText : FileIcon
+  const preview = () => sideActions()?.openFile(sent.file)
   return (
-    <BasicTool
-      {...passThrough(props)}
-      defaultOpen
-      hasContent={!!sent}
-      trigger={{
-        title: i18n.buff.t("File for you"),
-        subtitle: sent ? `${sent.name} · ${BuffSendFile.sizeOf(sent.bytes, i18n.buff.t)}` : String(props.input.path ?? ""),
-      }}
-    >
-      {sent && (
-        <div data-component="buff-send-file" className="tool-send-file">
-          <span className="tool-send-file__path">{sent.note ? `${sent.note} — ${sent.file}` : sent.file}</span>
-          <div className="tool-plan__actions">
-            {/* #808: shown in the window's own viewer — wherever the service runs. */}
-            <Button size="sm" variant="ghost" data-action="buff-file-preview" onClick={() => sideActions()?.openFile(sent.file)}>
-              {i18n.buff.t("Preview")}
+    <div data-component="buff-send-file" data-kind={kind} className="sent-file">
+      <div className="sent-file__card">
+        {kind === "image" && (
+          <SentPicture path={sent.file} name={sent.name} onContentRendered={props.onContentRendered} />
+        )}
+        <button
+          type="button"
+          className="sent-file__main"
+          data-action="buff-file-preview"
+          title={i18n.buff.t("Preview")}
+          onClick={preview}
+        >
+          <span className="sent-file__icon" aria-hidden="true">
+            <Icon size={18} />
+          </span>
+          <span className="sent-file__text">
+            <span className="sent-file__caption">
+              {i18n.buff.t("File for you")} · {BuffSendFile.sizeOf(sent.bytes, i18n.buff.t)}
+            </span>
+            <span className="sent-file__name">{sent.name}</span>
+            {sent.note && <span className="sent-file__note">{sent.note}</span>}
+          </span>
+          <ChevronRight className="sent-file__chevron" size={16} aria-hidden="true" />
+        </button>
+      </div>
+      {local && (
+        <div className="sent-file__actions">
+          <Button size="sm" variant="ghost" data-action="buff-file-open" onClick={() => void platform.openPath?.(full)}>
+            {i18n.buff.t("Open")}
+          </Button>
+          {platform.revealPath && (
+            <Button
+              size="sm"
+              variant="ghost"
+              data-action="buff-file-reveal"
+              onClick={() => void platform.revealPath?.(full)}
+            >
+              {i18n.buff.t("Show in folder")}
             </Button>
-            {local && (
-              <Button size="sm" variant="ghost" data-action="buff-file-open" onClick={() => void platform.openPath?.(full)}>
-                {i18n.buff.t("Open")}
-              </Button>
-            )}
-            {local && platform.revealPath && (
-              <Button size="sm" variant="ghost" data-action="buff-file-reveal" onClick={() => void platform.revealPath?.(full)}>
-                {i18n.buff.t("Show in folder")}
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       )}
-    </BasicTool>
+    </div>
+  )
+}
+
+// The picture itself, read through the service like a transcript image; a click opens it large.
+function SentPicture(props: { path: string; name: string; onContentRendered?: () => void }) {
+  const readImage = useReadImage()
+  const preview = usePreviewImage()
+  const [src, setSrc] = useState<string>()
+  const rendered = useRef(props.onContentRendered)
+  rendered.current = props.onContentRendered
+  useEffect(() => {
+    if (!readImage) return
+    const controller = new AbortController()
+    const state = { url: undefined as string | undefined }
+    void readImage(props.path, controller.signal)
+      .then((blob) => {
+        if (!blob || controller.signal.aborted) return
+        state.url = URL.createObjectURL(blob)
+        setSrc(state.url)
+      })
+      .catch(() => rendered.current?.())
+    return () => {
+      controller.abort()
+      if (state.url) URL.revokeObjectURL(state.url)
+    }
+  }, [props.path, readImage])
+  if (!src) return null
+  return (
+    <button
+      type="button"
+      className="sent-file__picture"
+      data-action="buff-file-picture"
+      onClick={() => preview(src, props.name)}
+    >
+      <img src={src} alt={props.name} onLoad={() => rendered.current?.()} onError={() => rendered.current?.()} />
+    </button>
   )
 }
 
