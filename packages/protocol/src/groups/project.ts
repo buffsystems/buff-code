@@ -1,7 +1,8 @@
 import { Project } from "@opencode/schema/project"
 import { Schema, Struct } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
-import { ProjectNotFoundError } from "../errors.js"
+import { HttpApiSchema } from "effect/unstable/httpapi"
+import { ConflictError, ProjectNotFoundError } from "../errors.js"
 
 const root = "/api/project"
 const UpdatePayload = Schema.Struct(Struct.omit(Project.UpdateInput.fields, ["projectID"]))
@@ -29,6 +30,20 @@ export const ProjectGroup = HttpApiGroup.make("server.project")
         identifier: "project.update",
         summary: "Update project",
         description: "Update the project canonical directory, display metadata, and workspace commands.",
+      }),
+    ),
+  )
+  .add(
+    HttpApiEndpoint.delete("project.remove", `${root}/:projectID`, {
+      params: { projectID: Project.ID },
+      success: HttpApiSchema.NoContent,
+      error: [ProjectNotFoundError, ConflictError],
+    }).annotateMerge(
+      OpenApi.annotations({
+        identifier: "project.remove",
+        summary: "Remove project",
+        description:
+          "Forget a project that has no sessions left. Its directory is not touched; a project with sessions answers a conflict.",
       }),
     ),
   )

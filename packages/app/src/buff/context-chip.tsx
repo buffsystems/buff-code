@@ -5,6 +5,8 @@ import { useDialog } from "@opencode/ui/context/dialog"
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from "@opencode/ui/dialog"
 import { List } from "@opencode/ui/list"
 import { BuffContext } from "@opencode/schema/buff-context"
+import { BuffFirstRun } from "@opencode/schema/buff-first-run"
+import { BuffSubscription } from "@opencode/schema/buff-subscription"
 import {
   chooseOrg,
   chooseProject,
@@ -159,6 +161,20 @@ export function BuffContextChip() {
   const { t } = useBuffText()
   const [choice, setChoice] = createSignal<Choice | null>(null)
   const [signedOut, setSignedOut] = createSignal(false)
+  const [account, setAccount] = createSignal<string | undefined>()
+  const sdk = useServerSDK()
+  /** Чей вход аккаунтом Buff выполнен; входа нет — ничего. Спрашивается у службы: список интеграций мог ещё не прийти. */
+  const accountLogin = () =>
+    sdk.api
+      .rpc(BuffSubscription.Rpc)
+      .get(undefined, at())
+      .then(
+        (usage) => usage.login ?? "",
+        (error: unknown) =>
+          typeof error === "object" && error !== null && "type" in error && error.type === "signed_out"
+            ? undefined
+            : "",
+      )
 
   const choose = async () => {
     const kept = await context.choose(choice())
@@ -175,8 +191,11 @@ export function BuffContextChip() {
     const problem = await rpc.options(undefined, at()).then(() => undefined, failure)
     const step = launchStep(saved, problem)
     setSignedOut(step === "sign_in")
+    // #966: вошли личным аккаунтом Buff — это тоже вход: чип называет его и входа в компанию не навязывает.
+    const signed = step === "sign_in" ? await accountLogin() : undefined
+    setAccount(signed)
     // #457: при первом запуске вход открывает знакомство, а не чип.
-    if (step === "sign_in") return openSignIn && !onboardingPending() ? signIn() : undefined
+    if (step === "sign_in") return openSignIn && !onboardingPending() && signed === undefined ? signIn() : undefined
     if (step === "unreachable") return showToast({ title: t("Buff context"), description: problem!.message })
     // Первый запуск в каталоге всегда спрашивает (#391).
     if (step === "choose") await choose()
@@ -213,12 +232,19 @@ export function BuffContextChip() {
       size="normal"
       style={{ height: "28px" }}
       class="min-w-0 max-w-[320px] justify-start ![font-weight:440]"
-      classList={{ "text-icon-warning-base": signedOut() || !choice() }}
+      classList={{ "text-icon-warning-base": (signedOut() && account() === undefined) || (!signedOut() && !choice()) }}
       title={t("Buff working context: organization, project, knowledge spaces")}
       onClick={() => (signedOut() ? signIn() : void choose())}
     >
       <span class="truncate leading-4">
-        ◆ {signedOut() ? t("Sign in to Buff") : choice() ? BuffContext.label(choice(), t) : t("Choose a Buff context")}
+        ◆{" "}
+        {signedOut()
+          ? account() !== undefined
+            ? [t(BuffFirstRun.ACCOUNT_SHORT), account()].filter(Boolean).join(" · ")
+            : t("Sign in to Buff")
+          : choice()
+            ? BuffContext.label(choice(), t)
+            : t("Choose a Buff context")}
       </span>
     </Button>
   )

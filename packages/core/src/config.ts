@@ -292,6 +292,14 @@ export const layer = (options?: Options) =>
         ),
         Effect.forkScoped({ startImmediately: true }),
       )
+      // Buff (#969): «config.updated» without a location asks every location to re-read its files
+      // now. The app announces its own config writes this way, so they apply even where the native
+      // watcher cannot load (a sandbox with a noexec /tmp) and no filesystem event ever comes.
+      yield* bus.subscribe(Event.Updated).pipe(
+        Stream.filter((event) => event.location === undefined),
+        Stream.runForEach(() => requestReload),
+        Effect.forkScoped({ startImmediately: true }),
+      )
       yield* bus.subscribe(Credential.Event.Switched).pipe(
         Stream.filterEffect((event) =>
           wellknown.entries().pipe(

@@ -427,7 +427,7 @@ export function SessionSidePanel(props: {
                                       <div class="flex items-center gap-1.5">
                                         <Icon name="branch-out" size="small" />
                                         <span class="max-w-40 truncate">
-                                          {data.session.get(side())?.title ?? buffText.t("Side conversation")}
+                                          {data.session.get(side())?.title ?? buffText.t("Side chat")}
                                         </span>
                                       </div>
                                     </SortableTab>

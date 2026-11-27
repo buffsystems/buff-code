@@ -106,7 +106,7 @@ function AutomationsPage() {
           <h1 class="buff-auto-title">{t("Automations")}</h1>
           <p class="buff-auto-intro">
             {t(
-              "Tasks for the agent on a schedule. The Buff Code service on this machine runs them — even with the window closed; each run is a new session in the project.",
+              "Tasks for the agent on a schedule. The Buff Code service on this machine runs them — even with the window closed; each run is a new chat in the project.",
             )}
           </p>
         </div>
@@ -225,7 +225,7 @@ function Card(props: {
               data-action="buff-auto-open"
               onClick={() => props.onOpenSession(session())}
             >
-              {state() === "waiting" ? t("Answer in the session") : t("Open session")}
+              {state() === "waiting" ? t("Answer in the chat") : t("Open chat")}
             </Button>
           )}
         </Show>

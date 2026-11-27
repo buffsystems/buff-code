@@ -1,4 +1,4 @@
-import { BUFF_PROVIDER } from "@/buff/providers"
+import { BUFF_ACCOUNT, BUFF_PROVIDER } from "@/buff/providers"
 import { BuffConnectorHint, BuffSignInCodeStatus } from "@/buff/sign-in-code"
 import { Button } from "@opencode/ui/button"
 import { OFFER_CUSTOM_PROVIDER } from "@/buff/brand"
@@ -17,6 +17,7 @@ import { useParams } from "@solidjs/router"
 import { ExternalLink } from "@/runtime/platform/external-link"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useBuffText } from "@/buff/i18n"
+import { usePlatform } from "@/runtime/platform/platform"
 import { useProviders } from "@/providers/catalog/providers"
 import { useIntegrations } from "@/providers/catalog/integrations"
 import { CustomProviderForm } from "@/providers/credentials/dialog"
@@ -270,6 +271,7 @@ function ProviderConnection(props: {
 }) {
   const dialog = useDialog()
   const buffText = useBuffText()
+  const platform = usePlatform()
   const params = useParams()
   const language = useLanguage()
   const providers = useProviders(() => props.directory)
@@ -664,6 +666,37 @@ function ProviderConnection(props: {
     )
   }
 
+  // Buff (#966): страница аккаунта Buff возвращается сама — кода, который вводить или копировать, нет.
+  function AccountAutoView() {
+    const url = () => controller.authorization()!.url
+    onMount(() => platform.openExternal(url()))
+    return (
+      <div class="flex flex-col gap-4" data-component="buff-account-auto">
+        <span class="text-14-regular text-text-base">{controller.authorization()!.instructions}</span>
+        <div class="flex flex-wrap gap-2">
+          <Button type="button" variant="contrast" data-action="buff-account-open" onClick={() => platform.openExternal(url())}>
+            {buffText.t("Open the sign-in page")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            data-action="buff-account-cancel"
+            onClick={() => {
+              controller.auth.cancel()
+              dialog.close()
+            }}
+          >
+            {buffText.t("Cancel")}
+          </Button>
+        </div>
+        <div class="text-14-regular text-text-base flex items-center gap-4">
+          <Spinner />
+          <span>{buffText.t("Waiting for you to allow the sign-in on the page…")}</span>
+        </div>
+      </div>
+    )
+  }
+
   function OAuthAutoView() {
     const code = createMemo(() => {
       const instructions = controller.authorization()?.instructions
@@ -775,6 +808,9 @@ function ProviderConnection(props: {
               <Switch>
                 <Match when={controller.authorization()?.mode === "code"}>
                   <OAuthCodeView />
+                </Match>
+                <Match when={controller.authorization()?.mode === "auto" && provider().id === BUFF_ACCOUNT}>
+                  <AccountAutoView />
                 </Match>
                 <Match when={controller.authorization()?.mode === "auto"}>
                   <OAuthAutoView />

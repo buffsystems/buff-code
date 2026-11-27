@@ -13,6 +13,7 @@ import { InstructionBuiltIns } from "../instructions/builtins.js"
 import { Location } from "../location.js"
 import { McpInstructions } from "../mcp/instructions.js"
 import { McpTool } from "../tool/mcp.js"
+import { PluginHooks } from "../plugin/hooks.js"
 import { ReferenceInstructions } from "../reference/instructions.js"
 import { SkillInstructions } from "../skill/instructions.js"
 import { Tool } from "../tool.js"
@@ -89,6 +90,7 @@ const layer = Layer.effect(
     const skillInstructions = yield* SkillInstructions.Service
     const store = yield* SessionStore.Service
     const registry = yield* Tool.Service
+    const hooks = yield* PluginHooks.Service
 
     const resolveModel = (session: SessionSchema.Info) => models.resolve(session, model.available)
 
@@ -127,8 +129,10 @@ const layer = Layer.effect(
       yield* mcpTools.flush
       const agent = yield* agents.select(session.agent)
       if (!agent.info) return yield* new AgentNotFoundError({ sessionID: session.id, agent: session.agent ?? agent.id })
-      // Session permissions narrow discovery the same way they narrow the tool snapshot.
-      const permissions = Permission.merge(agent.info.permissions, session.permissions ?? [])
+      // Session permissions narrow discovery the same way they narrow the tool snapshot; plugins may
+      // narrow them further for this Session (a connection turned off in one chat, #969).
+      const narrowed = yield* hooks.trigger("permission", "tools", { sessionID, agent: agent.info.id, rules: [] })
+      const permissions = Permission.merge(agent.info.permissions, session.permissions ?? [], narrowing(narrowed.rules))
       const loaded = yield* Effect.all(
         {
           tools: registry.snapshot(permissions),
@@ -179,6 +183,12 @@ const layer = Layer.effect(
   }),
 )
 
+/** What the `permission.tools` hook may add (R15-03): it narrows a Session's tools, never widens
+ *  them — only its deny rules count. */
+export function narrowing(rules: ReadonlyArray<Permission.Ruleset[number]>): Permission.Ruleset[number][] {
+  return rules.filter((rule) => rule.effect === "deny")
+}
+
 /** Variant IDs that minimize reasoning output, in preference order. */
 const MINIMAL_REASONING_VARIANTS = ["none", "minimal", "low"].map((id) => Model.VariantID.make(id))
 
@@ -186,6 +196,7 @@ export const node = makeLocationNode({
   service: Service,
   layer,
   deps: [
+    PluginHooks.node,
     Agent.node,
     Model.node,
     Database.node,

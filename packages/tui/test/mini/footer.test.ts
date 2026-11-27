@@ -257,8 +257,8 @@ test.each([false, true])("command menu uses its full height on first open (mono=
     const frame = app.captureCharFrame()
     expect(frame).toContain("Открыть редактор")
     expect(frame).toContain("Показать состояние")
-    expect(frame).toContain("Сжать сессию")
-    expect(frame).toContain("Новая сессия")
+    expect(frame).toContain("Сжать чат")
+    expect(frame).toContain("Новый чат")
     expect(frame).toContain("Следующий вариант модели")
   } finally {
     app.footer.destroy()

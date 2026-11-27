@@ -1,22 +1,22 @@
 /** Русский каталог (#816): публичные ссылки на диалоги Buff Code. */
 export const share = {
   "The title is required": "Нужен заголовок",
-  "The session is not found": "Сессия не найдена",
+  "The chat is not found": "Чат не найден",
   "The link is not found": "Ссылка не найдена",
   "The expiry is not a moment in time": "Срок действия — не момент времени",
   "No link to the gateway {gateway}: the link cannot be published — check the internet and try again.":
     "Нет связи со шлюзом {gateway}: ссылку не опубликовать — проверьте интернет и попробуйте ещё раз.",
   "The Buff Code service is not running — public links are made through it.":
     "Служба Buff Code не запущена — публичные ссылки создаются через неё.",
-  // окно: диалог «Поделиться» и настройки → «Публичные диалоги»
-  "Public links": "Публичные диалоги",
+  // окно: диалог «Поделиться» и настройки → «Публичные ссылки»
+  "Public links": "Публичные ссылки",
   "Share…": "Поделиться…",
-  "A public link to this dialog, with a password and an expiry if you like":
-    "Публичная ссылка на этот диалог — при желании с паролем и сроком действия",
+  "A public link to this chat, with a password and an expiry if you like":
+    "Публичная ссылка на этот чат — при желании с паролем и сроком действия",
   "Share this message": "Поделиться этим сообщением",
   "Public link": "Публичная ссылка",
   "What to share": "Чем поделиться",
-  "Whole dialog": "Весь диалог",
+  "Whole chat": "Весь чат",
   "Selected messages": "Выбранные сообщения",
   "No messages to share yet.": "Пока нечем делиться.",
   You: "Вы",
@@ -32,7 +32,7 @@ export const share = {
   "In 30 days": "30 дней",
   "Keep as is": "Оставить как есть",
   "Show AI tool calls and their results": "Показывать вызовы инструментов ИИ и их результаты",
-  "Follow the session live": "Транслировать сессию вживую",
+  "Follow the chat live": "Транслировать чат вживую",
   "Create the link": "Создать ссылку",
   "Select at least one message": "Выберите хотя бы одно сообщение",
   "The link was not created.": "Не удалось создать ссылку.",
@@ -40,23 +40,23 @@ export const share = {
   "Copy the link": "Скопировать ссылку",
   Copied: "Скопировано",
   "Anyone with the link can open it: there is no password.": "Страницу откроет любой, у кого есть ссылка: пароля нет.",
-  "The page reads the dialog from this machine while Buff Code runs; the links are managed in Settings → Public links.":
-    "Страница читает диалог с этой машины, пока работает Buff Code; ссылками можно управлять в «Настройки → Публичные диалоги».",
-  "Links of this machine's Buff Code live at {gateway}; a page reads the dialog from this machine when it opens — while Buff Code runs.":
-    "Ссылки Buff Code этой машины живут на {gateway}; страница читает диалог с этой машины при открытии — пока работает Buff Code.",
-  "Public links did not load.": "Не удалось загрузить публичные диалоги.",
+  "The page reads the chat from this machine while Buff Code runs; the links are managed in Settings → Public links.":
+    "Страница читает чат с этой машины, пока работает Buff Code; ссылками можно управлять в «Настройки → Публичные ссылки».",
+  "Links of this machine's Buff Code live at {gateway}; a page reads the chat from this machine when it opens — while Buff Code runs.":
+    "Ссылки Buff Code этой машины живут на {gateway}; страница читает чат с этой машины при открытии — пока работает Buff Code.",
+  "Public links did not load.": "Не удалось загрузить публичные ссылки.",
   "The Buff Code service did not answer about the links": "Служба Buff Code не ответила про ссылки",
   "The Buff Code service is not running — public links are made and shown through it.":
     "Служба Buff Code не запущена — публичные ссылки создаются и показываются через неё.",
   Links: "Ссылки",
   "Loading the links": "Загружаем ссылки",
   "No public links yet.": "Публичных ссылок пока нет.",
-  "Share a session from its menu or a message's actions.": "Поделитесь сессией из её меню или из действий у сообщения.",
+  "Share a chat from its menu or a message's actions.": "Поделитесь чатом из его меню или из действий у сообщения.",
   "Turned on": "Включена",
   "Turned off": "Отключена",
   Expired: "Истекла",
   "Not yet published": "Ещё не опубликована",
-  "Deleted session": "Сессия удалена",
+  "Deleted chat": "Чат удалён",
   "Messages: {count}": "Сообщений: {count}",
   "With password": "С паролем",
   "No password": "Без пароля",
@@ -69,7 +69,7 @@ export const share = {
   "New password (leave empty to keep)": "Новый пароль (пусто — оставить прежний)",
   "Remove the password": "Снять пароль",
   "Delete the link?": "Удалить ссылку?",
-  "The page will say the dialog was removed by its owner.": "Страница скажет, что диалог удалён владельцем.",
+  "The page will say the chat was removed by its owner.": "Страница скажет, что чат удалён владельцем.",
   "The link is deleted.": "Ссылка удалена.",
   "The link was not saved.": "Не удалось сохранить ссылку.",
   "The link was not deleted.": "Не удалось удалить ссылку.",
@@ -77,13 +77,13 @@ export const share = {
   "pick the messages to show": "выбрать сообщения, которые показать",
   Yes: "Да",
   No: "Нет",
-  "Open a session to share it.": "Откройте сессию, чтобы поделиться ею.",
+  "Open a chat to share it.": "Откройте чат, чтобы поделиться им.",
   "The Buff Code service is not running — public links are made through it. Start it: buff service start":
     "Служба Buff Code не запущена — публичные ссылки создаются через неё. Запустите: buff service start",
   "o — open in the browser · select the address with the mouse to copy it":
     "o — открыть в браузере · выделите адрес мышью, чтобы скопировать",
-  "This session has no public links.": "У этой сессии нет публичных ссылок.",
-  "Buff: public links": "Buff: публичные диалоги",
+  "This chat has no public links.": "У этого чата нет публичных ссылок.",
+  "Buff: public links": "Buff: публичные ссылки",
   "Disable public access": "Отключить публичный доступ",
   "Enable public access": "Возобновить публичный доступ",
   "Change the password": "Сменить пароль",

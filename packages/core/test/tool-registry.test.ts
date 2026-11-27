@@ -11,7 +11,7 @@ import { Tool } from "@opencode/core/tool"
 import type { Info } from "@opencode/schema/tool"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { codeModeListings, executeTool, toolDefinitions } from "./lib/tool"
-import { Deferred, Effect, Exit, Fiber, Layer, Logger, Schema, SchemaGetter, SchemaIssue, Scope } from "effect"
+import { Deferred, Effect, Exit, Fiber, Layer, Logger, Schema, SchemaGetter, SchemaIssue, Scope, Stream } from "effect"
 import { z } from "zod"
 import { testEffect } from "./lib/effect"
 
@@ -84,6 +84,20 @@ describe("Tool", () => {
         expect(editor.get("acme_echo")?.name).toBe("echo")
         expect(editor.get("missing")).toBeUndefined()
       })
+    }),
+  )
+
+  // R5-03: кто строит что-то по реестру (правила MCP), узнаёт о каждой его перемене.
+  it.live("announces every change of the registry", () =>
+    Effect.gen(function* () {
+      const service = yield* Tool.Service
+      const seen = yield* Deferred.make<void>()
+      yield* (yield* service.changes()).pipe(
+        Stream.runForEach(() => Deferred.succeed(seen, undefined)),
+        Effect.forkScoped({ startImmediately: true }),
+      )
+      yield* transform(service, { echo: make() })
+      yield* Deferred.await(seen).pipe(Effect.timeout("1 second"))
     }),
   )
 

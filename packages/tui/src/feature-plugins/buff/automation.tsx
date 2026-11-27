@@ -51,7 +51,7 @@ function Commands(props: { context: Context }) {
     const { runs } = await rpc.runs({ id: automation.id }, at())
     if (!runs.length) return say(t("No automation runs yet."), "info")
     const picked = await wide({
-      title: t("History: {title} · Enter — open the run session", { title: automation.title }),
+      title: t("History: {title} · Enter — open the run chat", { title: automation.title }),
       options: runs.map((run) => BuffAutomationFlow.historyRow(run, new Date(), words)),
     })
     context.ui.dialog.clear()
@@ -95,7 +95,7 @@ function Commands(props: { context: Context }) {
       case "remove": {
         const yes = await context.ui.dialog.confirm({
           title: t("Delete «{title}»?", { title: automation.title }),
-          message: t("It will no longer run, its run history will be deleted. The run sessions will stay."),
+          message: t("It will no longer run, its run history will be deleted. The run chats will stay."),
         })
         context.ui.dialog.clear()
         if (!yes) return

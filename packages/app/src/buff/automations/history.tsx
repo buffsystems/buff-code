@@ -67,7 +67,7 @@ export function RunHistory(props: {
                             props.onOpenSession(session())
                           }}
                         >
-                          {t("Open session")}
+                          {t("Open chat")}
                         </Button>
                       )}
                     </Show>

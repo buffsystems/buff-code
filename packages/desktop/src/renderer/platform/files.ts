@@ -57,12 +57,14 @@ export function createDesktopFiles(api: DesktopFileAPI, os: DesktopOS) {
     openExternal: (url: string) => api.openExternal(url),
     openLocalFile: (url: string) => api.openLocalFile(url),
     async openPath(path: string, app?: string) {
-      if (os !== "windows") {
-        await api.openPath(path, app)
-        return
+      // The system's opener does not throw: it answers with the reason, in words, when it could
+      // not open. That reason is a failure for whoever asked (#972) — a toast, not silence.
+      const said = (reason: string | undefined) => {
+        if (reason) throw new Error(reason)
       }
+      if (os !== "windows") return said(await api.openPath(path, app))
       const resolvedApp = app ? await api.resolveAppPath(app).catch(() => null) : null
-      await api.openPath(path, resolvedApp ?? undefined)
+      said(await api.openPath(path, resolvedApp ?? undefined))
     },
     async revealPath(path: string) {
       return api.revealPath(path)

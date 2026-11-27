@@ -8,7 +8,7 @@ Ask OpenCode for current information and it can search the web, read the results
 Find the latest Bun release and summarize the changes.
 ```
 
-The first search asks you to allow web search and select a provider. OpenCode remembers your choice for later sessions.
+The first search asks you to allow web search and select a provider. OpenCode remembers your choice for later chats.
 
 ## Providers
 
@@ -40,7 +40,7 @@ Set a provider in `opencode.jsonc` to skip the selection prompt.
 }
 ```
 
-Use `"random"` to choose an available provider automatically. Each session keeps using its selected provider until that provider is rate limited.
+Use `"random"` to choose an available provider automatically. Each chat keeps using its selected provider until that provider is rate limited.
 
 ```jsonc title="opencode.jsonc"
 {
@@ -61,7 +61,7 @@ Exa returns HTTP 429
 → OpenCode retries with another provider
 ```
 
-If every provider is cooling down, the search fails immediately. Moving a session or restarting its server clears its remembered provider; cooldowns are shared by sessions in the same workspace.
+If every provider is cooling down, the search fails immediately. Moving a chat or restarting its server clears its remembered provider; cooldowns are shared by chats in the same workspace.
 
 ## Permissions
 

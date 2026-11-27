@@ -44,13 +44,13 @@ export function newDeviceKey(): { deviceKey: string; pubkey: string } {
 }
 
 /** Подпись обновления — байт в байт как developerPopMessage(deviceId, jti) на бэкенде. */
-function proof(deviceKey: string, deviceID: string, jti: string): string {
+export function proof(deviceKey: string, deviceID: string, jti: string): string {
   const key = createPrivateKey({ key: Buffer.from(deviceKey, "base64url"), format: "der", type: "pkcs8" })
   return sign(null, Buffer.from(`developer-refresh:${deviceID}:${jti}`), key).toString("base64url")
 }
 
 /** Полезная нагрузка токена без проверки подписи: проверяет бэкенд. */
-function claims(token: string): Reply {
+export function claims(token: string): Reply {
   try {
     return JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8")) as Reply
   } catch {

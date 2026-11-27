@@ -41,6 +41,7 @@ import { toLLMMessages } from "./runner/to-llm-message.js"
 import type { SessionMessage } from "./message.js"
 import { SessionMediaFiles } from "./media-files.js"
 import { BuffAttachment } from "@opencode/schema/buff-attachment"
+import { BuffProviderFetch } from "../buff/provider-fetch.js"
 
 const IMAGE_BYTES_TRIGGER = 25 * 1024 * 1024 // 25 MiB
 const IMAGE_BYTES_TARGET = 15 * 1024 * 1024 // 15 MiB
@@ -112,10 +113,22 @@ const replacement = (
 ) => {
   const omitted: SessionMediaFiles.Omitted = options.omitted ?? new Map()
   if (!SessionMediaFiles.isReplaced(mime, capabilities, omitted)) return undefined
-  const modality = BuffAttachment.modalityOf(mime)!
   const saved = options.saved?.get(SessionMediaFiles.mediaKey(data))
   const hint = saved === undefined ? "" : SAVED_HINT(saved)
-  const label = name ? `"${name}"` : modality
+  const modality = BuffAttachment.modalityOf(mime)
+  // #971: a .pptx, a .zip — no model reads them as content; the model gets the path to the file
+  // (on a line of its own, like a text attachment: providers join text parts as they are).
+  if (!modality) {
+    const file = name ? `the file ${SessionMediaFiles.quotedName(name)}` : "a file"
+    return {
+      type: "text" as const,
+      text:
+        saved === undefined
+          ? `\n\nERROR: The user attached ${file}, but it could not be saved for reading. Inform the user.`
+          : `\n\nThe user attached ${file}.${hint}`,
+    }
+  }
+  const label = name ? SessionMediaFiles.quotedName(name) : modality
   const kind = modality === "image" ? "an image" : `a ${modality} file`
   // #757: «без файлов» — модель знает, что файл был, и не читает его; «кодом» — получает путь.
   if (omitted.get(modality) === "ignore")
@@ -339,6 +352,8 @@ export const layer = Layer.effect(
       const hasHttpHooks =
         (yield* hooks.has("session", "http.request", model.ref.providerID)) ||
         (yield* hooks.has("session", "http.response", model.ref.providerID))
+      // Buff (#966): a provider that answers its own requests is not reached over the network.
+      const answering = BuffProviderFetch.get(model.ref.providerID)
       const http: StreamOptions["http"] = hasHttpHooks
         ? (req, handler) =>
             Effect.gen(function* () {
@@ -353,7 +368,7 @@ export const layer = Layer.effect(
                   new Uint8Array(yield* Effect.promise(() => before.request.clone().arrayBuffer())),
                   before.request.headers.get("content-type") ?? undefined,
                 )
-              const res = yield* handler(sent)
+              const res = yield* answering ? BuffProviderFetch.answer(answering, sent) : handler(sent)
               const after = yield* hooks.trigger("session", "http.response", {
                 ...scope,
                 request: before.request,
@@ -364,7 +379,9 @@ export const layer = Layer.effect(
               })
               return HttpClientResponse.fromWeb(sent, after.response)
             }).pipe(Effect.mapError((cause) => (cause instanceof Error ? cause : new Error(String(cause)))))
-        : undefined
+        : answering
+          ? (req) => BuffProviderFetch.answer(answering, req)
+          : undefined
       // HTTP hooks wrap every HTTP request, including the WebSocket fallback path. The route decides
       // which transport actually carries the request, so both hook families are always offered.
       const webSocket =

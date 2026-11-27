@@ -184,10 +184,10 @@ test.each(
   expect(reconstructed).toBe(command)
   if (input.width >= 80) {
     expect(result.rows[1].startsWith(input.mono ? "[b]" : "▄▀▀▄▀▀▄")).toBe(true)
-    expect(result.rows[1].includes("Сессия     Review mini layout")).toBe(input.showSession)
+    expect(result.rows[1].includes("Чат".padEnd(11) + "Review mini layout")).toBe(input.showSession)
     expect(result.rows[2]).toContain("Продолжить " + command)
   } else {
-    expect(result.rows.join("\n")).not.toMatch(/Сессия|Продолжить|Review mini layout|█|\[O\]/)
+    expect(result.rows.join("\n")).not.toMatch(/Чат|Продолжить|Review mini layout|█|\[O\]/)
     expect(result.rows).toHaveLength(1 + Math.ceil(command.length / input.width))
   }
   // Моно-режим заменяет символы рамок и логотипа на ASCII; кириллица подписей (#472) — текст, её он не трогает.

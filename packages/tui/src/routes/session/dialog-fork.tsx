@@ -45,7 +45,7 @@ export function DialogFork(props: { sessionID: string; messageID?: string; onMov
         : undefined,
     })
     dialog.clear()
-    toast.show({ message: t("Forked session"), variant: "success", duration: 4000 })
+    toast.show({ message: t("Forked chat"), variant: "success", duration: 4000 })
   }
 
   onMount(() => {
@@ -55,7 +55,7 @@ export function DialogFork(props: { sessionID: string; messageID?: string; onMov
 
   const options = createMemo((): DialogSelectOption<string | undefined>[] => [
     {
-      title: t("Full session"),
+      title: t("Full chat"),
       value: undefined,
       onSelect: () => fork(),
     },
@@ -76,11 +76,11 @@ export function DialogFork(props: { sessionID: string; messageID?: string; onMov
       when={!pending()}
       fallback={
         <box paddingLeft={2} paddingRight={2} paddingBottom={1}>
-          <Spinner>{t("Forking session…")}</Spinner>
+          <Spinner>{t("Forking chat…")}</Spinner>
         </box>
       }
     >
-      <DialogSelect onMove={(option) => props.onMove?.(option.value)} title={t("Fork session")} options={options()} />
+      <DialogSelect onMove={(option) => props.onMove?.(option.value)} title={t("Fork chat")} options={options()} />
     </Show>
   )
 }

@@ -10,12 +10,12 @@ import { DEFAULT_PALETTE_KEYBIND, PALETTE_ID, type CommandOption } from "../../c
 import type { CommandCatalog } from "../../commands/catalog"
 import { createStore } from "../../core/store"
 
-export const GROUPS = ["General", "Session", "Navigation", "Model and agent", "Terminal", "Prompt"] as const
+export const GROUPS = ["General", "Chat", "Navigation", "Model and agent", "Terminal", "Prompt"] as const
 export type KeybindGroup = (typeof GROUPS)[number]
 
 export const groupKey = {
   General: "settings.shortcuts.group.general",
-  Session: "settings.shortcuts.group.session",
+  Chat: "settings.shortcuts.group.session",
   Navigation: "settings.shortcuts.group.navigation",
   "Model and agent": "settings.shortcuts.group.modelAndAgent",
   Terminal: "settings.shortcuts.group.terminal",
@@ -31,7 +31,7 @@ export function groupFor(id: string): KeybindGroup {
   if (id.startsWith("file.") || id.startsWith("fileTree.")) return "Navigation"
   if (id.startsWith("prompt.")) return "Prompt"
   const session = ["session.", "message.", "permissions.", "steps.", "review."]
-  if (session.some((prefix) => id.startsWith(prefix))) return "Session"
+  if (session.some((prefix) => id.startsWith(prefix))) return "Chat"
   return "General"
 }
 

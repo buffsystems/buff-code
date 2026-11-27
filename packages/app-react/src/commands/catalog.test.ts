@@ -10,10 +10,10 @@ test("visible commands are recorded with their default keybinds", async () => {
   const registry = createCommandRegistry({ keybindOverride: (id) => (id === "session.new" ? "ctrl+x" : undefined) })
   const catalog = createCommandCatalog(storage, registry)
   const stop = catalog.start()
-  registry.register("screen", () => [{ id: "session.new", title: "New session", keybind: "mod+shift+s" }])
+  registry.register("screen", () => [{ id: "session.new", title: "New chat", keybind: "mod+shift+s" }])
   await tick()
-  expect(catalog.store.get()).toEqual({ "session.new": { title: "New session", keybind: "mod+shift+s" } })
-  expect(JSON.parse(storage.items.get("command.catalog.v1") ?? "{}")["session.new"].title).toBe("New session")
+  expect(catalog.store.get()).toEqual({ "session.new": { title: "New chat", keybind: "mod+shift+s" } })
+  expect(JSON.parse(storage.items.get("command.catalog.v1") ?? "{}")["session.new"].title).toBe("New chat")
   stop()
 })
 
@@ -23,13 +23,13 @@ test("a hidden command enters the catalog when new and never renames a known one
   const registry = createCommandRegistry({ keybindOverride: () => undefined })
   const catalog = createCommandCatalog(memoryStorage(), registry)
   const stop = catalog.start()
-  registry.register("shell", () => [{ id: "tab.new", title: "New session", keybind: "mod+t", hidden: true }])
+  registry.register("shell", () => [{ id: "tab.new", title: "New chat", keybind: "mod+t", hidden: true }])
   registry.register("screen", () => [{ id: "settings.open", title: "Settings", keybind: "mod+comma" }])
   await tick()
   registry.register("settings", () => [{ id: "settings.open", title: "Close settings", hidden: true }])
   await tick()
   expect(catalog.store.get()).toEqual({
-    "tab.new": { title: "New session", keybind: "mod+t" },
+    "tab.new": { title: "New chat", keybind: "mod+t" },
     "settings.open": { title: "Settings", keybind: "mod+comma" },
   })
   stop()

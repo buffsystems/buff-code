@@ -13,6 +13,7 @@ import type { AppMount } from "../shell/mounts"
 import { DiffsText } from "./diffs/diffs-text"
 import { OnboardingDialog } from "./onboarding/dialog"
 import { ONBOARDING_COMMAND } from "./onboarding/settings-row"
+import { useSettingsModel } from "../shell/settings-context"
 import { firstLaunchDecision, markOnboardingDone, onboardingDone, onboardingPending } from "./onboarding/state"
 import { WithFirstServer } from "./page"
 
@@ -20,11 +21,14 @@ function Onboarding(props: { server: Server }) {
   const dialog = useDialog()
   const platform = usePlatform()
   const i18n = useI18n()
+  const settings = useSettingsModel()
   const show = () => {
     onboardingPending.set(() => true)
     dialog.show((close) => (
       <OnboardingDialog
         server={props.server}
+        onLayout={(layout) => settings.appearance({ layout })}
+        layout={onboardingDone() ? settings.store.get().appearance.layout : "simple"}
         onClose={() => {
           close()
           onboardingPending.set(() => !onboardingDone())

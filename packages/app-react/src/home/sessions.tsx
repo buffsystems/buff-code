@@ -1,6 +1,7 @@
 // Home's session list (#584): the search, the recent sessions by day, and each row's menu —
 // rename in place, export, delete. Ported from the Solid Home's sessions view.
 
+import type { ReactNode } from "react"
 import { BuffFeatures } from "@opencode/schema/buff-features"
 import {
   Button,
@@ -58,13 +59,15 @@ export function HomeSessions(props: {
   showProjectName: boolean
   search: HomeSearch
   actions: HomeSessionActions
+  /** Buff (#972): the picked project's own home, over its chats. */
+  head?: ReactNode
 }) {
   const i18n = useI18n()
   return (
     <section aria-label={i18n.t("sidebar.project.recentSessions")} className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="sticky top-0 z-30 shrink-0 bg-background pb-1 pt-6 md:pb-3 lg:pt-12">
         <HomeSessionSearch {...props} />
-        {props.groups.length > 0 && props.actions.create && (
+        {!props.head && props.groups.length > 0 && props.actions.create && (
           <div className="flex justify-end pt-2">
             <Button data-action="home-new-session" variant="ghost" size="sm" onClick={props.actions.create}>
               <SquarePen aria-hidden className="size-4" />
@@ -73,6 +76,7 @@ export function HomeSessions(props: {
           </div>
         )}
       </div>
+      {props.head}
       {props.loading ? (
         <div className="flex min-w-0 flex-col gap-4 pt-1 md:pt-3">
           <div className="ui-eyebrow px-1.5 md:px-3">{i18n.t("common.loading")}</div>

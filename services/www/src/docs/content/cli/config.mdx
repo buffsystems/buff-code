@@ -109,9 +109,9 @@ Configure mouse capture, scrolling, editor context, pastes, and prompt image pre
 
 </div>
 
-## Sessions
+## Chats
 
-Configure how full-screen TUI sessions are presented and where new sessions start:
+Configure how full-screen TUI chats are presented and where new chats start:
 
 ```json title="cli.json"
 {
@@ -140,14 +140,14 @@ Configure how full-screen TUI sessions are presented and where new sessions star
 | `session.image_preview` | boolean                     | Shows user attachment and tool-result images in the transcript.              |
 | `session.tps`           | boolean                     | Shows output tokens per second in assistant footers.                         |
 | `session.markdown`      | `source` or `rendered`      | Shows Markdown syntax markers or conceals them in rendered content.          |
-| `session.new_location`  | `launch` or `inherit`       | Starts in the TUI launch directory or inherits the active session location.  |
+| `session.new_location`  | `launch` or `inherit`       | Starts in the TUI launch directory or inherits the active chat location.  |
 | `session.permissions`   | `prompt` or `autoaccept`    | Prompts for permission requests or accepts every request automatically.      |
 
 </div>
 
 ## Tabs
 
-Configure the persistent session tab strip:
+Configure the persistent chat tab strip:
 
 ```json title="cli.json"
 {
@@ -164,7 +164,7 @@ Configure the persistent session tab strip:
 
 | Setting           | Values                      | Description                                                                   |
 | ----------------- | --------------------------- | ----------------------------------------------------------------------------- |
-| `tabs.enabled`    | boolean                     | Uses a persistent tab strip instead of pinned quick-switch sessions.          |
+| `tabs.enabled`    | boolean                     | Uses a persistent tab strip instead of pinned quick-switch chats.          |
 | `tabs.scope`      | `cwd` or `global`           | Keeps separate tabs per working directory or shares them globally.            |
 | `tabs.layout`     | `horizontal` or `vertical`  | Places tabs in a horizontal strip or a vertical sidebar.                      |
 | `tabs.indicators` | `status` or `numbers`       | Shows status icons or always shows tab numbers.                               |
@@ -295,7 +295,7 @@ The `mini` group controls [`opencode mini`](/cli#mini), the minimal interactive 
 | `mini.splash`       | `show` or `hide`               | Shows or hides entry and exit splash banners.                                      |
 | `mini.work_spinner` | spinner ID                     | Selects the work animation in the footer.                                          |
 | `mini.mono`         | boolean                        | Uses monochrome ASCII output.                                                      |
-| `mini.replay`       | boolean                        | Restores session history on resume and terminal resize.                            |
+| `mini.replay`       | boolean                        | Restores chat history on resume and terminal resize.                            |
 | `mini.replay_limit` | positive integer               | Limits replay to the newest messages. The default limit is `200`.                  |
 
 </div>

@@ -22,7 +22,7 @@ for (const entry of ["home", "session"] as const) {
     await installStressSessionTabs(page, { sessionIDs: entry === "home" ? [] : [fixture.sourceID] })
     await page.goto(entry === "home" ? "/" : stressSessionHref(fixture.sourceID))
     if (entry === "session") await waitForStableTimeline(page, fixture.expected.sourceMessageIDs.at(-1)!)
-    const trigger = entry === "home" ? '[data-action="home-new-session"]' : 'button[aria-label="New session"]'
+    const trigger = entry === "home" ? '[data-action="home-new-session"]' : 'button[aria-label="New chat"]'
     await expect(page.locator(trigger)).toBeVisible()
     await expect(page.locator('[data-component="new-session"]')).toHaveCount(0)
     const writes: string[] = []

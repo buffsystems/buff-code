@@ -20,12 +20,26 @@ const portable = Schema.toStandardSchemaV1
 const Time = Schema.String.annotate({ description: "Local time HH:MM, 24-hour" })
 const Days = Schema.Array(Schema.Number).annotate({ description: "Days of week, 0 = Sunday … 6 = Saturday" })
 const Every = Schema.Number.annotate({ description: `1 to ${BuffSchedule.MAX_EVERY}` })
+// Пояс человека (#969): облачная машина живёт в UTC, а «17:10» человек имеет в виду по своим часам.
+// Клиент называет свой пояс; модель его не знает и оставляет поле пустым — движок подставит пояс
+// того, кто попросил.
+const Zone = Schema.optional(
+  Schema.String.annotate({
+    description:
+      "IANA time zone of `at`, e.g. Europe/Berlin — only when the user names a zone or place other than their own. Otherwise omit it: the user's own zone is used.",
+  }),
+)
 export const Schedule = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("interval"), every: Every, unit: Schema.Literals(["minutes", "hours"]) }),
-  Schema.Struct({ kind: Schema.Literal("daily"), at: Time }),
-  Schema.Struct({ kind: Schema.Literal("weekly"), days: Days, at: Time }),
-  Schema.Struct({ kind: Schema.Literal("weeks"), every: Every, days: Days, at: Time }),
-  Schema.Struct({ kind: Schema.Literal("monthly"), day: Schema.Number.annotate({ description: "1 to 31" }), at: Time }),
+  Schema.Struct({ kind: Schema.Literal("daily"), at: Time, zone: Zone }),
+  Schema.Struct({ kind: Schema.Literal("weekly"), days: Days, at: Time, zone: Zone }),
+  Schema.Struct({ kind: Schema.Literal("weeks"), every: Every, days: Days, at: Time, zone: Zone }),
+  Schema.Struct({
+    kind: Schema.Literal("monthly"),
+    day: Schema.Number.annotate({ description: "1 to 31" }),
+    at: Time,
+    zone: Zone,
+  }),
 ])
 
 export const Mode = Schema.Literals(["ask", "edit", "full"])
@@ -123,7 +137,7 @@ export const BUSY = "the previous run was still going"
 export const ALREADY_RUNNING = "A run is already in progress — wait for it or stop it."
 /** Служба прерывает сессию, простоявшую час без событий (`LocationActivity`). */
 export const INACTIVE_WAITING =
-  "Permission was awaited for more than an hour — the service stopped the run. Open the session and continue yourself."
+  "Permission was awaited for more than an hour — the service stopped the run. Open the chat and continue yourself."
 export const INACTIVE = "The run showed no signs of life for an hour — the service stopped it."
 
 /** Действие запроса разрешения от инструмента модели «создать автоматизацию». */
@@ -152,7 +166,7 @@ export function runLabel(
 ): string {
   if (run.status === "failed") {
     const error = run.error?.trim()
-    return t("Failed: {reason}", { reason: error ? t(error) : t("no reason came — open the session") })
+    return t("Failed: {reason}", { reason: error ? t(error) : t("no reason came — open the chat") })
   }
   if (run.status === "skipped")
     return n(run.skipped ?? 1, "Skipped: {n} run ({reason})|Skipped: {n} runs ({reason})", {

@@ -133,7 +133,7 @@ export const Plugin = define<Form.Service | Permission.Service | Scope.Scope>({
           execute: (input, context) =>
             Effect.gen(function* () {
               if (context.agent !== BuffSetup.AGENT)
-                return yield* Effect.fail(new ToolFailure({ message: "setup_form is only for Setup mode." }))
+                return yield* Effect.fail(new ToolFailure({ message: "setup_form is only for Self-setup mode." }))
               const built = fields(input)
               if ("error" in built) return yield* Effect.fail(new ToolFailure({ message: built.error }))
               yield* permission

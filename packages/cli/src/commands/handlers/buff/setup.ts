@@ -2,6 +2,7 @@ import { log, spinner } from "@clack/prompts"
 import { Effect } from "effect"
 import type { OpenCodeClient } from "@opencode/client"
 import { BuffContext } from "@opencode/schema/buff-context"
+import { BuffFirstRun } from "@opencode/schema/buff-first-run"
 import { BuffLocale } from "@opencode/schema/buff-locale"
 import { BuffRunner } from "@opencode/schema/buff-runner"
 import { chooseOrg, chooseProject, chooseSpaces, launchStep, ownModel, setsUpBuff } from "@opencode/schema/buff-context-flow"
@@ -66,6 +67,20 @@ export const setupBuff = Effect.fn("cli.buff.setup")(function* (
   if (step === "unreachable") return yield* Effect.fail(new Error(problem!.message))
   if (!interactive()) return yield* Effect.fail(new Error(t(NOT_SET_UP)))
   if (step === "sign_in") {
+    // #966: своим аккаунтом Buff или через компанию — спросить; у аккаунта организации и проекта нет.
+    const way = yield* Effect.promise(() =>
+      consoleAsk({
+        title: t(BuffFirstRun.SIGN_IN_QUESTION),
+        options: BuffFirstRun.WAYS.flatMap((item) =>
+          item.integration ? [{ value: item.integration, title: t(item.title), description: t(item.note) }] : [],
+        ),
+      }),
+    )
+    if (way === undefined) return yield* Effect.fail(new Error(t("Cancelled")))
+    if (way === BuffFirstRun.ACCOUNT) {
+      yield* connectIntegration(client, way)
+      return null
+    }
     log.info(t("Sign-in to Buff goes through your company connector"))
     yield* connectIntegration(client, "buff")
     const after = yield* Effect.promise(() => rpc.get(undefined, { location }).catch(() => null))

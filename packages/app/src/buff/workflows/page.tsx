@@ -70,7 +70,12 @@ function WorkflowsPage() {
 
   const openSession = (session: string) => openNotificationSession(tabs, server.key, session)
   const chat = (directory: string, prompt: string) => void tabs.newDraft({ server: server.key, directory }, prompt)
-  const openFile = platform.openPath ? (path: string) => void platform.openPath?.(path) : undefined
+  const openFile = platform.openPath
+    ? (path: string) =>
+        void platform.openPath?.(path).catch((error: unknown) =>
+          showToast({ title: t("The file did not open"), description: error instanceof Error ? error.message : String(error) }),
+        )
+    : undefined
   const showRun = (id: string) =>
     void dialog.show(() => (
       <RunView

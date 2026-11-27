@@ -4,8 +4,8 @@ import { expect, test } from "bun:test"
 import { catalogTitle } from "./catalog-title"
 
 test("строка апстрима — на текущем языке, с какого бы ни была записана", () => {
-  expect(catalogTitle("Cycle session location", "ru")).toBe("Сменить каталог сессии")
-  expect(catalogTitle("Сменить каталог сессии", "en")).toBe("Cycle session location")
+  expect(catalogTitle("Cycle chat location", "ru")).toBe("Сменить каталог чата")
+  expect(catalogTitle("Сменить каталог чата", "en")).toBe("Cycle chat location")
   expect(catalogTitle("Search projects", "ru")).toBe("Поиск проектов")
 })
 

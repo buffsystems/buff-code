@@ -22,7 +22,7 @@ import { monoTruncate } from "./mono"
 import type { RunSplashTheme } from "./theme"
 
 const SPLASH_TITLE_LIMIT = 50
-const SPLASH_TITLE_FALLBACK = () => t("Untitled session")
+const SPLASH_TITLE_FALLBACK = () => t("Untitled chat")
 
 type SplashInput = {
   title: string | undefined
@@ -182,8 +182,8 @@ function buildExit(input: SplashWriterInput, ctx: ScrollbackRenderContext): Scro
   const top = 1
   const body_left = (mark[0]?.length ?? 0) + 2
   // Подписи выровнены по более длинной из двух (#472: в переводе их длины разные).
-  const pad = Math.max(stringWidth(t("Session")), stringWidth(t("Continue"))) + 1
-  const session = t("Session").padEnd(pad)
+  const pad = Math.max(stringWidth(t("Chat")), stringWidth(t("Continue"))) + 1
+  const session = t("Chat").padEnd(pad)
   const label = t("Continue").padEnd(pad)
   const command = `buff mini -s ${meta.session_id}`
   const wide = body_left + stringWidth(label + command) <= width

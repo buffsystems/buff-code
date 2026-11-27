@@ -98,7 +98,7 @@ export function createAutomationsController(deps: Deps) {
     remove: async (id: string) => {
       const yes = await deps.confirm({
         title: t("Delete the automation «{title}»?", { title: title(id) }),
-        description: t("It will no longer run, its run history will be deleted. The run sessions will stay."),
+        description: t("It will no longer run, its run history will be deleted. The run chats will stay."),
       })
       if (yes) await act(deps.rpc.remove({ id }, options()), "The automation was not deleted.")
     },

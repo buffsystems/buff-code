@@ -1,10 +1,11 @@
 // The request docks above the composer (#584), ported from the Solid session composer region:
 // an MCP server's request, the web-search choice, an agent's questions and a permission request.
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useI18n } from "../../i18n/provider"
 import { showToast } from "../../shell/notifications/toast"
 import { useSession } from "../context"
+import { focusLost, nearestBox } from "../focus-box"
 import { McpDock } from "./mcp-dock"
 import { PermissionDock } from "./permission-dock"
 import { QuestionDock } from "./question-dock"
@@ -35,8 +36,41 @@ export function SessionDocks() {
       )
       .finally(() => setResponding((id) => (id === permission.id ? undefined : id)))
   }
+  // #972 (R23-02): an answered request leaves with the button that was pressed. Focus goes to
+  // the next request's answer, or back to the message box — never to nowhere.
+  const root = useRef<HTMLDivElement>(null)
+  const shown = requests.question?.id ?? permission?.id
+  const before = useRef(shown)
+  useEffect(() => {
+    const was = before.current
+    before.current = shown
+    if (!was || was === shown) return
+    // Only when the person was answering here: focus that was elsewhere stays where it is. And
+    // never onto a button that approves — the next request is read before it is answered.
+    const answering = inside.current
+    inside.current = false
+    if (!answering) return
+    const frame = requestAnimationFrame(() => {
+      if (!focusLost()) return
+      const next = shown ? root.current : null
+      ;(next ?? nearestBox(root.current))?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [shown])
+  // Whether focus is in the docks: set as it comes in, cleared when it goes elsewhere by itself
+  // (a dock that leaves takes focus with it and tells nobody — that is the case this serves).
+  const inside = useRef(false)
   return (
-    <div data-component="session-request-docks" className="session-docks">
+    <div
+      ref={root}
+      data-component="session-request-docks"
+      className="session-docks"
+      tabIndex={-1}
+      onFocus={() => (inside.current = true)}
+      onBlur={(event) => {
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) inside.current = false
+      }}
+    >
       <McpDock />
       {requests.websearch && <WebSearchDock key={requests.websearch.id} request={requests.websearch} onSubmit={() => undefined} />}
       {requests.question && <QuestionDock key={requests.question.id} request={requests.question} onSubmit={() => undefined} />}

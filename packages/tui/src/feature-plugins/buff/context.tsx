@@ -17,17 +17,25 @@ import { t } from "./locale"
 
 type Choice = BuffContext.Choice
 
-export function ContextLabel(props: { context: Context; choice: Choice | null; signedOut?: boolean; own?: boolean }) {
+export function ContextLabel(props: {
+  context: Context
+  choice: Choice | null
+  signedOut?: boolean
+  own?: boolean
+  /** Вошли личным аккаунтом Buff (#966): чей это вход. */
+  account?: string
+}) {
   const theme = () => props.context.theme.text
   return (
     <Show
       when={props.choice}
       fallback={
         <Show
-          when={!(props.signedOut && props.own)}
+          when={!(props.signedOut && (props.own || props.account))}
           fallback={
             <text fg={theme().muted} wrapMode="none">
-              ◆ {t(BuffFirstRun.SIGNED_OUT_OWN)}
+              ◆{" "}
+              {props.account ? `${t(BuffFirstRun.ACCOUNT_SHORT)} · ${props.account}` : t(BuffFirstRun.SIGNED_OUT_OWN)}
             </text>
           }
         >
@@ -101,6 +109,14 @@ export default Plugin.define({
     const [signedOut, setSignedOut] = createSignal(false)
     // Свой провайдер подключён (#562): без входа в Buff работа идёт, и вход сам не открывается.
     const [own, setOwn] = createSignal(false)
+    // #966: вход личным аккаунтом Buff — тоже вход; строка состояния называет его.
+    const account = () => {
+      const connection = context.data.location.integration
+        .list(context.location)
+        ?.find((item) => item.id === BuffFirstRun.ACCOUNT)
+        ?.connections.find((item) => item.type === "credential")
+      return connection ? connection.label || t(BuffFirstRun.ACCOUNT_SHORT) : undefined
+    }
     const ownConnected = () =>
       context.client.model.list(at()).then(
         (response) => response.data.some(ownModel),
@@ -167,13 +183,13 @@ export default Plugin.define({
       append: "prompt.footer.status",
       render: (input) => (
         <Show when={input.sessionID}>
-          <ContextLabel context={context} choice={choice()} signedOut={signedOut()} own={own()} />
+          <ContextLabel context={context} choice={choice()} signedOut={signedOut()} own={own()} account={account()} />
         </Show>
       ),
     })
     context.ui.slot({
       append: "home.footer.status",
-      render: () => <ContextLabel context={context} choice={choice()} signedOut={signedOut()} own={own()} />,
+      render: () => <ContextLabel context={context} choice={choice()} signedOut={signedOut()} own={own()} account={account()} />,
     })
     // Слой команд и первый вопрос живут в компоненте, отрисованном в приложении:
     // клавиатура и диалоги доступны только внутри него («Keymap.Provider is missing»).
@@ -181,18 +197,28 @@ export default Plugin.define({
     // десктоп) — по событию.
     // Вход в Buff — прямо здесь (#401): адрес коннектора, код для кабинета, ожидание; после
     // него сразу выбор организации и проекта. Отдельных команд для этого нет.
-    const signIn = () =>
+    // #966: сначала вопрос, как человек входит — своим аккаунтом, через компанию или со своим провайдером.
+    const signIn = async () => {
+      const way = await context.ui.dialog.select({
+        title: t(BuffFirstRun.SIGN_IN_QUESTION),
+        options: BuffFirstRun.WAYS.map((item) => ({ title: t(item.title), description: t(item.note), value: item.value })),
+      })
+      const picked = BuffFirstRun.WAYS.find((item) => item.value === way)
+      if (!picked) return context.ui.dialog.clear()
       context.ui.dialog.show(() => (
         <DialogIntegration
-          integrationID="buff"
-          autoConnect
+          integrationID={picked.integration}
+          autoConnect={picked.integration !== undefined}
           onConnected={() => {
-            setSignedOut(false)
             context.ui.dialog.clear()
+            // Организацию и проект выбирают только после входа через компанию.
+            if (picked.value !== "company") return
+            setSignedOut(false)
             void choose("all")
           }}
         />
       ))
+    }
     const load = () => {
       void (async () => {
         const saved = await rpc.get(undefined, at()).catch(() => null)
@@ -203,7 +229,8 @@ export default Plugin.define({
         if (step === "sign_in") {
           const connected = await ownConnected()
           setOwn(connected)
-          return connected ? undefined : signIn()
+          // Вошли аккаунтом Buff без действующей подписки: вход выполнен, спрашивать о нём снова незачем.
+          return connected || account() ? undefined : signIn()
         }
         if (step === "unreachable") return context.ui.toast.show({ message: problem!.message, variant: "error" })
         // Первый запуск в каталоге всегда спрашивает (#391).

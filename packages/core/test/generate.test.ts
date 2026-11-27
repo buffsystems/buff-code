@@ -1,8 +1,9 @@
 import { expect } from "bun:test"
-import { LanguageModel } from "@opencode/ai"
+import { LanguageModel, LLMClient } from "@opencode/ai"
 import { OpenAIChat } from "@opencode/ai/protocols"
 import { TestLLM } from "@opencode/ai/testing"
 import { AISDK } from "@opencode/core/aisdk"
+import { BuffProviderFetch } from "@opencode/core/buff/provider-fetch"
 import { Generate } from "@opencode/core/generate"
 import { Integration } from "@opencode/core/integration"
 import { ModelResolver } from "@opencode/core/model-resolver"
@@ -10,6 +11,7 @@ import { ID, Info, Model, Ref } from "@opencode/core/model"
 import { Provider } from "@opencode/core/provider"
 import { Npm } from "@opencode/util/npm"
 import { Effect, Layer } from "effect"
+import { HttpClientRequest } from "effect/unstable/http"
 import { testEffect } from "./lib/effect"
 
 const selected = Info.make({
@@ -88,4 +90,35 @@ resolverIt.effect("resolves dynamic models with their catalog metadata", () =>
       limit: selected.limit,
     })
   }),
+)
+
+// Buff (#966): a provider that answers its own requests is offered to the model layer as the transport.
+const offered = Layer.mock(LLMClient.Service, {
+  generate: (_request, options) =>
+    options?.http
+      ? options
+          .http(HttpClientRequest.post("https://provider.invalid/v1/chat/completions"), () =>
+            Effect.die("the network must not be reached"),
+          )
+          .pipe(
+            Effect.flatMap((response) => response.text),
+            Effect.map((text) => ({ text }) as never),
+            Effect.orDie,
+          )
+      : Effect.die("no transport was offered"),
+})
+const answeringIt = testEffect(Generate.layer.pipe(Layer.provide(Layer.merge(resolver, offered))))
+
+answeringIt.effect("a one-off generation goes to a provider that answers its own requests, not to the network", () =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => BuffProviderFetch.register(selected.providerID, async () => new Response("answered by the provider"))),
+    () =>
+      Effect.gen(function* () {
+        const generate = yield* Generate.Service
+        expect(
+          yield* generate.text({ prompt: "x", model: Ref.make({ providerID: selected.providerID, id: selected.id }) }),
+        ).toBe("answered by the provider")
+      }),
+    (remove) => Effect.sync(remove),
+  ),
 )

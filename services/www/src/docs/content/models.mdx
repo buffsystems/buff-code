@@ -2,7 +2,7 @@
 title: "Models"
 ---
 
-Choose a model for the current session with `/models`:
+Choose a model for the current chat with `/models`:
 
 ```text
 /models
@@ -14,7 +14,7 @@ only shows enabled models whose provider is available in the current project. Co
 
 ## Select
 
-Pick an entry from `/models` instead of guessing its provider or model ID. The selection applies to the current session
+Pick an entry from `/models` instead of guessing its provider or model ID. The selection applies to the current chat
 and does not change your configuration.
 
 ```text
@@ -51,8 +51,8 @@ Set `model` in `opencode.json` or `opencode.jsonc` to choose the default for new
 The configured model becomes the catalog default when it is enabled and its provider is available. Otherwise, OpenCode
 falls back to the newest available supported model.
 
-- A model already selected for a session takes precedence over the configured default.
-- Switching a session's model does not rewrite the config file.
+- A model already selected for a chat takes precedence over the configured default.
+- Switching a chat's model does not rewrite the config file.
 - The root `model` currently retains only the default provider and model, not a variant.
 
 See [Config](/config) for configuration locations and precedence.
@@ -60,7 +60,7 @@ See [Config](/config) for configuration locations and precedence.
 ## Variants
 
 Variants are named options for one model, often used for reasoning effort or token budgets. Add `#variant` when selecting
-one for a run, session, agent, or command:
+one for a run, chat, agent, or command:
 
 ```bash
 opencode run --model openai/gpt-5.2#high "Review this migration plan"
@@ -421,7 +421,7 @@ Keep these rules in mind when configuring models:
 
 - A selector object uses `model`; a provider catalog entry uses `modelID` for the ID sent to the provider.
 - Although the root selection shape accepts a variant, the V2 catalog default does not retain it. Select variants for a
-  session, run, agent, or command instead.
+  chat, run, agent, or command instead.
 - Model options are provider-specific. Another provider package may ignore or reject them.
 - Catalog data, credentials, and configuration are location-scoped. A model available in one project may be unavailable
   in another.

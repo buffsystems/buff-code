@@ -131,16 +131,16 @@ export function DialogSessionList() {
   const searchState = createMemo(() => {
     const query = filter().trim()
     if (query !== search().trim() || searchResults.loading)
-      return { message: query ? t("Searching sessions…") : t("Loading sessions…"), error: false }
+      return { message: query ? t("Searching chats…") : t("Loading chats…"), error: false }
     const result = searchResults()
     if (result?.query === query && result.error)
       return {
         message: query
-          ? t("Could not search sessions. Change the search to try again.")
-          : t("Could not load sessions."),
+          ? t("Could not search chats. Change the search to try again.")
+          : t("Could not load chats."),
         error: true,
       }
-    return { message: query ? t("No sessions found") : t("No sessions available"), error: false }
+    return { message: query ? t("No chats found") : t("No chats available"), error: false }
   })
 
   const quickSwitchHint = createMemo(() => {
@@ -245,7 +245,7 @@ export function DialogSessionList() {
     return [
       ...setup
         .toSorted((a, b) => b.time.updated - a.time.updated)
-        .map((session) => option(session, t("Setup"))),
+        .map((session) => option(session, t("Self-setup"))),
       ...pinned.map((sessionID) => option(sessionMap.get(sessionID)!, t("Pinned"))),
       ...remaining,
       ...inContent,
@@ -256,11 +256,11 @@ export function DialogSessionList() {
 
   return (
     <DialogSelect
-      title={t("Sessions")}
+      title={t("Chats")}
       titleView={
         <box flexDirection="row">
           <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
-            {archive() ? t("Session archive") : t("Sessions")}
+            {archive() ? t("Chat archive") : t("Chats")}
           </text>
           <Show when={!allProjects() && currentProjectName()}>
             <text fg={theme.text.muted}> {t("for {project}", { project: currentProjectName() })}</text>
@@ -277,7 +277,7 @@ export function DialogSessionList() {
       bindings={[
         {
           bind: "ctrl+a",
-          title: allProjects() ? t("Show current directory sessions") : t("Show all project sessions"),
+          title: allProjects() ? t("Show current directory chats") : t("Show all project chats"),
           group: t("Dialog"),
           run: () => {
             void updatePrefs((draft) => {
@@ -287,7 +287,7 @@ export function DialogSessionList() {
         },
         {
           bind: "ctrl+y",
-          title: archive() ? t("Show sessions") : t("Show archive"),
+          title: archive() ? t("Show chats") : t("Show archive"),
           group: t("Dialog"),
           run: () => setArchive(!archive()),
         },
@@ -350,7 +350,7 @@ export function DialogSessionList() {
               .catch((error) => {
                 setToDelete(undefined)
                 toast.show({
-                  message: t("Failed to delete session: {error}", { error: errorMessage(error) }),
+                  message: t("Failed to delete chat: {error}", { error: errorMessage(error) }),
                   variant: "error",
                   duration: 5000,
                 })
@@ -367,7 +367,7 @@ export function DialogSessionList() {
       footerHints={[
         ...quickSwitchFooterHints(),
         { title: allProjects() ? t("current directory") : t("all projects"), label: "ctrl+a", side: "right" },
-        { title: archive() ? t("sessions") : t("archive"), label: "ctrl+y", side: "right" },
+        { title: archive() ? t("chats") : t("archive"), label: "ctrl+y", side: "right" },
       ]}
     />
   )

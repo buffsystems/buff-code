@@ -6,7 +6,7 @@ export const consoleConfig = {
   "Previous value": "Предыдущее значение",
   "Next value": "Следующее значение",
   Appearance: "Внешний вид",
-  Session: "Сессия",
+  Chat: "Чат",
   Tabs: "Вкладки",
   Diffs: "Изменения",
   Input: "Ввод",
@@ -23,7 +23,7 @@ export const consoleConfig = {
   "Tool grouping": "Группировка инструментов",
   "Transcript images": "Картинки в ленте",
   TPS: "Токенов в секунду",
-  "New session location": "Где начинать новую сессию",
+  "New chat location": "Где начинать новый чат",
   Permissions: "Разрешения",
   Enabled: "Включены",
   Scope: "Область",
@@ -49,7 +49,7 @@ export const consoleConfig = {
   off: "выкл.",
   on: "вкл.",
   "launch directory": "папка запуска",
-  "active session": "как у текущей сессии",
+  "active chat": "как у текущего чата",
   prompt: "спрашивать",
   "auto accept": "принимать сразу",
   "current directory": "текущая папка",
@@ -107,7 +107,7 @@ export const consoleConfig = {
   // Сведения для отладки.
   Date: "Дата",
   OS: "ОС",
-  "Session ID": "ID сессии",
+  "Chat ID": "ID чата",
   "Debug info copied to clipboard": "Сведения для отладки скопированы",
   "Copy debug info": "Скопировать сведения для отладки",
   Dialog: "Диалог",
@@ -125,7 +125,7 @@ export const consoleConfig = {
   "An update is available. After installing, you'll be prompted to restart Buff Code.":
     "Доступно обновление. После установки будет предложено перезапустить Buff Code.",
   "Installing Buff Code {version}…": "Устанавливаю Buff Code {version}…",
-  "Update successful! A restart is required. Any active sessions will be resumed automatically.":
-    "Обновление установлено. Нужен перезапуск — активные сессии продолжатся сами.",
+  "Update successful! A restart is required. Any active chats will be resumed automatically.":
+    "Обновление установлено. Нужен перезапуск — активные чаты продолжатся сами.",
   "Buff Code is already up to date.": "Buff Code уже последней версии.",
 } as const

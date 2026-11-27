@@ -3,6 +3,8 @@
 // skills, agents, MCP resources, files), attachments, history, sending and the composer's
 // commands. The session slot and the draft screen give it an adapter that says where sends go.
 
+import { chatWords } from "@buff/ui/chat-logic"
+import { agentLabel } from "../agent-label"
 import { composerPlaceholder } from "@opencode/app/react-reuse/composer-placeholder"
 import { setCursorPosition, getCursorPosition } from "@opencode/app/react-reuse/composer-dom"
 import type { ComposerSuggestion } from "@opencode/app/react-reuse/composer-types"
@@ -57,6 +59,10 @@ export type ComposerProps = {
 
 export function Composer(props: ComposerProps) {
   const i18n = useI18n()
+  const localeRef = useRef<"ru" | "en">("en")
+  localeRef.current = i18n.locale === "ru" ? "ru" : "en"
+  const buffT = useRef(i18n.buff.t)
+  buffT.current = i18n.buff.t
   const core = useCore()
   const dialog = useDialog()
   const manage = () => openManageModels(dialog, { server: props.server, directory: props.directory })
@@ -97,7 +103,7 @@ export function Composer(props: ComposerProps) {
         capture: () => historyComments(props.draft.contextItems()),
         restore: (metadata) => restoreComments(props.draft, metadata as PromptHistoryComment[] | undefined),
       },
-      commands: () => slashCommands(sources.current, keys),
+      commands: () => slashCommands(sources.current, keys, engineCommandWords(localeRef.current, buffT.current)),
       context: () => [
         ...contextSuggestions(sources.current.location, latest.current.selection),
         ...(latest.current.recentFiles?.() ?? []).map(
@@ -384,11 +390,15 @@ export function Composer(props: ComposerProps) {
       available={submitAvailable()}
       working={props.working}
       queue={props.queue}
+      // #972 (R13-07): only where the session's commands are registered — in a chat.
+      {...(commands.options().some((item) => item.id === CHAT_CONNECTIONS && !item.disabled)
+        ? { onConnections: () => commands.trigger(CHAT_CONNECTIONS) }
+        : {})}
       borderUnderlay={props.borderUnderlay}
       agent={
         selection.agentsVisible
           ? {
-              options: selection.agents.map((agent) => ({ id: agent.name, label: agent.name })),
+              options: selection.agents.map((agent) => ({ id: agent.name, label: agentLabel(agent.name, i18n.buff.t) })),
               current: selection.agent?.name ?? "",
               onSelect: handle.setAgent,
             }
@@ -433,6 +443,8 @@ export function Composer(props: ComposerProps) {
   )
 }
 
+const CHAT_CONNECTIONS = "chat.connections"
+
 function restoreComments(draft: ComposerDraft, comments: PromptHistoryComment[] | undefined) {
   draft.context.replaceComments(
     (comments ?? []).map((comment) => ({
@@ -447,9 +459,21 @@ function restoreComments(draft: ComposerDraft, comments: PromptHistoryComment[] 
   )
 }
 
+/** The engine's own commands in the window's words; a command of the person's own is not here. */
+function engineCommandWords(locale: "ru" | "en", t: (text: string) => string): Record<string, string> {
+  const words = chatWords(locale)
+  return {
+    init: words("slash.init"),
+    review: words("slash.review"),
+    compact: words("slash.compact"),
+    setup: t("Self-setup: a new chat where the agent connects itself to what you need"),
+  }
+}
+
 function slashCommands(
   sources: { location: { command?: { name: string; description?: string }[] } | undefined; commands: ReturnType<typeof useCommands> },
   keys: (id: string) => string[] | undefined,
+  words: Record<string, string>,
 ): ComposerSuggestion[] {
   const custom = (sources.location?.command ?? []).map((item) => ({
     id: `custom.${item.name}`,
@@ -457,7 +481,8 @@ function slashCommands(
     label: `/${item.name}`,
     trigger: item.name,
     title: item.name,
-    description: item.description,
+    // #972 (CO-06): the engine's own commands in the person's language; theirs — as they wrote them.
+    description: words[item.name] ?? item.description,
   }))
   const builtin = sources.commands
     .options()

@@ -152,7 +152,7 @@ describe("internal notifications TUI plugin", () => {
     harness.emit(executionFailed("failed"))
     harness.emit(executionFailed("duplicate"))
     expect(harness.toasts).toEqual([
-      { sessionID: "session", title: "Сессия завершилась с ошибкой", message: "boom", variant: "error" },
+      { sessionID: "session", title: "Ошибка в работе агента", message: "boom", variant: "error" },
     ])
     harness.emit(executionStarted("retry"))
     harness.emit(executionFailed("failed-again"))
@@ -165,7 +165,7 @@ describe("internal notifications TUI plugin", () => {
       const harness = await setup(route)
       harness.emit(executionFailed("failed"))
       expect(harness.toasts).toEqual([
-        { sessionID: "session", title: "Сессия завершилась с ошибкой", message: "boom", variant: "error" },
+        { sessionID: "session", title: "Ошибка в работе агента", message: "boom", variant: "error" },
       ])
       expect(harness.notifications).toHaveLength(1)
     },
@@ -239,13 +239,13 @@ describe("internal notifications TUI plugin", () => {
     expect(harness.notifications).toEqual([
       {
         title: "Demo session",
-        message: "Сессия завершена",
+        message: "Агент закончил работу",
         notification: { when: "blurred" },
         sound: { name: "done", when: "always" },
       },
       {
         title: "Demo session",
-        message: "Сессия завершена",
+        message: "Агент закончил работу",
         notification: { when: "blurred" },
         sound: { name: "done", when: "always" },
       },
@@ -273,7 +273,7 @@ describe("internal notifications TUI plugin", () => {
       },
       {
         title: "Subagent session",
-        message: "Сессия завершена",
+        message: "Агент закончил работу",
         notification: false,
         sound: { name: "subagent_done", when: "always" },
       },

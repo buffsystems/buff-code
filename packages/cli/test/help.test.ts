@@ -19,7 +19,7 @@ const CYRILLIC = /[а-яё]/i
 const LABELS = ["DESCRIPTION", "USAGE", "ARGUMENTS", "FLAGS", "GLOBAL FLAGS", "SUBCOMMANDS"]
 
 const doc: HelpDoc.HelpDoc = {
-  description: "Manage sessions",
+  description: "Manage chats",
   usage: "buff session <subcommand> [flags]",
   annotations: Context.empty(),
   args: [

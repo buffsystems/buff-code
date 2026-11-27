@@ -337,6 +337,47 @@ describe("Config", () => {
     ),
   )
 
+  // #969: in a sandbox where the native watcher cannot load, no filesystem event ever comes; the app
+  // announces its own config writes with a location-less «config.updated», and every location re-reads.
+  it.live("re-reads its files on a config.updated without a location, with no watcher event", () =>
+    Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const global = path.join(tmp.path, "global")
+          const project = path.join(tmp.path, "project")
+          const file = path.join(global, "opencode.json")
+          yield* Effect.promise(async () => {
+            await fs.mkdir(global, { recursive: true })
+            await fs.mkdir(project, { recursive: true })
+            await fs.writeFile(file, JSON.stringify({ shell: "first" }))
+          })
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const bus = yield* Bus.Service
+            const located = yield* bus
+              .subscribe(Event.Updated)
+              .pipe(
+                Stream.filter((event) => event.location !== undefined),
+                Stream.take(1),
+                Stream.runCollect,
+                Effect.forkScoped,
+              )
+            // Let the watches settle (their readiness rescan), then write: no watcher event follows.
+            yield* Effect.sleep("300 millis")
+            yield* Effect.promise(() => fs.writeFile(file, JSON.stringify({ shell: "second" })))
+            yield* Effect.sleep("300 millis")
+            expect(Config.latest(yield* config.entries(), "shell")).toBe("first")
+
+            yield* bus.publish(Event.Updated, {}, { global: true })
+
+            expect(yield* Fiber.join(located)).toHaveLength(1)
+            expect(Config.latest(yield* config.entries(), "shell")).toBe("second")
+          }).pipe(Effect.provide(testLayer(project, global, project, undefined, Watcher.testLayer)))
+        }),
+      ),
+    ),
+  )
+
   it.live("excludes missing files under symlinked global roots when global is disabled", () =>
     Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
       Effect.flatMap((tmp) => {

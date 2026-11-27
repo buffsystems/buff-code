@@ -209,7 +209,7 @@ for (const orientation of ["horizontal", "vertical"] as const) {
       await app.waitForFrame((frame) => !frame.includes("Переименовать"))
 
       setNewTab(true)
-      await app.waitForFrame((frame) => frame.includes("+ Новая сессия"))
+      await app.waitForFrame((frame) => frame.includes("+ Новый чат"))
     } finally {
       app.renderer.destroy()
     }

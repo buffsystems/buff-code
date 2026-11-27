@@ -25,7 +25,7 @@ function script(...answers: unknown[]) {
 
 test("the whole dialog: title, password, expiry, tools, live — in that order", async () => {
   const { ui, shown } = script("all", " Разбор ", "pw", "1d", true, false)
-  const made = await shareFlow(ui, { session: "s1", sessionTitle: "Сессия", messages: previews, nowMs: 1000 })
+  const made = await shareFlow(ui, { session: "s1", sessionTitle: "Чат", messages: previews, nowMs: 1000 })
   expect(made).toEqual({
     session: "s1",
     title: "Разбор",
@@ -40,9 +40,9 @@ test("the whole dialog: title, password, expiry, tools, live — in that order",
     "Password (optional)",
     "Expires",
     "Show AI tool calls and their results",
-    "Follow the session live",
+    "Follow the chat live",
   ])
-  expect(shown[1]!.value).toBe("Сессия")
+  expect(shown[1]!.value).toBe("Чат")
   expect(shown[0]!.current).toBe("all")
 })
 

@@ -1,3 +1,4 @@
+import { agentLabel } from "../../agent-label"
 import { Button, Dialog } from "@buff/ui/react"
 import type {
   ModelRef,
@@ -122,7 +123,7 @@ export function UserMessage(props: {
   const [preview, setPreview] = useState<{ src: string; alt: string }>()
   const attachments = (props.message.files ?? []).filter(attached)
   const inlineFiles = (props.message.files ?? []).filter((file) => !!file.mention)
-  const head = [props.agent ? props.agent[0]?.toUpperCase() + props.agent.slice(1) : "", props.modelName]
+  const head = [props.agent ? agentLabel(props.agent, i18n.buff.t) : "", props.modelName]
     .filter(Boolean)
     .join(" · ")
   const stamp = new Intl.DateTimeFormat(i18n.intl, { timeStyle: "short" }).format(props.message.time.created)

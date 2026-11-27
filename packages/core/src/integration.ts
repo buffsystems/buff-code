@@ -357,6 +357,16 @@ const layer = Layer.effect(
       return yield* credentials.create({ ...input, label })
     })
 
+    // A sign-in labelled by its account (#968): the same account signing in again refreshes its
+    // saved sign-in instead of keeping a second one under the same name — sign-out by the account's
+    // name then finds one, and the old device's keys go with it.
+    const saveSignIn = Effect.fnUntraced(function* (input: { integrationID: Integration.ID; label: string; value: Credential.OAuth }) {
+      const same = (yield* credentials.list(input.integrationID)).find((credential) => credential.label === input.label)
+      if (same === undefined) return yield* createCredential(input)
+      yield* credentials.update(same.id, { value: input.value })
+      return same
+    })
+
     const resolveConnections = (entry: Entry | undefined, saved: readonly Credential.Info[]) => {
       const credentials = saved
         .map((credential) => ({
@@ -420,11 +430,10 @@ const layer = Layer.effect(
             .get()
             .integrations.get(attempt.integrationID)
             ?.implementations.get(attempt.methodID)
-          return createCredential({
-            integrationID: attempt.integrationID,
-            label: attempt.label ?? implementation?.label?.(exit.value),
-            value: exit.value,
-          })
+          const account = attempt.label === undefined ? implementation?.label?.(exit.value) : undefined
+          return account === undefined
+            ? createCredential({ integrationID: attempt.integrationID, label: attempt.label, value: exit.value })
+            : saveSignIn({ integrationID: attempt.integrationID, label: account, value: exit.value })
         }).pipe(Effect.asVoid, Effect.exit)
         const settledAt = yield* Clock.currentTimeMillis
         const terminal: TerminalAttempt = Exit.isSuccess(persistence)

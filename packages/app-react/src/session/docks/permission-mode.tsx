@@ -4,7 +4,7 @@
 // not created yet remembers the choice and is created with it. Beside «Plan» sits the «Setup» toggle
 // (#775/#860): the setup agent, which connects the agent to services, accounts and folders.
 
-import { SelectMenu } from "@buff/ui/react"
+import { SelectMenu, Tooltip } from "@buff/ui/react"
 import { BuffPermissionMode as Mode } from "@opencode/schema/buff-permission-mode"
 import { BuffSetup } from "@opencode/schema/buff-setup"
 import { formatServerError } from "@opencode/app/react-reuse/server-errors"
@@ -25,7 +25,12 @@ type WorkMode = "work" | "plan" | "setup"
 const WORK_MODES = [
   { value: "work", label: "Work", hint: "Work: the agent does the task — reads, edits and runs by the permission mode." },
   { value: "plan", label: "Plan", hint: "Plan: the agent does not edit files, it drafts a plan." },
-  { value: "setup", label: "Setup", hint: "Setup: the agent connects itself to a service, an account or a folder you need." },
+  // #972: «Самонастройка» in every client — «Настройка» read as the app's own settings.
+  {
+    value: "setup",
+    label: "Self-setup",
+    hint: "Self-setup: the agent connects itself to a service, an account or a folder you need.",
+  },
 ] as const
 
 /** The rules a new session is created with, by the remembered mode. */
@@ -51,7 +56,7 @@ export function PermissionModeControl(props: { selection: ModelSelectionHandle; 
   const remembered = useStore(preferredMode, (mode) => mode)
   const mode = exists ? Mode.modeOf(permissions, plan) : remembered
   const options = [
-    ...(mode ? [] : [{ value: "custom", label: Mode.short(undefined, t), description: t("The rules of this session are not set by a mode.") }]),
+    ...(mode ? [] : [{ value: "custom", label: Mode.short(undefined, t), description: t("The rules of this chat are not set by a mode.") }]),
     ...Mode.MODES.map((item) => ({ value: item.value, label: t(item.label), description: t(item.hint) })),
   ]
 
@@ -106,20 +111,21 @@ export function PermissionModeControl(props: { selection: ModelSelectionHandle; 
           data-mode={work}
         >
           {works.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              role="radio"
-              aria-checked={work === item.value}
-              className="permission-mode__plan"
-              data-action="buff-work-mode"
-              data-work={item.value}
-              data-active={work === item.value}
-              title={t(item.hint)}
-              onClick={() => pickWork(item.value)}
-            >
-              {t(item.label)}
-            </button>
+            // #972 (R1-26): the hint in the window's own tooltip — it shows on keyboard focus too.
+            <Tooltip key={item.value} content={t(item.hint)}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={work === item.value}
+                className="permission-mode__plan"
+                data-action="buff-work-mode"
+                data-work={item.value}
+                data-active={work === item.value}
+                onClick={() => pickWork(item.value)}
+              >
+                {t(item.label)}
+              </button>
+            </Tooltip>
           ))}
         </div>
       )}

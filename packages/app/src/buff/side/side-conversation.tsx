@@ -74,7 +74,7 @@ export function SideConversation(props: { session: string; main: string }) {
     void sdk.api.session.prompt({ sessionID: props.session, text }).catch((error: unknown) => {
       setSideDraft(props.session, text)
       showToast({
-        title: t("Side conversation"),
+        title: t("Side chat"),
         description: error instanceof Error ? error.message : t("The message was not sent."),
       })
     })
@@ -97,13 +97,13 @@ export function SideConversation(props: { session: string; main: string }) {
     if (!current) return
     mainPrompt.set([...mainPrompt.current(), chipPart("quote", current.text, crypto.randomUUID())], mainPrompt.cursor())
     window.getSelection()?.removeAllRanges()
-    showToast({ title: t("To the main conversation"), description: t("The fragment is in the input of the main session.") })
+    showToast({ title: t("To the main chat"), description: t("The fragment is in the input of the main chat.") })
   }
 
   return (
     <div class="buff-side" data-component="buff-side-conversation">
       <div class="buff-side-head">
-        <span class="buff-side-title">{data.session.get(props.session)?.title ?? t("Side conversation")}</span>
+        <span class="buff-side-title">{data.session.get(props.session)?.title ?? t("Side chat")}</span>
         <Button
           size="small"
           variant="ghost"
@@ -119,7 +119,7 @@ export function SideConversation(props: { session: string; main: string }) {
           fallback={
             <p class="buff-side-empty">
               {t(
-                "The side conversation sees the whole main session, but the main one does not see it. Ask here without derailing the main task.",
+                "The side chat sees the whole main chat, but the main one does not see it. Ask here without derailing the main task.",
               )}
             </p>
           }
@@ -152,7 +152,7 @@ export function SideConversation(props: { session: string; main: string }) {
       <div class="buff-side-input">
         <textarea
           data-component="buff-side-input"
-          placeholder={t("Ask in the side conversation… Enter — send, Shift+Enter — new line")}
+          placeholder={t("Ask in the side chat… Enter — send, Shift+Enter — new line")}
           value={sideDraft(props.session)}
           onInput={(event) => setSideDraft(props.session, event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -197,7 +197,7 @@ export function SideConversation(props: { session: string; main: string }) {
                 onMouseDown={(event: MouseEvent) => event.preventDefault()}
                 onClick={toMain}
               >
-                {t("To the main conversation")}
+                {t("To the main chat")}
               </Button>
             </div>
           </Portal>

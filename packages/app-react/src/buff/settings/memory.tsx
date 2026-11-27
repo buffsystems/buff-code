@@ -68,7 +68,7 @@ function MemoryDialog(props: { controller: Controller; file: BuffMemory.File; te
     >
       <Field
         label={props.file.path}
-        hint={t("Plain text in Markdown. The model gets it at the start of the next session.")}
+        hint={t("Plain text in Markdown. The model gets it at the start of the next chat.")}
       >
         <Textarea
           rows={16}

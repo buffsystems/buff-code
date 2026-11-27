@@ -191,7 +191,8 @@ export function TurnFailure(props: {
   directory: string
   sessionID: string
   failure: SessionTurnFailure
-  onRetry: () => void | Promise<void>
+  /** Absent where the turn around the card offers «Повторить» itself (the simple layout, #972). */
+  onRetry?: () => void | Promise<void>
   /** #757: an answer to a refusal with files — a prepared message that stops sending their format. */
   onFollowUp: (input: ReturnType<typeof fileFollowUp>) => void | Promise<void>
   /** #757: the same message again on another model. */
@@ -268,9 +269,13 @@ export function TurnFailure(props: {
                 </Button>
               </>
             ) : (
-              <Button size="sm" variant="outline" data-action="turn-retry" onClick={() => void props.onRetry()}>
-                {t("Retry")}
-              </Button>
+              // #972: with the limit used up a retry only fails again — the way out is the top-up beside.
+              props.onRetry &&
+              failure.action !== "top-up" && (
+                <Button size="sm" variant="outline" data-action="turn-retry" onClick={() => void props.onRetry?.()}>
+                  {t("Retry")}
+                </Button>
+              )
             )}
             {failure.action && (
               <Button size="sm" variant="outline" data-action="turn-fix" onClick={() => void fix()}>

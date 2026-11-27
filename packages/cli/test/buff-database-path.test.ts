@@ -12,7 +12,7 @@ describe("файл базы Buff Code", () => {
     expect(path.basename(databasePath(data, has([])))).toMatch(/^buffcode(-[\w.-]+)?\.db$/)
   })
 
-  test("есть только апстримная — работаем с ней: история сессий остаётся на месте", () => {
+  test("есть только апстримная — работаем с ней: история чатов остаётся на месте", () => {
     const legacy = own.replace(/buffcode(-[\w.-]+)?\.db$/, (_, s = "") => `opencode${s}.db`)
     expect(databasePath(data, has([legacy]))).toBe(legacy)
   })

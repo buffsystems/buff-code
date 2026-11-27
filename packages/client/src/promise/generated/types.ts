@@ -5988,6 +5988,10 @@ export type ProjectUpdateInput = {
 
 export type ProjectUpdateOutput = Project
 
+export type ProjectRemoveInput = { readonly projectID: { readonly projectID: string }["projectID"] }
+
+export type ProjectRemoveOutput = void
+
 export type FormListInput = {
   readonly location?: { readonly location?: { readonly directory?: string | undefined } | undefined }["location"]
 }

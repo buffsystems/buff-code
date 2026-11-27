@@ -43,7 +43,7 @@ test("sessions leave out archived ones and add the one an id names", async () =>
     load: async () => [session("ses_a"), session("ses_b", 1)],
     get: async (id) => session(id),
     project: () => "p",
-    untitled: "New session",
+    untitled: "New chat",
     category: "Sessions",
   })
   const found = await source("ses_0123456789abcdefABCDEF", new AbortController().signal)

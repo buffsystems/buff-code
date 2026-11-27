@@ -227,7 +227,12 @@ const oauthLogin = Effect.fn("cli.auth.login.oauth")(function* (
   }
 
   const waiting = spinner()
-  waiting.start(t("Waiting for confirmation in the cabinet…"))
+  // #966: the Buff account is allowed on its own page, not in the company's cabinet.
+  waiting.start(
+    integration.id === "buff-account"
+      ? t("Waiting for you to allow the sign-in on the page…")
+      : t("Waiting for confirmation in the cabinet…"),
+  )
   const status = yield* waitForOAuth(client, integration.id, attempt.attemptID).pipe(
     Effect.tapCause(() => Effect.sync(() => waiting.stop(t("Sign-in failed"), 1))),
   )

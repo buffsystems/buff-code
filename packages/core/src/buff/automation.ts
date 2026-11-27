@@ -5,6 +5,7 @@ import type { Scope } from "effect"
 import { ToolFailure } from "@opencode/ai"
 import { define } from "@opencode/plugin/effect/plugin"
 import { BuffAutomation } from "@opencode/schema/buff-automation"
+import { BuffSchedule } from "@opencode/schema/buff-schedule"
 import { Permission } from "../permission.js"
 import { Session } from "../session.js"
 import { BuffAutomationService } from "./automation-service.js"
@@ -24,6 +25,16 @@ export const Plugin = define<BuffAutomationService.Service | Permission.Service 
     const automations = yield* BuffAutomationService.Service
     const permission = yield* Permission.Service
     const sessions = yield* Session.Service
+
+    // Пояс того, кто попросил (#969): клиент называет его в запросе; помощника ведёт главный чат.
+    const askerZone = (sessionID: Session.ID) =>
+      Effect.gen(function* () {
+        let current = yield* sessions.get(sessionID)
+        for (let hops = 0; current.parentID && hops < 16; hops++) current = yield* sessions.get(current.parentID)
+        const [latest] = yield* sessions.messages({ sessionID: current.id, type: "user", order: "desc", limit: 1 })
+        const zone = latest && "metadata" in latest ? (latest.metadata as Record<string, unknown> | undefined)?.["zone"] : undefined
+        return typeof zone === "string" && BuffSchedule.knownZone(zone) ? zone : undefined
+      }).pipe(Effect.orElseSucceed(() => undefined))
 
     yield* ctx.rpc
       .register(BuffAutomation.Rpc, {
@@ -62,6 +73,7 @@ export const Plugin = define<BuffAutomationService.Service | Permission.Service 
                 model
                   ? { id: model.id, providerID: model.providerID, ...(model.variant ? { variant: model.variant } : {}) }
                   : undefined,
+                yield* askerZone(context.sessionID),
               )
               const problem = BuffAutomation.draftProblem(draft)
               if (problem) return yield* Effect.fail(new ToolFailure({ message: problem }))

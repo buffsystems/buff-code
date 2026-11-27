@@ -45,6 +45,9 @@ const settingsSchema = Persistence.struct({
     sans: Schema.String,
     terminal: Schema.String,
     tabLayout: Schema.Literals(["horizontal", "vertical"]),
+    // Buff (#972): how a chat is shown — «simple», as the web client shows it (a turn in one
+    // line, its steps in words), or «developer», the window's own timeline with its presets.
+    layout: Schema.Literals(["simple", "developer"]),
     showProjectName: Schema.Boolean,
   }),
   keybinds: Persistence.record(Schema.String.pipe(Schema.catchDecoding(() => Effect.succeed(Option.none())))),
@@ -71,6 +74,7 @@ export type WorkspaceDefaultDestination = Settings["workspaces"]["defaultDestina
 export type TerminalPlacement = Settings["general"]["terminalPlacement"]
 export type FollowUpBehavior = Settings["general"]["followUpBehavior"]
 export type TabLayout = Settings["appearance"]["tabLayout"]
+export type WindowLayout = Settings["appearance"]["layout"]
 
 function storedTimelineCategory(category: TimelineCategory) {
   return Persistence.optional(
@@ -180,7 +184,16 @@ export const DEFAULT_SETTINGS: Settings = {
     experimentalBrowser: false,
   },
   sessionSummary: { projectExpanded: true, serverExpanded: true },
-  appearance: { fontSize: 14, mono: "", sans: "", terminal: "", tabLayout: "vertical", showProjectName: false },
+  // «developer» is what the window has always shown: an install that never chose keeps it.
+  appearance: {
+    fontSize: 14,
+    mono: "",
+    sans: "",
+    terminal: "",
+    tabLayout: "vertical",
+    layout: "developer",
+    showProjectName: false,
+  },
   keybinds: {},
   permissions: { autoApprove: false },
   workspaces: { defaultDestination: "last-used", lastUsed: {} },

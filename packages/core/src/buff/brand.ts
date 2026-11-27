@@ -9,13 +9,13 @@ export const ATTRIBUTION = { referer: "https://buff.systems/", title: "Buff Code
 export const OFFLINE_MODEL_CATALOG = true
 
 /**
- * Чего нет ни у разработчика, ни у раннера: облачные веб-поиски апстрима — чужие сервисы, и его
- * встроенные навыки — справка по OpenCode и отчёт об ошибке в его GitHub (#445, у раннера — #623).
+ * Чего нет ни у разработчика, ни у раннера: облачные веб-поиски апстрима, которым нужен ключ, и
+ * его встроенные навыки — справка по OpenCode и отчёт об ошибке в его GitHub (#445, у раннера —
+ * #623). Exa и Parallel ищут без ключа и у разработчика есть (#956): без них инструмент websearch
+ * падал на каждом вызове, а запрос уходит к ним лишь после согласия человека.
  */
 const UPSTREAM_CUT = new Set([
-  "opencode.websearch.exa",
   "opencode.websearch.firecrawl",
-  "opencode.websearch.parallel",
   "opencode.websearch.tavily",
   "opencode.websearch.tinyfish",
   "opencode.skill",
@@ -31,6 +31,8 @@ const UPSTREAM_CUT = new Set([
  */
 const RUNNER_CUT = new Set([
   "buff.login",
+  // #966: личный аккаунт — тоже вход человека; раннеру модель называет конфигурация прогона.
+  "buff.account",
   "buff.context",
   "buff.mcp",
   "buff.skill",
@@ -50,6 +52,9 @@ const RUNNER_CUT = new Set([
   "buff.plan",
   "buff.goal",
   "buff.side",
+  // #956: облачный поиск — согласие человека, а у раннера спросить некого; websearch он запрещает.
+  "opencode.websearch.exa",
+  "opencode.websearch.parallel",
 ])
 
 /**

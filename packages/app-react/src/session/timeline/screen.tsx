@@ -2,9 +2,13 @@
 // wide screens by the title row with the Find bar, sticky inside the scroller as in the Solid
 // window (a phone shows the title in its tab sheet).
 
+import { replaceable } from "../simple/chat"
+import { turnFailure } from "@opencode/schema/buff-turn-failure"
+import { offerUnsent } from "../composer/unsent"
 import { PhoneSessionBanner } from "@buff/ui/react"
 import { BuffMobile } from "@opencode/schema/buff-mobile"
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import type { SessionTurnFailure } from "@opencode/session-ui/actions"
 import { createPortal } from "react-dom"
 import type { Server } from "../../core/servers"
 import { formatServerError } from "@opencode/app/react-reuse/server-errors"
@@ -33,6 +37,8 @@ import { publishedSearches } from "./search"
 import { TimelineSearchBar } from "./search-bar"
 import { useSettings } from "../../shell/settings-context"
 import { SessionTimeline, useMediaQuery } from "./timeline"
+import { SimpleTranscript } from "../simple/transcript"
+import { ChatPlugins } from "../../buff/chat-plugins/host"
 import { usePendingSession } from "../preparing/pending"
 
 const cachedViews = 16
@@ -117,6 +123,9 @@ function TimelineView(props: { server: Server; sessionID: string; active: boolea
   const i18n = useI18n()
   const desktop = useMediaQuery("(min-width: 768px)")
   const detail = useSettings((settings) => settings.general.timelineDetail)
+  // Buff (#972): the simple layout shows the chat as the web client does; the developer one —
+  // the window's own timeline.
+  const layout = useSettings((settings) => settings.appearance.layout)
   const server = props.server
   const location = useServerData(server, (state) => state.session.info[props.sessionID]?.location)
   // Model names in notices and answers come from the session location's catalog.
@@ -144,7 +153,52 @@ function TimelineView(props: { server: Server; sessionID: string; active: boolea
     }),
     [navigateToSession, server.key, child, directory, turns],
   )
-  return (
+  const header = desktop ? (
+    <TimelineTitleRow active={props.active} />
+  ) : props.preparing ? (
+    <div data-session-title className="timeline-header">
+      <div className="timeline-header__bar">
+        <h1 className="timeline-header__title">{i18n.t("session.tab.session")}</h1>
+      </div>
+    </div>
+  ) : undefined
+  const readFile = useCallback(
+    async (path: string) => {
+      const blob = await readLocalImage(server.api(), directory, path, new AbortController().signal)
+      if (!blob) throw new Error("not a picture")
+      return blob
+    },
+    [server, directory],
+  )
+  const openFile = useCallback((path: string) => void sideActions()?.openFile(path), [])
+  // Buff (#595): the chat's plugins, for both layouts.
+  const withPlugins = (transcript: ReactNode) => (
+    <ChatPlugins server={server} sessionID={props.sessionID} directory={directory} readOnly={child}>
+      {transcript}
+    </ChatPlugins>
+  )
+  if (layout === "simple" && !props.preparing)
+    return withPlugins(
+      <SimpleTranscript
+        server={server}
+        sessionID={props.sessionID}
+        header={header}
+        // A helper's chat is only read: nothing in it is asked again or rewound.
+        {...(child || !directory
+          ? {}
+          : {
+              retry: turns.again,
+              retryHelps: turns.retryHelps,
+              rewind: (messageID: string) => void turns.revert?.({ sessionID: props.sessionID, messageID }),
+              failureCard: turns.failureCard,
+              ...(turns.turnSummary ? { summary: turns.turnSummary } : {}),
+            })}
+        openFile={openFile}
+        readFile={readFile}
+        active={props.active}
+      />,
+    )
+  return withPlugins(
     <SessionTimeline
       server={server}
       sessionID={props.sessionID}
@@ -155,24 +209,24 @@ function TimelineView(props: { server: Server; sessionID: string; active: boolea
       readImage={readImage}
       preparing={props.preparing}
       // A phone shows the title in its tab sheet; a session being prepared shows it here too.
-      header={
-        desktop ? (
-          <TimelineTitleRow active={props.active} />
-        ) : props.preparing ? (
-          <div data-session-title className="timeline-header">
-            <div className="timeline-header__bar">
-              <h1 className="timeline-header__title">{i18n.t("session.tab.session")}</h1>
-            </div>
-          </div>
-        ) : undefined
-      }
-    />
+      header={header}
+    />,
   )
 }
 
 // Buff's turn actions (#449, #458): rewind to a prompt after a preview, the changed files under a
 // finished turn, and a failed turn's card with retry.
-function useTurnActions(server: Server, sessionID: string, directory: string): TimelineActions {
+function useTurnActions(
+  server: Server,
+  sessionID: string,
+  directory: string,
+): TimelineActions & {
+  retry: (userMessageID: string) => void
+  /** The request asked again in place of what followed it: the answer is replaced, files stay. */
+  again: (userMessageID: string) => void
+  retryHelps: (failure: SessionTurnFailure) => boolean
+  failureCard: (failure: SessionTurnFailure) => ReactNode
+} {
   const core = useCore()
   const i18n = useI18n()
   const dialog = useDialog()
@@ -195,6 +249,7 @@ function useTurnActions(server: Server, sessionID: string, directory: string): T
           description: error instanceof Error ? error.message : String(error),
         }),
       confirm: (message) => confirmRef.current(message),
+      setAside: (bringBack) => offerUnsent(i18n.buff.t, bringBack),
     })
     const failed = (error: unknown) =>
       void showToast({
@@ -222,12 +277,78 @@ function useTurnActions(server: Server, sessionID: string, directory: string): T
       readonly text: string
       readonly metadata: { readonly omitMedia: string[]; readonly omitAs: string }
     }) =>
-      server.data.session.prompt({ sessionID, text: input.text, metadata: { ...input.metadata } }).then(() => undefined, failed)
+      server.data.session
+        .prompt({ sessionID, text: input.text, metadata: { ...input.metadata } })
+        .then(() => undefined, failed)
+    // `own` — the card retries by itself (the developer timeline). In the simple layout the turn
+    // has «Повторить», and another model asks again in place of the failed answer too.
+    const failureCard = (failure: SessionTurnFailure, own: boolean) => (
+      <TurnFailure
+        server={server}
+        directory={directory}
+        sessionID={sessionID}
+        failure={failure}
+        {...(own ? { onRetry: () => retry(failure.userMessageID) } : {})}
+        onRetryWith={(model) =>
+          // In place of the failed answer only where nothing came after it and no rewind is
+          // staged; an older failed turn is asked again at the chat's end, the later turns kept.
+          !own && replaces(failure.userMessageID)
+            ? againRef.run(failure.userMessageID, model)
+            : retryWith(failure.userMessageID, model)
+        }
+        onFollowUp={followUp}
+      />
+    )
+    // #972: the simple layout's «Повторить» says the answer is replaced — so the chat is taken
+    // back to the request first (files left as they are), and the request is sent again.
+    const replaces = (userMessageID: string) => {
+      const state = server.data.state.get().session
+      return replaceable(state.message[sessionID] ?? [], !!state.info[sessionID]?.revert, userMessageID)
+    }
+    const againRef: {
+      run: (id: string, model?: { providerID: string; modelID: string }) => Promise<void> | undefined
+    } = {
+      run: () => undefined,
+    }
+    const again = async (userMessageID: string, model?: { providerID: string; modelID: string }) => {
+      const message = server.data.session.message.get(sessionID, userMessageID)
+      if (message?.type !== "user") return
+      const api = server.api().session
+      if (server.data.session.status(sessionID) === "running") await api.interrupt({ sessionID }).catch(() => undefined)
+      const staged = await api.revert.stage({ sessionID, messageID: userMessageID, files: false }).then(
+        () => true,
+        (error: unknown) => (failed(error), false),
+      )
+      if (!staged) return
+      const input = retryInput(sessionID, message)
+      const send = model
+        ? api
+            .switchModel({ sessionID, model: { id: model.modelID, providerID: model.providerID } })
+            .then(() => server.data.session.prompt({ ...input, metadata: { ...input.metadata, model } }))
+        : server.data.session.prompt(input)
+      return send.then(
+        () => undefined,
+        // Not sent: the rewind is undone, so the request stays in the chat and nothing hangs staged.
+        (error: unknown) =>
+          api.revert
+            .clear({ sessionID })
+            .catch(() => undefined)
+            .then(() => failed(error)),
+      )
+    }
+    againRef.run = again
     return {
+      retry: (userMessageID: string) => void retry(userMessageID),
+      again: (userMessageID: string) => void again(userMessageID),
+      // With the limit used up a retry only fails again — the way out is the top-up on the card.
+      retryHelps: (failure: SessionTurnFailure) =>
+        turnFailure(failure, failure.providerID, i18n.buff.t, failure.providerID).action !== "top-up",
       revert: ({ messageID }) => revert.to(messageID),
       // Buff (#817): a public link to one message — the share dialog opens with it picked.
       share: (messageID) =>
-        dialog.show((close) => <ShareDialog server={server} sessionID={sessionID} preselect={[messageID]} onClose={close} />),
+        dialog.show((close) => (
+          <ShareDialog server={server} sessionID={sessionID} preselect={[messageID]} onClose={close} />
+        )),
       turnSummary: ({ userMessageID }) => (
         <TurnSummary
           server={server}
@@ -237,17 +358,9 @@ function useTurnActions(server: Server, sessionID: string, directory: string): T
           onRevert={() => void revert.to(userMessageID)}
         />
       ),
-      turnFailure: (failure) => (
-        <TurnFailure
-          server={server}
-          directory={directory}
-          sessionID={sessionID}
-          failure={failure}
-          onRetry={() => retry(failure.userMessageID)}
-          onRetryWith={(model) => retryWith(failure.userMessageID, model)}
-          onFollowUp={followUp}
-        />
-      ),
+      turnFailure: (failure) => failureCard(failure, true),
+      // The simple layout's turn has «Повторить» of its own under the card.
+      failureCard: (failure: SessionTurnFailure) => failureCard(failure, false),
     }
   }, [core, server, sessionID, directory, i18n, dialog])
 }

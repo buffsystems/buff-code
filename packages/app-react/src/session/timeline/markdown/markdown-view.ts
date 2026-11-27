@@ -36,6 +36,8 @@ type CodeBlock = {
   raw: string
   hash: string
   language: string
+  /** The language as the answer named it (Buff, #595): a chat plugin's block is no known language. */
+  named?: string | undefined
   complete: boolean
   generation: number
   stable: MarkdownToken[]
@@ -165,6 +167,7 @@ export function createMarkdownView(input: {
             hash: String(block.raw.length),
             complete: !!block.complete,
             ...result,
+            named: block.language,
           }
           if (block.complete) completedCode.set(blockKey, rendered)
           return rendered
@@ -260,7 +263,12 @@ export function createMarkdownView(input: {
 async function highlight(text: string, language: string | undefined, key: string, complete = false) {
   try {
     const result = await highlightStreamingCode(key, text, language ?? "text", complete)
-    return { language: result.language, generation: result.generation, stable: result.stable, unstable: result.unstable }
+    return {
+      language: result.language,
+      generation: result.generation,
+      stable: result.stable,
+      unstable: result.unstable,
+    }
   } catch (error) {
     if (
       !(error instanceof MarkdownWorkerDisposedError) &&
@@ -340,6 +348,7 @@ function pendingBlocks(
       raw: block.raw,
       hash: String(block.raw.length),
       language: block.language ?? "text",
+      named: block.language,
       complete: !!block.complete,
       stable: [],
       generation: 0,
@@ -354,9 +363,11 @@ function codeUrl(text: string) {
   return new URL(href).toString()
 }
 
-function applyCodeMetadata(wrapper: HTMLElement, language: string | undefined) {
+function applyCodeMetadata(wrapper: HTMLElement, language: string | undefined, named?: string) {
   if (language) wrapper.dataset.language = language
   if (!language) delete wrapper.dataset.language
+  if (named) wrapper.dataset.named = named
+  if (!named) delete wrapper.dataset.named
   const shell = !!language && shellLanguages.has(language.toLowerCase())
   if (shell) wrapper.dataset.codeKind = "shell"
   if (!shell) delete wrapper.dataset.codeKind
@@ -528,6 +539,7 @@ function updateBlock(container: HTMLDivElement, index: number, block: RenderedBl
         Array.from(code.classList)
           .find((name) => name.startsWith("language-"))
           ?.slice(9),
+        code.dataset.named,
       )
       pre.replaceWith(wrapper)
       wrapper.appendChild(pre)
@@ -541,7 +553,12 @@ function updateBlock(container: HTMLDivElement, index: number, block: RenderedBl
   current.replaceWith(next)
 }
 
-function updateCodeBlock(container: HTMLDivElement, current: Element | undefined, block: CodeBlock, labels: CopyLabels) {
+function updateCodeBlock(
+  container: HTMLDivElement,
+  current: Element | undefined,
+  block: CodeBlock,
+  labels: CopyLabels,
+) {
   const existing =
     current instanceof HTMLDivElement && current.dataset.markdownKey === block.key && renderedCodeTokens.has(current)
       ? current
@@ -563,7 +580,7 @@ function updateCodeBlock(container: HTMLDivElement, current: Element | undefined
   const code = existing?.querySelector("code")
   if (code instanceof HTMLElement) {
     const wrapper = code.closest('[data-component="markdown-code"]')
-    if (wrapper instanceof HTMLElement) applyCodeMetadata(wrapper, block.language)
+    if (wrapper instanceof HTMLElement) applyCodeMetadata(wrapper, block.language, block.named)
     code.className = `language-${block.language}`
     const previous = renderedCodeTokens.get(next)
     const reset = shouldResetCodeTokens(previous, {
@@ -589,7 +606,7 @@ function updateCodeBlock(container: HTMLDivElement, current: Element | undefined
 
   const wrapper = document.createElement("div")
   wrapper.setAttribute("data-component", "markdown-code")
-  applyCodeMetadata(wrapper, block.language)
+  applyCodeMetadata(wrapper, block.language, block.named)
   const pre = document.createElement("pre")
   pre.className = "shiki OpenCode"
   const codeElement = document.createElement("code")

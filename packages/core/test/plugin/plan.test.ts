@@ -169,7 +169,13 @@ describe("plan plugin reminders", () => {
       expect(persisted[0]).toContain("You are in Plan mode")
       expect(persisted[0]).toContain("Do not create or update plan files unless the user explicitly asks you to")
       expect(persisted[0]).toContain(planDirectory)
-      expect(persisted[0]).toContain("Do not modify any other files")
+      expect(persisted[0]).toContain("Do not modify files or ask a subagent to do so")
+      // #969, #970: the plan directory is the app's own, never a step of the plan; approval is
+      // plan_exit's job, not a question in text; a request to implement waits for the approval.
+      expect(persisted[0]).toContain("never make it a step of the plan")
+      expect(persisted[0]).toContain("Do not ask for approval in text")
+      expect(persisted[0]).toContain("do not do it yourself yet")
+      expect(persisted[0]).not.toContain("{{")
       expect(persisted[1]).toContain("NO LONGER in Plan mode")
     }),
   )

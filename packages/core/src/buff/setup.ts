@@ -26,16 +26,16 @@ import offerText from "./setup/prompts/offer.md" with { type: "text" }
 const SETUP = Agent.ID.make(BuffSetup.AGENT)
 const LANGUAGE = { ru: "Russian", en: "English" } as const
 
-export const description = `Open a new Setup session for the user: there the agent connects itself to an external service, account, data source or folder the user needs, asking them plain questions and testing the result. The user confirms the switch before the session opens.
+export const description = `Open a new Self-setup chat for the user: there the agent connects itself to an external service, account, data source or folder the user needs, asking them plain questions and testing the result. The user confirms the switch before the chat opens.
 
 Call it right after the user agrees to set up a connection you do not have. Do not call it to do the user's task yourself, and never to ask for credentials in this conversation.
 
 - title: short name of what is being connected, in the user's language.
-- task: a self-contained task for the new session that cannot see this conversation: the outcome the user wants, and anything they already told you (which service, which account, what for).`
+- task: a self-contained task for the new chat that cannot see this conversation: the outcome the user wants, and anything they already told you (which service, which account, what for).`
 
 export const Input = Schema.Struct({
   title: Schema.String.annotate({ description: "Short name of what is being connected" }),
-  task: Schema.String.annotate({ description: "Self-contained task for the setup session" }),
+  task: Schema.String.annotate({ description: "Self-contained task for the Self-setup chat" }),
 })
 export type Input = typeof Input.Type
 
@@ -57,7 +57,7 @@ export function resources(input: Input): string[] {
 }
 
 export function reply(session: string): string {
-  return `Setup session ${session} is open and already working on the task. Tell the user in one line that the setup continues in a new conversation, then stop; do not repeat the task here.`
+  return `Self-setup chat ${session} is open and already working on the task. Tell the user in one line that the setup continues in a new conversation, then stop; do not repeat the task here.`
 }
 
 export const Plugin = define<Permission.Service | Session.Service | Global.Service | Scope.Scope>({
@@ -101,7 +101,7 @@ export const Plugin = define<Permission.Service | Session.Service | Global.Servi
       if (event.tool !== "edit" && event.tool !== "write" && event.tool !== "patch") return Effect.void
       if (!(event.error.error instanceof Permission.BlockedError)) return Effect.void
       event.error = new ToolFailure({
-        message: `Setup mode edits only your configuration folder: ${global.config}. Project files stay untouched.`,
+        message: `Self-setup mode edits only your configuration folder: ${global.config}. Project files stay untouched.`,
       })
       return Effect.void
     })
@@ -141,7 +141,7 @@ export const Plugin = define<Permission.Service | Session.Service | Global.Servi
       .transform((editor) =>
         editor.add({
           name: "setup",
-          description: BuffLocale.t("Setup: a new session where the agent connects itself to what you need"),
+          description: BuffLocale.t("Self-setup: a new chat where the agent connects itself to what you need"),
           // Переход из переписки — с её номером: консоль и окно открывают новую сессию рядом.
           execute: (input) =>
             open({ ...(input.prompt.text.trim() ? { text: input.prompt.text.trim() } : {}), from: input.sessionID }).pipe(
@@ -162,7 +162,7 @@ export const Plugin = define<Permission.Service | Session.Service | Global.Servi
           execute: (input, context) =>
             Effect.gen(function* () {
               if (context.agent === SETUP)
-                return yield* Effect.fail(new ToolFailure({ message: "You are already in Setup mode." }))
+                return yield* Effect.fail(new ToolFailure({ message: "You are already in Self-setup mode." }))
               const title = input.title.trim()
               const task = input.task.trim()
               if (!title || !task)
@@ -181,7 +181,7 @@ export const Plugin = define<Permission.Service | Session.Service | Global.Servi
               Effect.mapError((error) =>
                 error instanceof ToolFailure
                   ? error
-                  : new ToolFailure({ message: "Unable to open the setup session", error }),
+                  : new ToolFailure({ message: "Unable to open the Self-setup chat", error }),
               ),
             ),
         }),

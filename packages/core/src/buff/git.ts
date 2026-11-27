@@ -160,7 +160,7 @@ export const register = Effect.fn("BuffGit.register")(function* (ctx: Context) {
                       message: String((cause as { message?: unknown }).message ?? cause),
                     })
                   : BuffLocale.t(
-                      "Send the first message of the session: the commit message is composed in its context.",
+                      "Send the first message of the chat: the commit message is composed in its context.",
                     ),
               }),
             ),

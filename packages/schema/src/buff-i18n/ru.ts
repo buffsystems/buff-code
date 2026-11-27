@@ -15,6 +15,7 @@ import { consoleMini } from "./ru-console-mini.js"
 import { extensions } from "./ru-extensions.js"
 import { phone } from "./ru-phone.js"
 import { share } from "./ru-share.js"
+import { subscription } from "./ru-subscription.js"
 import { session } from "./ru-session.js"
 import { sessions } from "./ru-sessions.js"
 import { workflows } from "./ru-workflows.js"
@@ -39,6 +40,7 @@ export const AREAS: Readonly<Record<string, Catalog>> = {
   consoleMini,
   phone,
   share,
+  subscription,
   desktop,
 }
 

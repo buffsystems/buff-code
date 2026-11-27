@@ -84,7 +84,7 @@ describe("resolveKeybindOption", () => {
 // Buff (#470, #584): a hidden command keeps its shortcut editable in settings, but never renames a
 // command the catalog already knows (settings' hidden «Close settings» shares tab.close).
 test("hidden commands enter the catalog without overwriting a known title", () => {
-  expect(writesCatalog({ title: "New session", hidden: true }, false)).toBe(true)
+  expect(writesCatalog({ title: "New chat", hidden: true }, false)).toBe(true)
   expect(writesCatalog({ title: "Close settings", hidden: true }, true)).toBe(false)
   expect(writesCatalog({ title: "Close tab" }, true)).toBe(true)
   expect(writesCatalog({ hidden: true }, false)).toBe(false)

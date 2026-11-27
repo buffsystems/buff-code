@@ -2,6 +2,7 @@
 // window has (the owner's decision) — the three fonts, the text sizes (#461) and the session tabs'
 // layout (#470). Ported from the Solid window's appearance.tsx.
 
+import { BuffFirstRun } from "@opencode/schema/buff-first-run"
 import { Button, useTheme, type Theme } from "@buff/ui/react"
 import { useI18n } from "../../i18n/provider"
 import { useStore } from "../../react/use-store"
@@ -71,6 +72,15 @@ export function SettingsAppearance() {
               />
             ))}
             <TextSizeRows />
+            {/* #972: how a chat is shown — picked at the first launch, changed here. */}
+            <SelectRow
+              action="settings-chat-layout"
+              title={i18n.buff.t(BuffFirstRun.LAYOUT_SETTING.title)}
+              description={i18n.buff.t(BuffFirstRun.LAYOUT_SETTING.note)}
+              value={appearance.layout}
+              options={BuffFirstRun.LAYOUTS.map((item) => ({ value: item.value, label: i18n.buff.t(item.title) }))}
+              onChange={(value) => model.appearance({ layout: value })}
+            />
             <SelectRow
               action="settings-tab-layout"
               title={i18n.t("settings.appearance.row.tabs.title")}

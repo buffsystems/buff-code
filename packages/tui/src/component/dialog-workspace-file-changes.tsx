@@ -82,7 +82,7 @@ export function DialogWorkspaceFileChanges(props: {
       </box>
       <box paddingLeft={2} paddingRight={2}>
         <text fg={theme.text.muted} wrapMode="word">
-          {props.message ?? t("Do you want to move these changes with the session?")}
+          {props.message ?? t("Do you want to move these changes with the chat?")}
         </text>
       </box>
       <scrollbox

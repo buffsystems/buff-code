@@ -4,7 +4,7 @@ export type { Context, Metadata, Namespace, Options, Result } from "@opencode/sc
 
 import { ToolDefinition, type ToolCall } from "@opencode/ai"
 import { Tool } from "@opencode/schema/tool"
-import { Context, Effect, Layer, Result, Schema, SchemaIssue, Types } from "effect"
+import { Context, Effect, Layer, PubSub, Result, Schema, SchemaIssue, Scope, Stream, Types } from "effect"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import type { Agent } from "./agent.js"
 import { CodeModeCatalog } from "./codemode/catalog.js"
@@ -41,6 +41,8 @@ type Data = {
 export interface Interface extends State.Transformable<Editor> {
   readonly list: () => Effect.Effect<ReadonlyArray<Tool.Info & { readonly id: string }>>
   readonly snapshot: (permissions?: Permission.Ruleset) => Effect.Effect<Snapshot>
+  /** Subscribes now and emits after every later change of the registry: a registration, its disposal or a reload. */
+  readonly changes: () => Effect.Effect<Stream.Stream<void>, never, Scope.Scope>
 }
 
 /** A local execution result after hooks and content normalization. */
@@ -155,6 +157,7 @@ const layer = Layer.effect(
       }
     })
 
+    const changes = yield* PubSub.sliding<void>(1)
     let catalog: { data: Data; names: string; value: CodeModeCatalog.Inventory } | undefined
     const state = State.create<Data, Editor>({
       name: "tool",
@@ -214,7 +217,7 @@ const layer = Layer.effect(
               error: error.message,
             }),
           { discard: true },
-        )
+        ).pipe(Effect.andThen(PubSub.publish(changes, undefined)))
       },
     })
 
@@ -222,6 +225,7 @@ const layer = Layer.effect(
       transform: state.transform,
       reload: state.reload,
       list: () => Effect.sync(() => Array.from(state.get().tools.values())),
+      changes: () => PubSub.subscribe(changes).pipe(Effect.map(Stream.fromSubscription)),
       snapshot: Effect.fn("Tool.snapshot")((permissions) =>
         Effect.sync(() => {
           const data = state.get()

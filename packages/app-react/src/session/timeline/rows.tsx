@@ -2,6 +2,7 @@
 // A row is memoised on its projection row object, which the projection keeps while the row's
 // structure is unchanged; its live content comes from narrow selectors on the server's data.
 
+import { agentLabel } from "../agent-label"
 import type {
   ModelRef,
   SessionMessageAssistant,
@@ -179,10 +180,6 @@ function TurnDivider(props: { row: TimelineRow.TurnDivider }) {
   )
 }
 
-function capitalizeAgent(agent: string) {
-  return agent.slice(0, 1).toUpperCase() + agent.slice(1)
-}
-
 type NoticeContent = { label: string; data?: string; items?: string[] }
 
 function useNoticeContent() {
@@ -192,8 +189,8 @@ function useNoticeContent() {
       return {
         label: i18n.t("ui.sessionTimeline.notice.agentChanged"),
         data: message.previous
-          ? `${capitalizeAgent(message.previous)} → ${capitalizeAgent(message.agent)}`
-          : capitalizeAgent(message.agent),
+          ? `${agentLabel(message.previous, i18n.buff.t)} → ${agentLabel(message.agent, i18n.buff.t)}`
+          : agentLabel(message.agent, i18n.buff.t),
       }
     if (message.type === "model-switched" || message.type === "context-switched") return undefined
     if (message.type === "skill") return { label: i18n.t("ui.tool.skill"), data: message.name }

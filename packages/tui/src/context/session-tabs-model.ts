@@ -5,7 +5,7 @@ export type SessionTab = {
 
 export type SessionTabUnread = "activity" | "error"
 
-export const NEW_SESSION_TAB_TITLE = "New session"
+export const NEW_SESSION_TAB_TITLE = "New chat"
 
 export function sessionTabNumberLabel(index: number) {
   return String(index + 1)

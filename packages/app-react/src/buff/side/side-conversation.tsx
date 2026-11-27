@@ -86,7 +86,7 @@ export function SideConversation(props: {
       .catch((error: unknown) => {
         setSideDraft(props.session, text)
         showToast({
-          title: t("Side conversation"),
+          title: t("Side chat"),
           description: error instanceof Error ? error.message : t("The message was not sent."),
         })
       })
@@ -110,15 +110,15 @@ export function SideConversation(props: {
     props.onQuote(offer.text)
     window.getSelection()?.removeAllRanges()
     showToast({
-      title: t("To the main conversation"),
-      description: t("The fragment is in the input of the main session."),
+      title: t("To the main chat"),
+      description: t("The fragment is in the input of the main chat."),
     })
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 p-2" data-component="buff-side-conversation">
       <div className="flex items-center gap-2">
-        <span className="ui-title ui-title--sm min-w-0 flex-1 truncate">{title ?? t("Side conversation")}</span>
+        <span className="ui-title ui-title--sm min-w-0 flex-1 truncate">{title ?? t("Side chat")}</span>
         <Button
           size="sm"
           variant="ghost"
@@ -132,7 +132,7 @@ export function SideConversation(props: {
         {!rows.length && (
           <EmptyState inline>
             {t(
-              "The side conversation sees the whole main session, but the main one does not see it. Ask here without derailing the main task.",
+              "The side chat sees the whole main chat, but the main one does not see it. Ask here without derailing the main task.",
             )}
           </EmptyState>
         )}
@@ -165,8 +165,8 @@ export function SideConversation(props: {
           rows={2}
           className="flex-1"
           data-component="buff-side-input"
-          aria-label={t("Side conversation")}
-          placeholder={t("Ask in the side conversation… Enter — send, Shift+Enter — new line")}
+          aria-label={t("Side chat")}
+          placeholder={t("Ask in the side chat… Enter — send, Shift+Enter — new line")}
           value={draft}
           onChange={(event) => setSideDraft(props.session, event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -209,7 +209,7 @@ export function SideConversation(props: {
               onMouseDown={(event) => event.preventDefault()}
               onClick={toMain}
             >
-              {t("To the main conversation")}
+              {t("To the main chat")}
             </Button>
           </div>,
           document.body,

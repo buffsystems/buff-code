@@ -31,10 +31,19 @@ export function saved(scope: BuffMcp.Scope, project: string): string {
   return scope === "project" ? "Saved in the project's repository configuration." : "Saved for all projects."
 }
 
-export function list(entries: ReadonlyArray<BuffMcp.Entry>, tools: ReadonlyArray<ToolLike>): string {
+/** What the list says of a connection the user turned off in the chat (#970): its tools are gone. */
+const OFF_HERE =
+  "Turned off by the user in this chat: its tools are not available here. Do not reach the same service another way; tell the user — only they can turn it back on."
+
+/** `off` — the connections turned off in the chat that asks: listed as such, without their tools. */
+export function list(
+  entries: ReadonlyArray<BuffMcp.Entry>,
+  tools: ReadonlyArray<ToolLike>,
+  off: ReadonlySet<string> = new Set(),
+): string {
   if (!entries.length) return "No connections yet."
   const lines = entries.map((entry) => {
-    const own = tools.filter((tool) => tool.server === entry.name)
+    const own = off.has(entry.name) ? [] : tools.filter((tool) => tool.server === entry.name)
     const scope = WHERE[entry.scope]
     const kind =
       entry.config?.type === "remote"
@@ -44,7 +53,8 @@ export function list(entries: ReadonlyArray<BuffMcp.Entry>, tools: ReadonlyArray
         : entry.config?.type === "local"
           ? "local"
           : ""
-    const head = `- ${entry.name} (${[scope, kind].filter(Boolean).join("; ")}): ${BuffConnection.statusForModel(entry.status)}`
+    const state = off.has(entry.name) ? OFF_HERE : BuffConnection.statusForModel(entry.status)
+    const head = `- ${entry.name} (${[scope, kind].filter(Boolean).join("; ")}): ${state}`
     return own.length ? `${head}\n  tools (${own.length}): ${names(own)}` : head
   })
   return lines.join("\n")

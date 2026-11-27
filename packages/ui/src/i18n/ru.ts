@@ -1,5 +1,5 @@
 export const dict = {
-  "ui.sessionReview.title": "Изменения сессии",
+  "ui.sessionReview.title": "Изменения чата",
   "ui.sessionReview.title.git": "Изменения Git",
   "ui.sessionReview.title.branch": "Изменения ветки",
   "ui.sessionReview.title.lastTurn": "Изменения последнего хода",
@@ -95,7 +95,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Рассмотрение следующих шагов",
 
   "ui.messagePart.questions.dismissed": "Вопросы отклонены",
-  "ui.messagePart.compaction": "Сессия сжата",
+  "ui.messagePart.compaction": "Чат сжат",
   "ui.messagePart.context.read.one": "{{count}} чтение",
   "ui.messagePart.context.read.few": "{{count}} чтения",
   "ui.messagePart.context.read.many": "{{count}} чтений",
@@ -188,7 +188,7 @@ export const dict = {
   "ui.message.collapse": "Свернуть сообщение",
   "ui.message.copy": "Копировать",
   "ui.message.copyMessage": "Копировать сообщение",
-  "ui.message.forkMessage": "Ответвить в новую сессию",
+  "ui.message.forkMessage": "Ответвить в новый чат",
   "ui.message.revertMessage": "Сбросить до этого момента",
   "ui.message.copyResponse": "Копировать ответ",
   "ui.message.copied": "Скопировано!",

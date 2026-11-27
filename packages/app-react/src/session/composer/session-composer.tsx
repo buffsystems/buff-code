@@ -3,6 +3,7 @@
 // the queued prompts above it, and typing anywhere on the screen landing in it. While a request
 // dock asks something the composer steps aside; a subagent's session points back to its parent.
 
+import { offerUnsent } from "./unsent"
 import { Button } from "@buff/ui/react"
 import { useEffect, useMemo, useRef } from "react"
 import { useCommandRegistration } from "../../commands/provider"
@@ -25,6 +26,7 @@ import { showToast } from "../../shell/notifications/toast"
 import { promptContextActions, usePromptContextMirror } from "./prompt-context"
 import { createSessionRevert } from "./revert"
 import { BuffBalanceChip, BuffFundsStrip } from "../../buff/billing/billing"
+import { BuffUsageChip } from "../../buff/subscription/subscription"
 import { BuffContextChip } from "../../buff/context/chip"
 import { BuffGitChip } from "../../buff/git/chip"
 import { BuffGoalBar } from "../../buff/goal/goal-bar"
@@ -133,6 +135,7 @@ function ActiveComposer(props: { directory: string }) {
         notify: (error) =>
           showToast({ title: i18n.t("common.requestFailed"), description: error instanceof Error ? error.message : String(error) }),
         confirm: (message) => confirmRef.current(message),
+        setAside: (bringBack) => offerUnsent(i18n.buff.t, bringBack),
       }),
     [server, sessionID, props.directory, draft, i18n],
   )
@@ -249,6 +252,7 @@ function ActiveComposer(props: { directory: string }) {
           <BackgroundChip />
           <span className="ms-auto">
             <BuffBalanceChip {...scope} />
+            <BuffUsageChip {...scope} />
           </span>
         </div>
       </div>

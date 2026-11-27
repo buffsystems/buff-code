@@ -3,6 +3,7 @@
 // export, copy the session's and the project's id, the MCPs dialog and auto-accept of permissions.
 // The panes, the composer and the timeline register theirs from their own folders.
 
+import { ChatConnectionsDialog } from "./chat-connections-dialog"
 import { fetchSessionExport, saveSessionExport, sessionExportFilename } from "@opencode/app/react-reuse/session-export"
 import { BuffFeatures } from "@opencode/schema/buff-features"
 import { useCommandRegistration, useCommands } from "../commands/provider"
@@ -14,6 +15,8 @@ import { showToast } from "../shell/notifications/toast"
 import { useSettings, useSettingsModel } from "../shell/settings-context"
 import { useSession } from "./context"
 import { ShareDialog } from "./share/share-dialog"
+
+export const CHAT_CONNECTIONS_COMMAND = "chat.connections"
 
 export function useSessionCommands() {
   const i18n = useI18n()
@@ -106,7 +109,7 @@ export function useSessionCommands() {
     {
       id: "session.share",
       title: i18n.buff.t("Share…"),
-      description: i18n.buff.t("A public link to this dialog, with a password and an expiry if you like"),
+      description: i18n.buff.t("A public link to this chat, with a password and an expiry if you like"),
       category: sessionCategory,
       slash: "share",
       disabled: messages === 0,
@@ -146,6 +149,26 @@ export function useSessionCommands() {
       onSelect: () =>
         directory &&
         dialog.show((close) => <McpDialog server={session.server} directory={directory} onClose={close} />),
+    },
+    {
+      // #972 (R13-07): a connection out of this chat only.
+      id: CHAT_CONNECTIONS_COMMAND,
+      title: i18n.buff.t("Connections in this chat"),
+      description: i18n.buff.t("Turn a connection off for this chat only"),
+      category: i18n.t("command.category.mcp"),
+      slash: "connections",
+      // A helper's chat follows the chat that started it: the switch is there.
+      disabled: !directory || !!info?.parentID,
+      onSelect: () =>
+        directory &&
+        dialog.show((close) => (
+          <ChatConnectionsDialog
+            server={session.server}
+            directory={directory}
+            sessionID={session.sessionID}
+            onClose={close}
+          />
+        )),
     },
     {
       id: "permissions.autoaccept",

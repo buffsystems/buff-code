@@ -71,7 +71,7 @@ describe("the list", () => {
       membership: { grouped: "g1", "setup-old": "g1" },
     }
     expect(shape(Marks.sections(withSetup, both, now))).toEqual([
-      ["Setup", ["setup-new", "setup-old"]],
+      ["Self-setup", ["setup-new", "setup-old"]],
       ["Pinned", ["pinned"]],
       ["Выпуск", ["grouped"]],
       ["Today", ["today"]],
@@ -79,8 +79,8 @@ describe("the list", () => {
       ["Earlier", ["old"]],
     ])
     // Пустой раздел виден — это вход в режим; при поиске без совпадений он пропадает.
-    expect(shape(Marks.sections(sessions, marks, now))[0]).toEqual(["Setup", []])
-    expect(shape(Marks.sections(withSetup, marks, now, "setup-old"))).toEqual([["Setup", ["setup-old"]]])
+    expect(shape(Marks.sections(sessions, marks, now))[0]).toEqual(["Self-setup", []])
+    expect(shape(Marks.sections(withSetup, marks, now, "setup-old"))).toEqual([["Self-setup", ["setup-old"]]])
   })
 
   test("pinned first, then groups, then by time; archived are out", () => {
@@ -99,8 +99,8 @@ describe("the list", () => {
     const live = new Set(["old", "pinned"])
     const sections = Marks.sections(sessions, marks, now, "", (item) => live.has(item.id))
     expect(shape(sections)).toEqual([
-      ["Active sessions", ["old", "pinned"]],
-      ["Setup", []],
+      ["Active chats", ["old", "pinned"]],
+      ["Self-setup", []],
       ["Выпуск", ["grouped"]],
       ["Recent", ["today", "yesterday"]],
     ])
@@ -111,11 +111,11 @@ describe("the list", () => {
     const withSetup = [...sessions, { ...session("setup-run", now - 7 * day), setup: true }]
     const running = Marks.sections(withSetup, marks, now, "", (item) => item.id === "setup-run")
     expect(shape(running).slice(0, 2)).toEqual([
-      ["Active sessions", ["setup-run"]],
-      ["Setup", []],
+      ["Active chats", ["setup-run"]],
+      ["Self-setup", []],
     ])
     expect(shape(Marks.sections(sessions, marks, now, "", () => false))).toEqual([
-      ["Setup", []],
+      ["Self-setup", []],
       ["Pinned", ["pinned"]],
       ["Выпуск", ["grouped"]],
       ["Recent", ["today", "yesterday", "old"]],

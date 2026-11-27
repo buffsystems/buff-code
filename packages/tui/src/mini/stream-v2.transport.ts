@@ -194,7 +194,7 @@ function globalForm(form: FormInfo, location: LocationRef): MiniFormRequest {
 }
 
 function errorMessage(error: { message?: string; _tag?: string }) {
-  return error.message || error._tag || t("Session execution failed")
+  return error.message || error._tag || t("The agent's run failed")
 }
 
 function pendingPrompt(item: SessionInboxInfo): PendingPrompt | undefined {
@@ -1097,7 +1097,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       state.activeCompaction = messageID
       if (state.messageIDs.has(messageID)) return
       state.messageIDs.add(messageID)
-      write([compactionCommit(messageID)], { phase: "running", status: t("compacting session") })
+      write([compactionCommit(messageID)], { phase: "running", status: t("compacting chat") })
       return
     }
     if (event.type === "session.compaction.delta") {
@@ -1438,7 +1438,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         return
       }
       if (event.type === "session.execution.interrupted") {
-        current.terminalError = new Error(t("Session interrupted: {reason}", { reason: event.data.reason }))
+        current.terminalError = new Error(t("The agent was interrupted: {reason}", { reason: event.data.reason }))
       }
     }
   }

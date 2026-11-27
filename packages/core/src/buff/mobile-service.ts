@@ -10,10 +10,13 @@ import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { Bus } from "../bus.js"
 import { MobileAgent, type AgentStatus, type Phone } from "./mobile/agent.js"
+import { ancestry } from "./mobile/ancestors.js"
 import { sentMessages } from "./mobile/delta.js"
 import { peerLog } from "./mobile/log.js"
 import { inLanguage, phoneRefusal } from "./mobile/refusal.js"
 import { mobileApi, type Call, type Fetch, type MobileApi, type Terminals } from "./mobile/api.js"
+import { machineOf } from "./mobile/api-machine.js"
+import { liveText } from "./mobile/live-text.js"
 import { lookupHome, type SignedIn } from "./mobile/home.js"
 import { machineNotice, noticeKindOf, type NoticeKind } from "./mobile/notify.js"
 import { fileStore } from "./mobile/store.js"
@@ -160,6 +163,8 @@ function watchers(sent: ReturnType<typeof sentMessages>) {
       if (by.get(session)?.size === 0) by.delete(session)
     },
     of: (session: string) => [...(by.get(session) ?? [])],
+    /** Anyone watching any session: only then is a helper's parent worth looking up. */
+    any: () => by.size > 0,
   }
 }
 
@@ -237,8 +242,10 @@ const make = Effect.gen(function* () {
     const home = await lookupHome(me, postJson)
     if (home) await agent.setHome(home)
   }
+  // Что модель пишет прямо сейчас (#969): в снимок сессии подставляется написанное к этому моменту.
+  const live = liveText()
   // Изменение сессии уходит смотрящим её телефонам данными — без «перечитай».
-  const changed = (session: string) => {
+  const changedOwn = (session: string) => {
     if (!watches.of(session).length || timers.has(session)) return
     timers.set(
       session,
@@ -260,6 +267,21 @@ const make = Effect.gen(function* () {
         )
       }, SETTLE_MS),
     )
+  }
+  // Помощник — своя сессия, а его вопрос виден в чате, что его запустил (#969): изменение
+  // помощника уходит и смотрящим этот чат — вверх по цепочке.
+  const parents = ancestry((session) =>
+    loop
+      ? loop("GET", `/api/session/${session}`).then((got) => {
+          const id = (got as { data?: { parentID?: unknown } } | null)?.data?.parentID
+          return typeof id === "string" ? id : undefined
+        })
+      : Promise.resolve(undefined),
+  )
+  const changed = (session: string) => {
+    changedOwn(session)
+    if (!watches.any()) return
+    void parents(session).then((up) => up.forEach(changedOwn))
   }
   const sessionOf = (data: unknown): string | undefined => {
     const id = (data as { sessionID?: unknown } | null)?.sessionID
@@ -310,6 +332,8 @@ const make = Effect.gen(function* () {
           loop = call
           api = mobileApi(call, watches, {
             fetch: loopbackBytes(server.url, server.password),
+            machine: machineOf(process.env, Global.Path.home),
+            writing: (messages) => live.apply(messages),
             // The same directory the plugin writes to (Global.Service honours OPENCODE_CONFIG_DIR).
             modelPrefs: () =>
               readPrefs(prefsFile(process.env.OPENCODE_CONFIG_DIR ?? Global.Path.config)).then((prefs) => prefs.user),
@@ -355,6 +379,7 @@ const make = Effect.gen(function* () {
             bus.subscribe().pipe(
               Stream.runForEach((event) =>
                 Effect.sync(() => {
+                  live.event(event.type, event.data)
                   const session = sessionOf(event.data) ?? sessionOf((event.data as { form?: unknown } | null)?.form)
                   if (!session) return
                   changed(session)

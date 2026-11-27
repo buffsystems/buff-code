@@ -10,6 +10,23 @@ import { useI18n } from "../../i18n/provider"
 import { showToast } from "../../shell/notifications/toast"
 import { quoteForSide, setSideDraft } from "./drafts"
 
+const EXPLAINED_KEY = "buff.side.explained"
+
+/** #972 (IA-09): the first side conversation says what it is — a copy of the chat, the main one untouched. */
+function explainOnce(t: (text: string) => string) {
+  try {
+    if (localStorage.getItem(EXPLAINED_KEY) === "true") return
+    localStorage.setItem(EXPLAINED_KEY, "true")
+  } catch {
+    return
+  }
+  showToast({
+    title: t("Side chat"),
+    description: t("This is a copy of the chat: ask here apart — the main chat does not change."),
+    duration: 10000,
+  })
+}
+
 export function useSideConversations(input: {
   server: Server
   main: string | undefined
@@ -30,16 +47,17 @@ export function useSideConversations(input: {
         (result) => {
           if (text) setSideDraft(result.side.id, quoteForSide(text))
           current.show(result.side.id)
+          explainOnce(t)
         },
         (error: unknown) =>
           showToast({
-            title: t("Side conversation"),
+            title: t("Side chat"),
             description: error instanceof Error ? error.message : t("Did not open."),
           }),
       )
   }
   useCommandRegistration("buff-side", () => [
-    { id: "buff.side.new", title: t("Side conversation"), category: "Buff", onSelect: () => void open() },
+    { id: "buff.side.new", title: t("Side chat"), category: "Buff", onSelect: () => void open() },
   ])
   useEffect(() => {
     const stop = new AbortController()

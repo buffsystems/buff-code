@@ -485,6 +485,12 @@ describe("LocationServiceMap", () => {
           expect(blockedTools.filter((name) => name !== "execute").sort()).toEqual([
             // Buff (#447): «создать автоматизацию».
             "automation_create",
+            // Buff (#595): плагины чатов режима «Настройка».
+            "chat_plugin_guide",
+            "chat_plugin_list",
+            "chat_plugin_remove",
+            "chat_plugin_save",
+            "chat_plugin_test",
             // Buff (#765): подключения режима «Настройка».
             "connection_auth",
             "connection_instructions",
@@ -496,6 +502,8 @@ describe("LocationServiceMap", () => {
             "edit",
             "glob",
             "grep",
+            // Buff (#969): заметка в память.
+            "memory_save",
             "patch",
             // Buff (#463): утверждение плана.
             "plan_exit",
@@ -536,6 +544,12 @@ describe("LocationServiceMap", () => {
           expect(blockedTools.includes("execute")).toBe(allowedTools.includes("execute"))
           expect(allowedTools.filter((name) => name !== "execute").sort()).toEqual([
             "automation_create",
+            // Buff (#595): плагины чатов режима «Настройка».
+            "chat_plugin_guide",
+            "chat_plugin_list",
+            "chat_plugin_remove",
+            "chat_plugin_save",
+            "chat_plugin_test",
             // Buff (#765): подключения режима «Настройка».
             "connection_auth",
             "connection_instructions",
@@ -547,6 +561,8 @@ describe("LocationServiceMap", () => {
             "edit",
             "glob",
             "grep",
+            // Buff (#969): заметка в память.
+            "memory_save",
             "patch",
             // Buff (#463): утверждение плана.
             "plan_exit",

@@ -499,6 +499,32 @@ Recent work
     ])
   })
 
+  test("keeps a file of any other format as provider media, never drops it (#971)", () => {
+    const pptx = Base64.make(Buffer.from("PK\u0003\u0004deck").toString("base64"))
+    const zip = Base64.make(Buffer.from("PK\u0003\u0004zip").toString("base64"))
+    const messages = toLLMMessages(
+      [
+        SessionMessage.User.make({
+          id: id("user-office-file"),
+          type: "user",
+          text: "Study the deck",
+          files: [
+            FileAttachment.make({ data: pptx, mime: "application/octet-stream", source: { type: "inline" }, name: "deck.pptx" }),
+            FileAttachment.make({ data: zip, mime: "application/zip", source: { type: "inline" }, name: "src.zip" }),
+          ],
+          time: { created },
+        }),
+      ],
+      model,
+    )
+
+    expect(messages[0]?.content).toEqual([
+      { type: "text", text: "Study the deck" },
+      { type: "media", mediaType: "application/octet-stream", data: pptx, filename: "deck.pptx" },
+      { type: "media", mediaType: "application/zip", data: zip, filename: "src.zip" },
+    ])
+  })
+
   test("exposes admitted local image source paths before provider media", () => {
     const data = Base64.make("AAECAw==")
     const location = path.resolve("/project/IMG_3480.JPG")

@@ -5,8 +5,9 @@
 // arrives as an event. The session composer and the draft mount it.
 
 import { Button, cx } from "@buff/ui/react"
-import { BUFF_PROVIDER, buffSignedIn } from "@opencode/app/react-reuse/buff-providers"
+import { accountSignedIn, BUFF_PROVIDER, buffSignedIn } from "@opencode/app/react-reuse/buff-providers"
 import { BuffContext } from "@opencode/schema/buff-context"
+import { BuffFirstRun } from "@opencode/schema/buff-first-run"
 import { launchStep } from "@opencode/schema/buff-context-flow"
 import { useEffect, useRef, useState } from "react"
 import type { Server } from "../../core/servers"
@@ -34,6 +35,8 @@ export function BuffContextChip(props: { server: Server; directory: string }) {
   const catalog = useProviderCatalog(props.server, props.directory)
   const signedIn = buffSignedIn(catalog.integrations)
   const own = catalog.paid.some((provider) => provider.id !== BUFF_PROVIDER)
+  // #966: signed in with a Buff account — the chip names it instead of offering a sign-in.
+  const account = accountSignedIn(catalog.integrations)
 
   const choose = async () => {
     const kept = await context.choose(choice ?? null)
@@ -50,17 +53,19 @@ export function BuffContextChip(props: { server: Server; directory: string }) {
     setSignedOut(step === "sign_in")
     // #457: on the first launch the introduction signs in, not the chip; #562: one's own provider
     // works without Buff — the chip only offers it then.
-    if (step === "sign_in") return openSignIn && !onboardingPending.get() && !own ? signIn() : undefined
+    if (step === "sign_in")
+      return openSignIn && !onboardingPending.get() && !own && account === undefined ? signIn() : undefined
     if (step === "unreachable") return showToast({ title: t("Buff context"), description: problem?.message })
     // The first run in a directory always asks (#391).
     if (step === "choose") await choose()
   }
   const latest = useRef(launch)
   latest.current = launch
-  // After the catalog: whether one's own provider is there decides if the sign-in opens (#562).
+  // After the catalog: whether one's own provider is there decides if the sign-in opens (#562),
+  // and whether a Buff account is signed in — known only once the integrations have loaded (#966).
   useEffect(() => {
-    if (connected && catalog.ready) void latest.current(true).catch(() => undefined)
-  }, [connected, catalog.ready, props.server, props.directory])
+    if (connected && catalog.ready && catalog.integrationsReady) void latest.current(true).catch(() => undefined)
+  }, [connected, catalog.ready, catalog.integrationsReady, props.server, props.directory])
   // #457: signing in elsewhere (the no-model strip, the introduction) lets the chip offer the choice.
   const before = useRef(signedIn)
   useEffect(() => {
@@ -74,12 +79,23 @@ export function BuffContextChip(props: { server: Server; directory: string }) {
       data-action="buff-context"
       variant="ghost"
       size="sm"
-      className={cx("composer-chip", ((signedOut && !own) || (!signedOut && !choice)) && "composer-chip--warning")}
+      className={cx(
+        "composer-chip",
+        ((signedOut && !own && account === undefined) || (!signedOut && !choice)) && "composer-chip--warning",
+      )}
+      data-account={signedOut && account !== undefined ? "true" : undefined}
       title={t("Buff working context: organization, project, knowledge spaces")}
       onClick={() => (signedOut ? signIn() : void choose())}
     >
       <span className="truncate">
-        ◆ {signedOut ? t("Sign in to Buff") : choice ? BuffContext.label(choice, t) : t("Choose a Buff context")}
+        ◆{" "}
+        {signedOut
+          ? account !== undefined
+            ? [t(BuffFirstRun.ACCOUNT_SHORT), account].filter(Boolean).join(" · ")
+            : t("Sign in to Buff")
+          : choice
+            ? BuffContext.label(choice, t)
+            : t("Choose a Buff context")}
       </span>
     </Button>
   )

@@ -25,6 +25,7 @@ import {
   type ReactNode,
 } from "react"
 import { ContextMenu, type ContextMenuTrigger } from "../../../shell/menu/context-menu"
+import { useI18n } from "../../../i18n/provider"
 import { useStore } from "../../../react/use-store"
 import { FileIcon } from "../file-icon"
 import { useVirtualRows } from "../virtual"
@@ -83,6 +84,7 @@ export function FileTree(props: {
   onFileClick?: (node: FileNode) => void
   onFileDoubleClick?: (node: FileNode) => void
 }) {
+  const i18n = useI18n()
   const live = props.allowed === undefined
   const state = useStore(props.files.store, (value) => value)
   const model = useMemo(() => (live ? undefined : buildFileTreeV2Model(props.allowed ?? [])), [live, props.allowed])
@@ -135,6 +137,14 @@ export function FileTree(props: {
     props.files.tree.expand(node.originalPath, live ? undefined : { list: false })
   }
 
+  // #972 (CH-14): a folder read over a slow link says it is being read, not an empty pane.
+  if (live && rows.length === 0 && !root?.loaded)
+    return (
+      <div role="status" className="ui-note px-2 py-2">
+        {root?.error ?? `${i18n.t("common.loading")}${i18n.t("common.loading.ellipsis")}`}
+      </div>
+    )
+
   return (
     <div
       ref={list.root}
@@ -172,6 +182,13 @@ export function FileTree(props: {
                   onBlur={() => setFocused(undefined)}
                   onClick={() => (directory ? toggle(node) : select(node, props.onFileClick))}
                   onDoubleClick={() => !directory && select(node, props.onFileDoubleClick)}
+                  // Where a file opens only on a double click (the project's home), the keyboard's
+                  // Enter is that double click: a press alone would do nothing there (#972).
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" || event.repeat || directory || props.onFileClick || !props.onFileDoubleClick) return
+                    event.preventDefault()
+                    select(node, props.onFileDoubleClick)
+                  }}
                 >
                   {Array.from({ length: row.level }, (_, index) => (
                     <div

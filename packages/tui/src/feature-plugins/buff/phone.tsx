@@ -174,7 +174,7 @@ function PhoneBanner(props: { context: Context; sessionID: string }) {
       {(phone) => (
         <box paddingLeft={2} paddingRight={2}>
           <text fg={props.context.theme.text.muted}>
-            {t("Started on the phone «{device}» — continue here or on the phone, it is one session.", {
+            {t("Started on the phone «{device}» — continue here or on the phone, it is one chat.", {
               device: phone().device ?? "",
             })}
           </text>

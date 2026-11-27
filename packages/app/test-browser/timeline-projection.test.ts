@@ -283,7 +283,7 @@ for (const factory of [createTimelineProjection, createReactiveTimelineProjectio
         })
         setState("messages", [])
         verify()
-        setState("messages", [assistant("new-session", [{ type: "text", text: "New session" }])])
+        setState("messages", [assistant("new-session", [{ type: "text", text: "New chat" }])])
         verify()
         dispose()
       })

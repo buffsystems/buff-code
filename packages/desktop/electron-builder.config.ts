@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 
 import type { CustomMacSignOptions } from "app-builder-lib"
+import { macSigning, signAndNotarize } from "./scripts/mac-sign"
 import type { Configuration } from "electron-builder"
 
 const execFileAsync = promisify(execFile)
@@ -119,18 +120,28 @@ const getBase = (appId: string): Configuration => ({
     }
 
     // Buff: macOS-пакет мы собираем на Linux, где electron-builder подпись пропускает.
-    // Без подписи приложение на Apple Silicon не запустится вообще, поэтому подписываем
-    // ad-hoc сторонним инструментом. Порядок важен: сначала вложенный в Resources CLI
-    // (он обычный файл, а не вложенный бандл), потом внешний бандл — иначе его печать
-    // окажется снятой с уже изменённого содержимого.
+    // С ключами из окружения (#764) — Developer ID с hardened runtime и нотаризация Apple
+    // (scripts/mac-sign.ts); без них — ad-hoc: без подписи приложение на Apple Silicon не
+    // запустится вообще. Порядок ad-hoc важен: сначала вложенный в Resources CLI (он обычный
+    // файл, а не вложенный бандл), потом внешний бандл — иначе его печать окажется снятой с уже
+    // изменённого содержимого.
     if (context.electronPlatformName === "darwin" && process.platform !== "darwin") {
       const bundle = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`)
+      const signing = macSigning(process.env)
+      if (signing) {
+        const plists = {
+          app: path.join(packageDir, "resources/entitlements.plist"),
+          cli: path.join(packageDir, "resources/entitlements.cli.plist"),
+        }
+        await signAndNotarize(bundle, signing, plists)
+        return
+      }
       await execFileAsync("rcodesign", ["sign", cli])
       await execFileAsync("rcodesign", ["sign", ripgrep])
       // Без флага runtime (hardened runtime): при нём macOS грузит только библиотеки того же
       // Team ID, а у ad-hoc подписи его нет — dyld отказывался загрузить Electron Framework
-      // («different Team IDs», проверено на macOS 27). Hardened runtime нужен лишь для
-      // нотаризации Apple, которой без платной учётки у нас нет.
+      // («different Team IDs», проверено на macOS 27). У подписи Developer ID Team ID один на
+      // весь бандл, поэтому там hardened runtime включён.
       await execFileAsync("rcodesign", ["sign", bundle])
     }
   },

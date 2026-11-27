@@ -195,7 +195,7 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
         title: sessionLabel(withTimestampedFallback(session)),
         searchText: `${session.id} ${session.location.directory}`,
         value: { type: "session", sessionID: session.id } as OpenTarget,
-        category: t("Sessions"),
+        category: t("Chats"),
         footer: `${label ? `${Locale.truncate(label, 30)} · ` : ""}${timeAgo(session.time.updated)}`,
         onSelect: () => location.set(session.location),
         gutter: running
@@ -325,7 +325,7 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
                 ? t("{project} / Worktrees", { project: projectName(data.project.get(projectID()!)) ?? t("Project") })
                 : t("Open")
             }
-            placeholder={projectID() ? t("Search worktrees…") : t("Search sessions and projects…")}
+            placeholder={projectID() ? t("Search worktrees…") : t("Search chats and projects…")}
             options={projectID() ? worktreeOptions() : options()}
             current={
               currentSessionID() ? ({ type: "session", sessionID: currentSessionID()! } as OpenTarget) : undefined
@@ -342,7 +342,7 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
             emptyView={
               <Show when={!recent.loading && !projects.loading}>
                 <box paddingLeft={4} paddingRight={4}>
-                  <text fg={theme.text.muted}>{t("No recent sessions or projects")}</text>
+                  <text fg={theme.text.muted}>{t("No recent chats or projects")}</text>
                 </box>
               </Show>
             }
@@ -359,14 +359,14 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
                     <Spinner color={theme.text.muted}>{t("Loading worktrees…")}</Spinner>
                   </Show>
                   <Show when={!projectID() && (recent.loading || projects.loading)}>
-                    <Spinner color={theme.text.muted}>{t("Refreshing sessions and projects…")}</Spinner>
+                    <Spinner color={theme.text.muted}>{t("Refreshing chats and projects…")}</Spinner>
                   </Show>
                   <Show when={!projectID() && (recent() === false || projects() === false)}>
                     <text fg={theme.text.feedback.error.base}>
                       {recent() === false
                         ? projects() === false
-                          ? t("Could not refresh sessions and projects.")
-                          : t("Could not refresh sessions.")
+                          ? t("Could not refresh chats and projects.")
+                          : t("Could not refresh chats.")
                         : t("Could not refresh projects.")}
                     </text>
                   </Show>
@@ -417,9 +417,9 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
                       ? t("Loading worktrees…")
                       : t("No matching worktrees")
                     : recent.loading || projects.loading || matched.loading
-                      ? t("Searching sessions and projects…")
+                      ? t("Searching chats and projects…")
                       : shortcuts.get("session.list")
-                        ? t("No matches · search all sessions with {key}", { key: shortcuts.get("session.list")! })
+                        ? t("No matches · search all chats with {key}", { key: shortcuts.get("session.list")! })
                         : t("No matches")}
                 </text>
               </box>

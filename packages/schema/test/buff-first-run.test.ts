@@ -35,6 +35,29 @@ describe("no model", () => {
     expect(BuffFirstRun.noModel({ signedIn: false, context: false, models: false, own: true })).toBeUndefined()
     expect(BuffFirstRun.noModel({ signedIn: true, context: false, models: false, own: true })).toBeUndefined()
   })
+  // #966: личный аккаунт Buff — тоже вход; без действующей подписки моделей у него нет.
+  test("signed in with a Buff account that has no subscription — say that, and offer another provider", () => {
+    expect(
+      local(BuffFirstRun.noModel({ signedIn: false, context: false, models: false, own: false, account: true })),
+    ).toEqual({
+      text: "Нет модели — у аккаунта Buff нет действующей подписки. Оформите её на сайте или подключите другой провайдер.",
+      action: "connect",
+    })
+    // Подписка действует — её уровни и есть модели.
+    expect(BuffFirstRun.noModel({ signedIn: false, context: false, models: false, own: true, account: true })).toBeUndefined()
+  })
+  test("the first sign-in offers the Buff account, the company connector and another provider", () => {
+    expect(BuffFirstRun.WAYS.map((way) => [way.value, way.integration, ru(way.title), ru(way.note)])).toEqual([
+      ["account", "buff-account", "Аккаунт Buff", "Ваша подписка на buff.systems"],
+      ["company", "buff", "Коннектор компании", "Модели вашей организации"],
+      ["other", undefined, "Другой провайдер", "Свой ключ или свой сервер"],
+    ])
+    expect(ru(BuffFirstRun.SIGN_IN_QUESTION)).toBe("Как вы входите?")
+  })
+  test("the status line of a person working on the account's subscription names the account", () => {
+    expect(ru(BuffFirstRun.ACCOUNT_SHORT)).toBe("Аккаунт Buff")
+    expect(ru(BuffFirstRun.SIGNED_OUT_SHORT)).toBe("нет модели — войдите в Buff или подключите провайдер · /connect")
+  })
   test("models are there — nothing to say", () => {
     expect(BuffFirstRun.noModel({ signedIn: true, context: true, models: true, own: false })).toBeUndefined()
   })
@@ -83,6 +106,16 @@ test("every first-run string has a Russian translation", () => {
     BuffFirstRun.CONNECTOR_HINT,
     BuffFirstRun.CODE_EXPIRED,
     ...BuffFirstRun.STEPS.flatMap((step) => [step.title, step.note]),
+    // #972: the window's own step — how a chat is shown — and its row in the settings.
+    BuffFirstRun.LAYOUT_STEP.title,
+    BuffFirstRun.LAYOUT_STEP.note,
+    ...BuffFirstRun.LAYOUTS.flatMap((layout) => [layout.title, layout.note]),
+    // #595: the closing step — self-setup and self-extension.
+    BuffFirstRun.SETUP_STEP.title,
+    BuffFirstRun.SETUP_STEP.note,
+    ...BuffFirstRun.SETUP_POINTS.flatMap((point) => [point.title, point.note]),
+    BuffFirstRun.LAYOUT_SETTING.title,
+    BuffFirstRun.LAYOUT_SETTING.note,
     ...BuffFirstRun.ROLES.flatMap((role) => [role.title, role.note]),
     ...BuffFirstRun.THEMES.map((theme) => theme.title),
     BuffFirstRun.MEMORY.title,

@@ -52,14 +52,14 @@ export default Plugin.define({
             {
               id: "session.aside",
               title: t("Ask a side question"),
-              description: t("One-shot answer from the session's context without adding to the conversation"),
-              group: t("Session"),
+              description: t("One-shot answer from the chat's context without adding to the conversation"),
+              group: t("Chat"),
               palette: true,
               slash: { name: "btw", arguments: true },
               async run(input) {
                 const route = context.ui.router.current()
                 if (route.type !== "session") {
-                  toast.show({ message: t("Open a session first"), variant: "warning" })
+                  toast.show({ message: t("Open a chat first"), variant: "warning" })
                   return
                 }
                 const question =

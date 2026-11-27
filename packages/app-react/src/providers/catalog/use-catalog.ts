@@ -43,6 +43,16 @@ function useSync(server: Server, directory: string | undefined, load: (ref: Loca
   }, [server, directory, connection.status])
 }
 
+/** What of a location's catalog has loaded (#966): the integrations come apart from the providers,
+ *  and until they do nobody can tell a Buff account's sign-in from none — a «not signed in» read
+ *  then opened the company sign-in over a window already signed in with a Buff account. */
+export function catalogReadiness(loaded: { providers: unknown; models: unknown; integrations: unknown }) {
+  return {
+    ready: loaded.providers !== undefined && loaded.models !== undefined,
+    integrationsReady: loaded.integrations !== undefined,
+  }
+}
+
 export function useIntegrations(server: Server, directory: string | undefined) {
   useSync(server, directory, (ref) => server.data.location.integration.sync(ref))
   const key = useLocationKey(server, directory)
@@ -52,6 +62,8 @@ export function useIntegrations(server: Server, directory: string | undefined) {
 export type ProviderCatalog = {
   /** Both the providers and the models of the location have loaded. */
   ready: boolean
+  /** The integrations (sign-ins) of the location have loaded too. */
+  integrationsReady: boolean
   catalog: ProviderListResponse
   integrations: IntegrationInfo[]
   /** The well-known providers one can connect, in the catalog's order of preference. */
@@ -69,6 +81,7 @@ export function useProviderCatalog(server: Server, directory: string | undefined
   const providers = useServerData(server, (state) => state.location[key]?.provider)
   const models = useServerData(server, (state) => state.location[key]?.model)
   const integrations = useIntegrations(server, directory)
+  const integrationsLoaded = useServerData(server, (state) => state.location[key]?.integration !== undefined)
   return useMemo(() => {
     const catalog = normalizeProviderList(providers, models)
     // V2 servers list only available providers: the connectable ones come from the integrations.
@@ -83,7 +96,7 @@ export function useProviderCatalog(server: Server, directory: string | undefined
         .map((provider) => ({ id: provider.id, name: provider.name })),
     ]
     return {
-      ready: providers !== undefined && models !== undefined,
+      ...catalogReadiness({ providers, models, integrations: integrationsLoaded ? integrations : undefined }),
       catalog,
       integrations,
       popular,
@@ -91,5 +104,5 @@ export function useProviderCatalog(server: Server, directory: string | undefined
       paid: paidProviders(catalog),
       models: catalogModels(catalog),
     }
-  }, [providers, models, integrations])
+  }, [providers, models, integrations, integrationsLoaded])
 }

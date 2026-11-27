@@ -13,7 +13,7 @@ import { sessionTitle } from "@opencode/app/react-reuse/session-title"
 import { timelineChildTitle } from "@opencode/app/react-reuse/timeline-projection"
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { MoreHorizontal } from "lucide-react"
-import { createContext, use, useEffect, useState, type ReactNode } from "react"
+import { createContext, use, useEffect, useRef, useState, type ReactNode } from "react"
 import type { Server } from "../../core/servers"
 import { useI18n } from "../../i18n/provider"
 import { useServerData } from "../../react/core"
@@ -50,6 +50,7 @@ export function TimelineHeader(props: {
     parentID ? (state.session.message[parentID] ?? noMessages) : noMessages,
   )
   const [title, setTitle] = useState({ editing: false, draft: "", pending: false })
+  const more = useRef<HTMLButtonElement>(null)
   const [menu, setMenu] = useState({ open: false, rename: false, remove: false })
   const fallback = i18n.t("session.tab.session")
   const label = sessionTitle(info?.title) ?? fallback
@@ -150,7 +151,11 @@ export function TimelineHeader(props: {
               onFocus={(event) => event.currentTarget.select()}
               onKeyDown={(event) => event.stopPropagation()}
               onCommit={(value) => void save(value)}
-              onCancel={() => setTitle({ editing: false, draft: "", pending: false })}
+              onCancel={() => {
+                setTitle({ editing: false, draft: "", pending: false })
+                // #972 (R5-02): the field leaves into a heading that takes no focus — «…» takes it.
+                requestAnimationFrame(() => more.current?.focus())
+              }}
             />
           ) : (
             childTitle && (
@@ -162,7 +167,7 @@ export function TimelineHeader(props: {
           {!parentID && (
             <DropdownMenu open={menu.open} onOpenChange={(open) => setMenu((current) => ({ ...current, open }))}>
               <DropdownMenuTrigger asChild>
-                <IconButton icon={MoreHorizontal} size="xs" aria-label={i18n.t("common.moreOptions")} />
+                <IconButton ref={more} icon={MoreHorizontal} size="xs" aria-label={i18n.t("common.moreOptions")} />
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="start"

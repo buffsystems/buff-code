@@ -38,7 +38,13 @@ const setupWith = (options: { project: boolean }) => Effect.gen(function* () {
   const config = Context.get(yield* Layer.build(Config.testLayer()), Config.Test)
   // Личная папка проекта (#951) — в конфигурации пользователя; вне проекта её нет.
   const personal = path.join(user, "projects", "prj_one")
+  // Сколько раз ядро попросили перечитать конфигурацию — и что к тому времени уже лежало в файле.
+  const rereads: string[] = []
+  const userFile = path.join(user, "buffcode.jsonc")
   yield* BuffMcpPlugin.register(host, {
+    reread: Effect.promise(() => fs.readFile(userFile, "utf8").catch(() => "")).pipe(
+      Effect.map((text) => void rereads.push(text)),
+    ),
     settle: "0 millis",
     userDirectory: user,
     ...(options.project ? { localDirectory: personal } : {}),
@@ -58,7 +64,7 @@ const setupWith = (options: { project: boolean }) => Effect.gen(function* () {
     ...(options.project ? { localDirectory: personal } : {}),
   }).pipe(Effect.provideService(Config.Service, config))
   const client = (yield* Rpc.Service).client
-  return { rpc: client(BuffMcp.Rpc), skills: client(BuffSkill.Rpc), project, user, personal, loaded }
+  return { rpc: client(BuffMcp.Rpc), skills: client(BuffSkill.Rpc), project, user, personal, loaded, rereads }
 })
 const setup = setupWith({ project: true })
 
@@ -68,6 +74,30 @@ describe("BuffMcp (#444)", () => {
       const { rpc, user } = yield* setup
       yield* rpc.save({ scope: "user", name: "files", config: local })
       expect(yield* read(path.join(user, "buffcode.jsonc"))).toEqual({ mcp: { servers: { files: local } } })
+    }),
+  )
+
+  // R16-02 (#969): the operator's limit keeps the person's connections in the order they were
+  // added; the order is kept beside the user's config, a rename keeps its place.
+  it.live("the user's servers are remembered in the order they were added; a rename keeps its place", () =>
+    Effect.gen(function* () {
+      const { rpc, user, loaded } = yield* setup
+      const file = path.join(user, "buffcode.jsonc")
+      const order = () => read(path.join(user, BuffMcp.ORDER_FILE)).pipe(Effect.map((json) => json.order))
+      yield* rpc.save({ scope: "user", name: "notion", config: local })
+      yield* rpc.save({ scope: "user", name: "github", config: local })
+      yield* rpc.save({ scope: "user", name: "notion", config: local })
+      expect(yield* order()).toEqual(["notion", "github"])
+      yield* loaded(file)
+      yield* rpc.save({ scope: "user", name: "nt", config: local, previous: { scope: "user", name: "notion" } })
+      expect(yield* order()).toEqual(["nt", "github"])
+      yield* loaded(file)
+      const added = (yield* rpc.list()).filter((entry) => entry.scope === "user").map((entry) => [entry.name, entry.added])
+      expect(added).toEqual([["github", 1], ["nt", 0]])
+      yield* rpc.remove({ scope: "user", name: "nt" })
+      expect(yield* order()).toEqual(["github"])
+      yield* rpc.save({ scope: "project", name: "repo", config: local })
+      expect(yield* order()).toEqual(["github"])
     }),
   )
 
@@ -81,6 +111,25 @@ describe("BuffMcp (#444)", () => {
       expect(yield* rpc.list()).toEqual([
         { name: "files", scope: "project", file, config: local, status: { status: "pending" } },
       ])
+    }),
+  )
+
+  // #969: в песочнице облачной машины наблюдатель за файлами не работает — правка сама просит ядро
+  // перечитать конфигурацию, уже записав файл, иначе сервер так и остался бы «подключается».
+  it.live("every change asks the engine to re-read the configuration once the file is written", () =>
+    Effect.gen(function* () {
+      const { rpc, user, loaded, rereads } = yield* setup
+      const file = path.join(user, "buffcode.jsonc")
+      yield* rpc.save({ scope: "user", name: "files", config: local })
+      expect(rereads).toHaveLength(1)
+      expect(JSON.parse(rereads[0]!)).toEqual({ mcp: { servers: { files: local } } })
+      yield* loaded(file)
+      yield* rpc.enable({ scope: "user", name: "files", enabled: false })
+      expect(JSON.parse(rereads[1]!).mcp.servers.files.disabled).toBe(true)
+      yield* loaded(file)
+      yield* rpc.remove({ scope: "user", name: "files" })
+      expect(rereads).toHaveLength(3)
+      expect(JSON.parse(rereads[2]!)).toEqual({ mcp: { servers: {} } })
     }),
   )
 

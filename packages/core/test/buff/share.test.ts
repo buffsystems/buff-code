@@ -125,7 +125,7 @@ describe("store", () => {
 
 describe("document", () => {
   test("a whole session: text and files; tools and reasoning only when the link shows them", () => {
-    const plain = buildDocument(record(), messages, { limit: 50 }, "Сессия")
+    const plain = buildDocument(record(), messages, { limit: 50 }, "Чат")
     expect(plain.kind).toBe("session")
     expect(plain.title).toBe("Моя ссылка")
     expect(plain.items.map((i) => i.id)).toEqual(["u1", "a1", "c1", "u2"])
@@ -135,7 +135,7 @@ describe("document", () => {
     ])
     expect(plain.items[1]!.parts).toEqual([{ kind: "text", text: "Вот файл." }])
     expect(plain.items[2]!.role).toBe("system")
-    const withTools = buildDocument(record({ tools: true }), messages, { limit: 50 }, "Сессия")
+    const withTools = buildDocument(record({ tools: true }), messages, { limit: 50 }, "Чат")
     expect(withTools.items[1]!.parts.map((p) => p.kind)).toEqual(["reasoning", "tool", "text"])
     expect(withTools.items[1]!.parts[1]).toEqual({
       kind: "tool",
@@ -170,7 +170,7 @@ describe("document", () => {
         } as StoredMessage,
       ],
       { limit: 50 },
-      "Сессия",
+      "Чат",
     )
     expect(doc.items[0]!.parts[0]).toMatchObject({ kind: "tool", input: long, output: long })
   })
@@ -197,7 +197,7 @@ describe("document", () => {
         call("c", "bash", { sessionID: "ses_x" }),
       ],
       { limit: 50 },
-      "Сессия",
+      "Чат",
     )
     expect(doc.items.map((i) => (i.parts[0] as { session?: string }).session)).toEqual([
       "ses_child",
@@ -208,7 +208,7 @@ describe("document", () => {
 
   test("a file the agent handed over is a file of the document — with its note, whether tools show or not (#892)", () => {
     for (const tools of [false, true]) {
-      const doc = buildDocument(record({ tools }), handed, { limit: 50 }, "Сессия")
+      const doc = buildDocument(record({ tools }), handed, { limit: 50 }, "Чат")
       expect(doc.items[0]!.parts).toEqual([
         {
           kind: "file",
@@ -221,7 +221,7 @@ describe("document", () => {
   })
 
   test("a goal or workflow notice and a failed turn are lines of the document; other service records are not (#892)", () => {
-    const doc = buildDocument(record(), handed, { limit: 50 }, "Сессия")
+    const doc = buildDocument(record(), handed, { limit: 50 }, "Чат")
     expect(doc.items.map((i) => [i.id, i.role])).toEqual([
       ["a9", "assistant"],
       ["g1", "system"],
@@ -244,9 +244,9 @@ describe("document", () => {
   })
 
   test("selected messages only, in session order; the session title stands in for an empty one", () => {
-    const doc = buildDocument(record({ messages: ["u2", "a1"], title: "" }), messages, { limit: 50 }, "Сессия")
+    const doc = buildDocument(record({ messages: ["u2", "a1"], title: "" }), messages, { limit: 50 }, "Чат")
     expect(doc.kind).toBe("messages")
-    expect(doc.title).toBe("Сессия")
+    expect(doc.title).toBe("Чат")
     expect(doc.items.map((i) => i.id)).toEqual(["a1", "u2"])
   })
 
@@ -280,7 +280,7 @@ describe("links", () => {
       up: true,
     }
     const sessions = new Map<string, { title: string; active?: boolean; parent?: string }>([
-      ["s1", { title: "Сессия" }],
+      ["s1", { title: "Чат" }],
     ])
     let now = 10_000
     const ports: LinkPorts = {
@@ -348,7 +348,7 @@ describe("links", () => {
     expect(doc.title).toBe("Разбор")
     expect(doc.active).toBeUndefined()
     // A live link (#823): the tail, and whether the session is being worked on.
-    r.sessions.set("s1", { title: "Сессия", active: true })
+    r.sessions.set("s1", { title: "Чат", active: true })
     await r.links.update(ID, { live: true })
     const live = (await r.links.serve(SHARE_VIEW, { id: ID, pass: "pw", limit: 1, tail: true }))
       .document as ShareDocument
@@ -456,7 +456,7 @@ describe("links", () => {
     const page = { limit: 50 }
 
     test("the chosen record of an answer shows the files of its earlier steps, before its words", () => {
-      const document = buildDocument(record({ messages: ["a3"] }), steps, page, "Сессия")
+      const document = buildDocument(record({ messages: ["a3"] }), steps, page, "Чат")
       expect(document.items.map((item) => item.id)).toEqual(["a3"])
       expect(document.items[0]?.parts).toEqual([
         { kind: "file", file: { id: "a1:s0", name: "index.html", mime: "text/plain", size: 5 } },
@@ -466,17 +466,17 @@ describe("links", () => {
     })
 
     test("another answer's files stay out; a chosen step keeps its own file once", () => {
-      const other = buildDocument(record({ messages: ["b2"] }), steps, page, "Сессия")
+      const other = buildDocument(record({ messages: ["b2"] }), steps, page, "Чат")
       expect(other.items[0]?.parts.map((part) => (part.kind === "file" ? part.file.id : part.kind))).toEqual([
         "b1:s0",
         "text",
       ])
-      const both = buildDocument(record({ messages: ["a1", "a3"] }), steps, page, "Сессия")
+      const both = buildDocument(record({ messages: ["a1", "a3"] }), steps, page, "Чат")
       expect(
         both.items.map((item) => item.parts.map((part) => (part.kind === "file" ? part.file.id : part.kind))),
       ).toEqual([["a1:s0"], ["a2:s0", "text"]])
       // Only the prompt is chosen: the answer's files are not part of it.
-      expect(buildDocument(record({ messages: ["u1"] }), steps, page, "Сессия").items[0]?.parts).toEqual([
+      expect(buildDocument(record({ messages: ["u1"] }), steps, page, "Чат").items[0]?.parts).toEqual([
         { kind: "text", text: "Собери" },
       ])
     })
@@ -540,7 +540,7 @@ describe("phone", () => {
       gatewayHost: "dev.buff.systems",
       publish: async () => gateway.up,
       revoke: async () => gateway.up,
-      session: async () => ({ title: "Сессия" }),
+      session: async () => ({ title: "Чат" }),
       messages: async () => messages,
       now: () => 1,
       newId: () => ID,

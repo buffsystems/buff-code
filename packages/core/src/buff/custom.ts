@@ -124,7 +124,7 @@ export const register = Effect.fn("BuffCustom.register")(function* (ctx: Context
             Effect.map((list) =>
               list.some((agent) => String(agent.id) !== id && agent.mode !== "subagent" && !agent.hidden)
                 ? undefined
-                : BuffLocale.t("This is the last primary agent — without it nobody can run the session."),
+                : BuffLocale.t("This is the last primary agent — without it there is no agent to answer in the chat."),
             ),
           ),
       reload: agents.reload(),

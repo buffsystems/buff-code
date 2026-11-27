@@ -32,14 +32,14 @@ export function useSideConversations(input: {
       },
       (error: unknown) =>
         showToast({
-          title: t("Side conversation"),
+          title: t("Side chat"),
           description: error instanceof Error ? error.message : t("Did not open."),
         }),
     )
   }
 
   command.register("buff-side", () => [
-    { id: "buff.side.new", title: t("Side conversation"), category: "Buff", onSelect: () => void open() },
+    { id: "buff.side.new", title: t("Side chat"), category: "Buff", onSelect: () => void open() },
   ])
   const stop = new AbortController()
   onCleanup(() => stop.abort())

@@ -20,7 +20,7 @@ const TITLE: Record<NoticeKind, string> = {
   permission: "The agent waits for a permission",
   question: "The agent asked a question",
   done: "The turn is done",
-  failed: "The session failed",
+  failed: "The chat failed",
 }
 
 // Типы — те же, что у кабинета (bc_*): телефон по ним рисует значок и группу.
@@ -39,7 +39,7 @@ export function machineNotice(
 ): PushMessage {
   return {
     title: BuffLocale.t(TITLE[kind]),
-    body: `${session.title || BuffLocale.t("Session")} · ${machine.name}`.slice(0, 600),
+    body: `${session.title || BuffLocale.t("Chat")} · ${machine.name}`.slice(0, 600),
     link: `buff://${machine.id}/session/${encodeURIComponent(session.id)}${session.project ? `?project=${encodeURIComponent(session.project)}` : ""}`,
     at: now,
     type: TYPE[kind],

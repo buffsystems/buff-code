@@ -22,7 +22,7 @@ import {
   untrack,
 } from "solid-js"
 
-const stages = ["Keeping your session safe", "Starting the new background service", "Loading Buff Code"] as const
+const stages = ["Keeping your chat safe", "Starting the new background service", "Loading Buff Code"] as const
 const stageFloor = 480
 const transitionDuration = 420
 const completionHold = 650

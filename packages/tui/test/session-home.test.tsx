@@ -151,7 +151,7 @@ test.each([
         mode.startsWith("settling") &&
         !navigated &&
         setup.captureCharFrame().includes("History message 0000") &&
-        setup.captureCharFrame().includes("Загружаю историю сессии")
+        setup.captureCharFrame().includes("Загружаю историю чата")
       ) {
         navigated = true
         setup.mockInput.pressKey("F7")
@@ -163,12 +163,12 @@ test.each([
       setup.mockInput.pressKey(mode === "prepend-navigation" ? "F9" : "F8")
       await setup.waitFor(() => pages.length === 2)
       setup.mockInput.pressKey("HOME")
-      await setup.waitForFrame((frame) => frame.includes("Загружаю историю сессии"))
+      await setup.waitForFrame((frame) => frame.includes("Загружаю историю чата"))
       prior.resolve()
       await setup.waitFor(() => pages.some((page) => page.end === 360 && page.limit === 200))
       await setup.waitForVisualIdle()
       expect(visible()).toBe(before)
-      expect(setup.captureCharFrame()).toContain("Загружаю историю сессии")
+      expect(setup.captureCharFrame()).toContain("Загружаю историю чата")
       expect(pages).toEqual([
         { end: 400, limit: 20 },
         { end: 380, limit: 20 },
@@ -177,20 +177,20 @@ test.each([
       release.resolve()
       finish.resolve()
       if (mode === "prepend-failure") {
-        await setup.waitForFrame((frame) => !frame.includes("Загружаю историю сессии"))
+        await setup.waitForFrame((frame) => !frame.includes("Загружаю историю чата"))
         expect(visible()).toBe(before)
         expect(mounted()).toHaveLength(40)
         return
       }
       await setup.waitForFrame(
-        (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю сессии"),
+        (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю чата"),
       )
       expect(mounted()).toHaveLength(60)
       expect(pages).toHaveLength(5)
       return
     }
     setup.mockInput.pressKey("HOME")
-    await setup.waitForFrame((frame) => frame.includes("Загружаю историю сессии…"))
+    await setup.waitForFrame((frame) => frame.includes("Загружаю историю чата…"))
     setup.mockInput.pressKey("HOME")
     await setup.waitForVisualIdle()
     expect(pages).toEqual([
@@ -204,7 +204,7 @@ test.each([
       if (mode === "resize-cancel") {
         setup.resize(60, 22)
         await setup.waitForFrame(
-          (frame) => frame.includes("History message 0399") && !frame.includes("Загружаю историю сессии"),
+          (frame) => frame.includes("History message 0399") && !frame.includes("Загружаю историю чата"),
         )
       }
       await aborted.promise
@@ -219,7 +219,7 @@ test.each([
       release.resolve()
       finish.resolve()
       await setup.waitForFrame(
-        (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю сессии"),
+        (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю чата"),
       )
       await setup.waitForVisualIdle()
       expect(frames).toEqual([before, visible()])
@@ -257,7 +257,7 @@ test.each([
     }
     if (mode === "page-cancel") {
       setup.mockInput.pressKey("F8")
-      await setup.waitForFrame((frame) => !frame.includes("Загружаю историю сессии"))
+      await setup.waitForFrame((frame) => !frame.includes("Загружаю историю чата"))
       release.resolve()
       finish.resolve()
       await setup.waitFor(() => Boolean(scroll.getRenderable("message-360")))
@@ -274,7 +274,7 @@ test.each([
     if (mode === "failure") {
       release.resolve()
       finish.resolve()
-      await setup.waitForFrame((frame) => !frame.includes("Загружаю историю сессии"))
+      await setup.waitForFrame((frame) => !frame.includes("Загружаю историю чата"))
       events.emit({
         id: "evt_live",
         created: 400,
@@ -290,7 +290,7 @@ test.each([
       expect(mounted()).toHaveLength(21)
       setup.mockInput.pressKey("HOME")
       await setup.waitForFrame(
-        (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю сессии"),
+        (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю чата"),
       )
       expect(mounted()).toHaveLength(60)
       return
@@ -299,7 +299,7 @@ test.each([
       if (mode === "up-cancel") setup.mockInput.pressKey("F6")
       if (mode === "mouse-cancel") await setup.mockMouse.scroll(scroll.viewport.x + 2, scroll.viewport.y + 2, "up")
       await setup.waitForFrame(
-        (frame) => frame.includes("К последнему") && !frame.includes("Загружаю историю сессии"),
+        (frame) => frame.includes("К последнему") && !frame.includes("Загружаю историю чата"),
       )
       await setup.waitForVisualIdle()
       const cancelled = visible()
@@ -316,7 +316,7 @@ test.each([
       await setup.waitForFrame(
         (frame) =>
           frame.includes("History message 0399") &&
-          !frame.includes("Загружаю историю сессии") &&
+          !frame.includes("Загружаю историю чата") &&
           !frame.includes("К последнему"),
       )
       await setup.waitFor(() => scroll.scrollTop === maximum())
@@ -339,7 +339,7 @@ test.each([
       finish.resolve()
     }
     await setup.waitForFrame(
-      (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю сессии"),
+      (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю чата"),
     )
     await setup.waitForVisualIdle()
     if (!mode.endsWith("cancel")) expect(frames).toEqual([before, visible()])
@@ -372,7 +372,7 @@ test.each([
     expect(scroll.scrollTop).toBe(maximum())
     setup.mockInput.pressKey("HOME")
     await setup.waitForFrame(
-      (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю сессии"),
+      (frame) => frame.includes("History message 0000") && !frame.includes("Загружаю историю чата"),
     )
     setup.mockInput.pressKey("HOME")
     await setup.waitForVisualIdle()

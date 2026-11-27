@@ -70,7 +70,7 @@ export function RunHistory(props: {
                       if (run.session) props.onOpenSession(run.session)
                     }}
                   >
-                    {t("Open session")}
+                    {t("Open chat")}
                   </Button>
                 )}
                 <Button size="sm" variant="ghost" data-action="buff-auto-run-remove" onClick={() => remove(run.id)}>

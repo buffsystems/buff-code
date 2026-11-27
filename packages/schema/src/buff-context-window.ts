@@ -15,7 +15,7 @@ export const TITLE = "Context window"
 export const CUSTOM = "custom"
 
 const PRESETS: readonly { tokens: number; label: string; hint: string }[] = [
-  { tokens: 64_000, label: "Compact", hint: "Cheaper and faster: the dialogue is compacted sooner" },
+  { tokens: 64_000, label: "Compact", hint: "Cheaper and faster: the chat is compacted sooner" },
   { tokens: 200_000, label: "Mid-size", hint: "A balance of memory and cost" },
   { tokens: 500_000, label: "Large", hint: "Keeps long work in mind: costlier" },
 ]

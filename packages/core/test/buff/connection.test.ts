@@ -76,6 +76,49 @@ describe("the person confirms saving and removing", () => {
     expect(BuffConnection.oauthState("not a url")).toBeUndefined()
     expect(BuffConnection.APP_LINK).toMatch(/^buff:\/\//)
   })
+  test("a sign-in returns where the chat was begun: the app on a phone, the web client's /oauth on the web (#969)", () => {
+    const web = "https://code.example"
+    expect(BuffConnection.returnTo("phone", web)).toBe(BuffConnection.APP_LINK)
+    expect(BuffConnection.returnTo("web", web)).toBe("https://code.example/oauth")
+    expect(BuffConnection.returnTo("console", web)).toBeUndefined()
+    expect(BuffConnection.returnTo(undefined, web)).toBeUndefined()
+  })
+  test("a sign-in returns to the client signing in now, not where the chat was begun (#969, R14-01)", () => {
+    // The latest request of the person names its client: the web says «web», the phone app «phone»
+    // by its source; a request from the window or the terminal names none — the machine's loopback.
+    expect(BuffConnection.signingClient({ source: "phone", client: "web" }, "phone")).toBe("web")
+    expect(BuffConnection.signingClient({ source: "phone" }, "web")).toBe("phone")
+    expect(BuffConnection.signingClient({}, "phone")).toBeUndefined()
+    // No request yet — the chat's birth mark is all there is.
+    expect(BuffConnection.signingClient(undefined, "web")).toBe("web")
+    expect(BuffConnection.signingClient(undefined, "console")).toBe("console")
+  })
+  test("signing in to, testing, listing and describing a connection work in any chat; changing one is Setup's (#969 live check)", () => {
+    // On the cloud a person adds connections in «Подключения» and signs in from a normal chat.
+    for (const tool of ["auth", "test", "list", "instructions"] as const)
+      expect(BuffConnectionPlugin.anyMode(BuffConnection.TOOLS[tool])).toBe(true)
+    for (const tool of ["save", "script", "remove"] as const)
+      expect(BuffConnectionPlugin.anyMode(BuffConnection.TOOLS[tool])).toBe(false)
+    // What the model reads says so: no «Self-setup mode only» on the tools any chat may call.
+    for (const tool of ["auth", "test", "list", "instructions"] as const)
+      expect(BuffConnectionPlugin.descriptions[tool]).not.toMatch(/Self-setup mode only/)
+    for (const tool of ["save", "script", "remove"] as const)
+      expect(BuffConnectionPlugin.descriptions[tool]).toMatch(/Self-setup mode only/)
+  })
+  // R22-01: outside Setup the tools reach only what a chat could reach anyway — no trial call past
+  // the tool path (the chat's «off», origin rules, asks), no project's connection, none switched
+  // off or over the limit, none off in this chat.
+  test("outside Setup: no trial call, only one's own connections that are on, here and within the limit", () => {
+    const ok = { scope: "user" as const, status: "connected", off: false, trial: false }
+    expect(BuffConnectionPlugin.outsideSetupProblem(ok)).toBeUndefined()
+    expect(BuffConnectionPlugin.outsideSetupProblem({ ...ok, scope: "builtin" })).toBeUndefined()
+    expect(BuffConnectionPlugin.outsideSetupProblem({ ...ok, status: "needs_auth" })).toBeUndefined()
+    expect(BuffConnectionPlugin.outsideSetupProblem({ ...ok, trial: true })).toMatch(/Self-setup mode/)
+    expect(BuffConnectionPlugin.outsideSetupProblem({ ...ok, scope: "project" })).toMatch(/project/)
+    expect(BuffConnectionPlugin.outsideSetupProblem({ ...ok, scope: "local" })).toMatch(/project/)
+    expect(BuffConnectionPlugin.outsideSetupProblem({ ...ok, status: "disabled" })).toMatch(/off|limit/)
+    expect(BuffConnectionPlugin.outsideSetupProblem({ ...ok, off: true })).toMatch(/this chat/)
+  })
   test("the skill id of a connection is a valid skill id", () => {
     expect(BuffConnection.skillID("My_Mail 2")).toBe("connection-my-mail-2")
     expect(BuffConnection.skillID("---")).toBe("connection-x")
@@ -152,6 +195,22 @@ describe("what the model hears", () => {
     expect(text).toContain("- buff (built-in, not editable): Sign-in needed: Unauthorized")
     expect(text).toContain("- crm (this project only; local): Connected")
     expect(BuffConnectionText.list([], [])).toBe("No connections yet.")
+  })
+  // #970 (live): a connection turned off in the chat was listed as «Connected» with its tools, and
+  // the model, finding no such tool, reached the service by address instead.
+  test("the list says which connection the user turned off in this chat, and names no tools of it", () => {
+    const text = BuffConnectionText.list(
+      [
+        { name: "mail", scope: "user", config: { type: "local", command: ["srv"] }, status: { status: "connected" } },
+        { name: "other", scope: "user", config: { type: "local", command: ["srv"] }, status: { status: "connected" } },
+      ],
+      tools,
+      new Set(["mail"]),
+    )
+    expect(text).toContain("- mail (all projects; local): Turned off by the user in this chat")
+    expect(text).toContain("Do not reach the same service another way")
+    expect(text).not.toContain("search, read")
+    expect(text).toContain("- other (all projects; local): Connected\n  tools (1): x")
   })
   test("a status report lists tools with one-line descriptions only when connected", () => {
     expect(BuffConnectionText.status("mail", { status: "connected" }, tools.slice(0, 2))).toBe(

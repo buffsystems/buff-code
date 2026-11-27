@@ -2,13 +2,23 @@
 // (тот же сервер, что у окна и консоли; второй реализации логики нет). Телефон — владелец машины,
 // но только в известных проектах: новая сессия — проект и модель лишь из списков службы,
 // произвольный путь не открывается.
+import os from "node:os"
 import type { DeviceRecord, Reply } from "@buff/mobile-protocol"
+import { BuffSchedule } from "@opencode/schema/buff-schedule"
 import { BuffAttachment } from "@opencode/schema/buff-attachment"
 import type { BuffGoal } from "@opencode/schema/buff-goal"
 import { BuffModelPrefs } from "@opencode/schema/buff-model-prefs"
 import { BuffPermissionMode } from "@opencode/schema/buff-permission-mode"
 import { inLanguage, phoneRefusal } from "./refusal.js"
 import { explain, failedTurn } from "./failure.js"
+import { data, rpc, str, type Kit, type Machine, type ProjectRow } from "./api-kit.js"
+import { machineOf, machineOps } from "./api-machine.js"
+import { chatOps } from "./api-chats.js"
+import { projectOps } from "./api-projects.js"
+import { insideHome, readPart, storageOps } from "./api-storage.js"
+import { memoryOps } from "./api-memory.js"
+import { mcpOps } from "./api-mcp.js"
+import { pluginOps } from "./api-plugins.js"
 
 /** Запрос к серверу Buff Code внутри процесса; 4xx приходит отказом (RefusalError). */
 export type Call = (
@@ -17,12 +27,7 @@ export type Call = (
   options?: { query?: Record<string, string | number | undefined>; body?: unknown },
 ) => Promise<unknown>
 
-interface ProjectInfo {
-  id: string
-  canonical: string
-  name?: string
-  time: { updated: number }
-}
+type ProjectInfo = ProjectRow
 
 interface SessionInfo {
   id: string
@@ -32,6 +37,8 @@ interface SessionInfo {
   time: { created: number; updated: number; archived?: number }
   metadata?: Record<string, unknown>
   model?: { id: string; providerID: string; variant?: string }
+  /** Отменённый ход (#969): чат возвращён к этому сообщению, пока человек не отправил новое. */
+  revert?: { messageID?: string }
   agent?: string
   permissions?: BuffPermissionMode.Rule[]
 }
@@ -63,17 +70,17 @@ interface AgentInfo {
   hidden: boolean
 }
 
-const data = <T>(reply: unknown): T => (reply as { data: T }).data
-
 /** Сколько ждать, пока сервер откроет каталог и плагины осядут (#739), и шаг переспроса. */
 const SETTLE_MS = 5000
 const SETTLE_STEP_MS = 250
 
 // Очередь сообщений (#811): отправленное во время работы агента ждёт конца хода; «сейчас» — в текущий ход.
-const deliveryOf = (args: Record<string, unknown>): "queue" | "steer" => {
-  if (args.delivery === undefined || args.delivery === "queue") return "queue"
-  if (args.delivery === "steer") return "steer"
-  throw phoneRefusal("Unknown delivery mode")
+// Не названный способ (#969): пока агент работает — в очередь, иначе — сразу, как шлёт окно. Из
+// очереди простаивающей сессии сообщение ждало бы ход того, что уже ждёт (напоминания «Плана»).
+const deliveryOf = (args: Record<string, unknown>, running: () => Promise<boolean>): Promise<"queue" | "steer"> => {
+  if (args.delivery === "queue" || args.delivery === "steer") return Promise.resolve(args.delivery)
+  if (args.delivery !== undefined) throw phoneRefusal("Unknown delivery mode")
+  return running().then((busy) => (busy ? "queue" : "steer"))
 }
 
 interface InboxItem {
@@ -83,16 +90,48 @@ interface InboxItem {
   payload?: { text?: string; files?: unknown[] }
 }
 
-const str = (args: Record<string, unknown>, key: string): string => {
-  const v = args[key]
-  if (typeof v !== "string" || !v.trim()) throw phoneRefusal("The field {key} is required", { key })
-  return v.trim()
+/** Клиент запроса (R14-01): веб-клиент называет себя `client: "web"` — по нему вход подключения
+ *  вернётся на веб; приложение не называет себя никак и остаётся телефоном. */
+function clientOf(args: Record<string, unknown>): { client?: "web"; zone?: string } {
+  // Пояс клиента (#969): по нему автоматизация, созданная из этого запроса, читает время.
+  const zone = typeof args.zone === "string" && BuffSchedule.knownZone(args.zone) ? { zone: args.zone } : {}
+  return { ...(args.client === "web" ? { client: "web" as const } : {}), ...zone }
 }
 
-/** Где начата сессия (#861): телефон, терминал (TUI) или окно — у прочих сессий метки нет. */
+/** Где начата сессия (#861): телефон, терминал (TUI) или окно — у прочих сессий метки нет. Чат
+ *  веб-клиента (#969) в списках — телефонный: приложения, не знающие «web», он не ломает. */
 export function sessionOrigin(value: unknown): "phone" | "console" | "window" {
+  if (value === "web") return "phone"
   return value === "phone" || value === "console" ? value : "window"
 }
+
+/** Сколько уровней помощников под чатом просматривается в поисках их вопросов (R24). */
+const NESTED_MAX = 4
+
+/** Что меняет сессию (#969, R13-04): у помощника (сабагента) это отказ — его ведёт агент чата. */
+const CHANGES_SESSION = new Set([
+  "session.prompt",
+  "session.retry",
+  "session.undo",
+  "session.redo",
+  "session.fork",
+  "session.compact",
+  "session.rename",
+  "session.mode",
+  "session.agent",
+  "session.model",
+  "session.context",
+  "session.queue.cancel",
+  "session.queue.send",
+  "session.connection",
+  "commands.run",
+  // R14-07: помощник — часть своего чата: его не переносят, не архивируют, не закрепляют и не
+  // удаляют отдельно. Ответ на его вопрос, форму или разрешение — можно: его ход ждёт человека.
+  "session.move",
+  "session.archive",
+  "session.pin",
+  "session.remove",
+])
 
 export interface MobileApi {
   run(record: DeviceRecord, op: string, args: unknown): Promise<Reply>
@@ -124,10 +163,14 @@ export interface SessionState {
   permissions: unknown[]
   forms: unknown[]
   setup?: boolean
+  /** Живые проверки плагинов чатов, которых ждёт идущий вызов (#984). */
+  pluginTests?: unknown[]
   // Цель сессии (#711): плашка цели на телефоне, как в окне; null — цели нет.
   goal: unknown
   // Родитель сессии (#753): у сабагента — id родительской, телефон открывает её только для чтения.
   parent: string | null
+  /** Сообщение, к которому чат возвращён отменой хода; с него и дальше — уйдёт со следующим запросом. */
+  reverted?: string
   title: string
   // Режим разрешений сессии (#760), как его показывает окно; custom — правила писал кто-то другой.
   mode: BuffPermissionMode.Mode | "custom"
@@ -211,8 +254,29 @@ export function mobileApi(
     terminals?: Terminals
     /** Отметки видимости моделей, присланные окном (#743); без них — правило по умолчанию. */
     modelPrefs?: () => Promise<readonly BuffModelPrefs.Choice[]>
+    /** Что машина знает о себе (#969); без этого — по окружению процесса. */
+    machine?: Machine
+    /** Сообщения с тем, что модель пишет прямо сейчас (#969): хранилище держит часть целиком, по окончании. */
+    writing?: (messages: unknown[]) => unknown[]
   },
 ): MobileApi {
+  const machine = extra?.machine ?? machineOf(process.env, process.env.OPENCODE_TEST_HOME ?? os.homedir())
+  // Дом машины как проект движка: спрашивается один раз, неудача не запоминается.
+  let homeProject: Promise<{ project: string; directory: string }> | undefined
+  const home = () => {
+    homeProject ??= call("GET", "/api/location", { query: { "location[directory]": machine.home } }).then((r) => ({
+      project: (r as { project: { id: string } }).project.id,
+      directory: machine.home,
+    }))
+    homeProject.catch(() => (homeProject = undefined))
+    return homeProject
+  }
+  // Где идёт то, что названо проектом; без проекта — в доме машины (#969: чат вне проектов).
+  const place = async (args: Record<string, unknown>): Promise<{ id: string; canonical: string }> => {
+    if (typeof args.project === "string" && args.project.trim()) return project(args.project.trim())
+    const at = await home()
+    return { id: at.project, canonical: at.directory }
+  }
   const projects = async () =>
     // /api/project отвечает массивом, без обёртки data.
     ((await call("GET", "/api/project")) as ProjectInfo[]).slice().sort((a, b) => b.time.updated - a.time.updated)
@@ -377,24 +441,85 @@ export function mobileApi(
     })
       .then((r) => data<SessionInfo[]>(r) ?? [])
       .catch(() => [] as SessionInfo[])
+    const list = (r: unknown): unknown[] => {
+      const got = Array.isArray(r) ? r : data<unknown>(r)
+      return Array.isArray(got) ? got : []
+    }
+    // Ход помощника, спросившего человека, стоит до ответа (R23-01): его вопросы и запросы
+    // разрешения видны и в чате, который его запустил, — с именем помощника; ответ идёт ему.
+    // Помощник помощника (R24; движок позволяет его, если поднят experimental.subagent_depth)
+    // стоит так же — его вопросы видны в верхнем чате, а его ветка помечена ждущей.
+    const own = (of: string, list: SessionInfo[]) =>
+      // Только свои помощники: не сама сессия и не чужие дети, если список их вернул.
+      list.filter((c) => c.id !== of && (c.parentID === undefined || c.parentID === of))
+    const asksUnder = async (
+      kids: SessionInfo[],
+      depth: number,
+    ): Promise<{ id: string; permissions: unknown[]; forms: unknown[] }[]> =>
+      Promise.all(
+        kids
+          .filter((c) => active.includes(c.id))
+          .map(async (c) => {
+            const helper = { id: c.id, title: c.title ?? "" }
+            const [asks, questions, deeper] = await Promise.all([
+              call("GET", `/api/session/${c.id}/permission`).catch(() => ({ data: [] })),
+              call("GET", `/api/session/${c.id}/form`).catch(() => ({ data: [] })),
+              depth > 1
+                ? call("GET", "/api/session", {
+                    query: { ...(info?.projectID ? { project: info.projectID } : {}), parentID: c.id, limit: 50, order: "desc" },
+                  })
+                    .then((r) => asksUnder(own(c.id, data<SessionInfo[]>(r) ?? []), depth - 1))
+                    .catch(() => [])
+                : Promise.resolve([]),
+            ])
+            const mark = (item: unknown) => ({ ...(item as object), helper })
+            return {
+              id: c.id,
+              permissions: [...list(asks).map(mark), ...deeper.flatMap((d) => d.permissions)],
+              forms: [...list(questions).map(mark), ...deeper.flatMap((d) => d.forms)],
+            }
+          }),
+      )
+    const asking = await asksUnder(own(session, children), NESTED_MAX)
+    const waits = new Set(asking.filter((a) => a.permissions.length || a.forms.length).map((a) => a.id))
     const subagents = children.map((c) => ({
       id: c.id,
       title: c.title ?? "",
       ...(c.agent ? { agent: c.agent } : {}),
       running: active.includes(c.id),
+      ...(waits.has(c.id) ? { waiting: true } : {}),
     }))
-    const list = (r: unknown) => (Array.isArray(r) ? r : (data<unknown[]>(r) ?? []))
     const plan = info?.agent === "plan"
+    // Идущие проверки плагинов — только у работающего чата: вызов инструмента ждёт клиента.
+    // Плагины и их проверки живут в каталоге чата.
+    const pluginTests = active.includes(session)
+      ? await directoryOf(session)
+          .then((directory) =>
+            call("POST", "/api/rpc/buff.chat-plugin/tests", {
+              query: { "location[directory]": directory },
+              body: { input: { session } },
+            }),
+          )
+          .then(
+            (r) => (r as { output?: { tests?: unknown[] } } | undefined)?.output?.tests ?? [],
+            () => [] as unknown[],
+          )
+      : []
     return {
       session,
       running: active.includes(session),
-      messages: (await phonePage(session, list(messages))) as unknown[],
-      permissions: list(permissions),
-      forms: list(forms),
+      messages: (await phonePage(session, extra?.writing?.(list(messages)) ?? list(messages))) as unknown[],
+      permissions: [...list(permissions), ...asking.flatMap((a) => a.permissions)],
+      forms: [...list(forms), ...asking.flatMap((a) => a.forms)],
       // Режим «Настройка» (#765): сессия режима — по агенту.
       setup: info?.agent === "setup",
+      // Живая проверка плагина чатов (#984): что этому клиенту нарисовать и о чём ответить.
+      ...(pluginTests.length ? { pluginTests } : {}),
       goal,
       parent: info?.parentID ?? null,
+      // Отмена хода ждёт следующего запроса: до него сообщения с этого и дальше ещё лежат в чате,
+      // а клиент их уже не показывает; с запросом они удаляются (#969).
+      ...(info?.revert?.messageID ? { reverted: info.revert.messageID } : {}),
       title: info?.title ?? "",
       mode: BuffPermissionMode.modeOf(info?.permissions, plan) ?? "custom",
       plan,
@@ -407,14 +532,18 @@ export function mobileApi(
 
   // Файлы с телефона (#652): приходят чанками (как у установок) и уходят в промпт сессии целиком.
   const uploads = new Map<string, { name: string; mime: string; parts: string[]; of: number; at: number }>()
-  const UPLOAD_MAX = 20 * 1024 * 1024
+  // Целиком загруженный файл, один раз: что не догрузилось — отказ.
+  const uploaded = (id: unknown) => {
+    const u = uploads.get(String(id ?? ""))
+    if (!u || u.parts.filter((x) => x !== undefined).length !== u.of)
+      throw phoneRefusal("The file did not upload completely — attach it again")
+    uploads.delete(String(id))
+    return u
+  }
   const filesOf = (args: Record<string, unknown>) => {
     const refs = Array.isArray(args.attachments) ? (args.attachments as { upload_id?: unknown }[]) : []
     return refs.map((r) => {
-      const u = uploads.get(String(r.upload_id ?? ""))
-      if (!u || u.parts.filter((x) => x !== undefined).length !== u.of)
-        throw phoneRefusal("The file did not upload completely — attach it again")
-      uploads.delete(String(r.upload_id))
+      const u = uploaded(r.upload_id)
       // The prompt endpoint takes a file as a URI (PromptInput.FileAttachment, #676): inline — a data URL.
       return { uri: `data:${u.mime};base64,${u.parts.join("")}`, name: u.name }
     })
@@ -471,11 +600,36 @@ export function mobileApi(
       return { files: data<unknown[]>(diff) ?? [], vcs: data<unknown>(vcs) ?? {} }
     },
     // MCP-серверы машины там, где идёт сессия (#861): подробности сессии на телефоне, как в окне.
+    // Включён ли сервер в этом чате (#969, R13-07) — `on`; машина без переключателей его не называет.
     "mcp.list": async (args) => {
-      const where = { "location[directory]": await directoryOf(str(args, "session")) }
-      const servers =
-        data<{ name: string; status: { status: string } }[]>(await call("GET", "/api/mcp", { query: where })) ?? []
-      return { servers: servers.map((x) => ({ name: x.name, ok: x.status.status === "connected" })) }
+      const session = str(args, "session")
+      const directory = await directoryOf(session)
+      const where = { "location[directory]": directory }
+      const [servers, off] = await Promise.all([
+        call("GET", "/api/mcp", { query: where }).then(
+          (r) => data<{ name: string; status: { status: string } }[]>(r) ?? [],
+        ),
+        rpc<{ off?: unknown } | undefined>(kit, directory, "buff.chat-connections", "get", { sessionID: session })
+          .then((r) => (Array.isArray(r?.off) ? (r.off as string[]) : undefined))
+          .catch(() => undefined),
+      ])
+      return {
+        servers: servers.map((x) => ({
+          name: x.name,
+          ok: x.status.status === "connected",
+          ...(off ? { on: !off.includes(x.name) } : {}),
+        })),
+      }
+    },
+    // Подключение в одном чате (#969, R13-07): выключить или включить снова.
+    "session.connection": async (args) => {
+      const session = str(args, "session")
+      if (typeof args.on !== "boolean") throw phoneRefusal("The field {key} is required", { key: "on" })
+      return rpc<{ off: string[] }>(kit, await directoryOf(session), "buff.chat-connections", "change", {
+        sessionID: session,
+        server: str(args, "server"),
+        on: args.on,
+      })
     },
     "files.list": async (args) => {
       const where = await directoryOf(str(args, "session"))
@@ -489,6 +643,13 @@ export function mobileApi(
     // Файл проекта на телефон: только внутри каталога сессии (сервер отказывает в выходе за него), частями.
     "files.read": async (args) => {
       const where = await directoryOf(str(args, "session"))
+      // Абсолютный путь в доме облачной машины (#969): нарисованная картинка лежит в ~/pictures,
+      // вне папки чата, — дом там и есть хранилище человека (как `storage.read`).
+      if (machine.cloud && typeof args.path === "string" && args.path.startsWith("/")) {
+        const whole = insideHome(machine.home, args.path)
+        if (!whole) throw phoneRefusal("Only inside your storage")
+        return readPart(whole, args.path, args, READ_PART, BuffMobileText.isText)
+      }
       const path = str(args, "path").replace(/^\.?\/+/, "")
       if (path.split("/").includes("..")) throw phoneRefusal("Only inside the project")
       if (!extra?.fetch) throw phoneRefusal("Reading files is unavailable")
@@ -601,9 +762,13 @@ export function mobileApi(
         at: Date.now(),
       }
       u.parts[seq] = typeof args.data === "string" ? args.data : ""
-      if (u.parts.reduce((n, x) => n + (x?.length ?? 0), 0) > UPLOAD_MAX) {
+      // Предел — машины (#969): на облачной его задаёт оператор. Части идут в base64: три байта в четырёх знаках.
+      const max = machine.limits.uploadMaxBytes
+      // Все части, кроме последней, одной длины (#971): по первой видно, что файл не влезет, — отказ сразу.
+      const least = seq < of - 1 ? (u.parts[seq]!.length * (of - 1) * 3) / 4 : 0
+      if (least > max + 2 || (u.parts.reduce((n, x) => n + (x?.length ?? 0), 0) * 3) / 4 > max + 2) {
         uploads.delete(id)
-        throw phoneRefusal("The file is larger than 20 MB")
+        throw phoneRefusal("The file is larger than {n} MB", { n: Math.floor(max / 1024 / 1024) })
       }
       uploads.set(id, u)
       return {}
@@ -652,12 +817,14 @@ export function mobileApi(
           directory: p.canonical,
           updated: p.time.updated,
           sessions: (await sessionPage(p.id, 200)).data.filter(listed).length,
+          // Цвет проекта (#969) — когда он задан; старый клиент поля не читает.
+          ...(p.icon?.color ? { color: p.icon.color } : {}),
         })),
       ),
     }),
     // default — модель последней сессии проекта, пока она есть на машине, иначе модель по умолчанию.
     "models.list": async (args) => {
-      const p = await project(str(args, "project"))
+      const p = await place(args)
       // #757: `all` — every model, hidden ones too: after a refusal with files the phone looks for one that reads them.
       const [list, last] = await Promise.all([
         args.all === true ? allModels(p.canonical) : models(p.canonical),
@@ -689,7 +856,7 @@ export function mobileApi(
     },
     // default — агент последней сессии проекта, пока он в списке, иначе первый (агент по умолчанию).
     "agents.list": async (args) => {
-      const p = await project(str(args, "project"))
+      const p = await place(args)
       const [list, last] = await Promise.all([agents(p.canonical), lastSession(p.id)])
       const chosen = list.find((a) => a.id === last?.agent) ?? list[0]
       return {
@@ -707,7 +874,7 @@ export function mobileApi(
       const m = data<{ type?: string; status?: string; summary?: string }>(
         await call("GET", `/api/session/${str(args, "session")}/message/${str(args, "message")}`),
       )
-      if (m?.type !== "compaction") throw phoneRefusal("No such compaction in the session")
+      if (m?.type !== "compaction") throw phoneRefusal("No such compaction in the chat")
       return { status: m.status, summary: m.summary ?? "" }
     },
     // Страница таймлайна: первая — новые сверху (order=desc), дальше — по курсору назад (без order:
@@ -730,9 +897,9 @@ export function mobileApi(
           },
         }),
       ),
-    // Новая сессия: проект и модель — только из списков машины.
+    // Новая сессия: проект и модель — только из списков машины; без проекта — в доме машины (#969).
     "session.new": async (args, record) => {
-      const p = await project(str(args, "project"))
+      const p = await place(args)
       const wanted = str(args, "model")
       const model = (await models(p.canonical)).find((m) => modelKey(m) === wanted)
       if (!model) throw phoneRefusal("No such model in this Buff Code")
@@ -748,7 +915,8 @@ export function mobileApi(
           body: {
             model: { id: model.modelID, providerID: model.providerID, ...(variant ? { variant } : {}) },
             location: { directory: p.canonical },
-            metadata: { origin: "phone", device: record.display },
+            // Чат веб-клиента (#969) — свой: вход подключения вернётся на веб, а не в приложение.
+            metadata: { origin: args.origin === "web" ? "web" : "phone", device: record.display },
             permissions: BuffPermissionMode.rules(mode, plan),
             ...(plan ? { agent: "plan" } : agent ? { agent } : {}),
             // Окно контекста, если телефон его назвал (#835) — с самого начала сессии.
@@ -760,7 +928,7 @@ export function mobileApi(
       const files = filesOf(args)
       if (text || files.length)
         await call("POST", `/api/session/${created.id}/prompt`, {
-          body: { text, metadata: { source: "phone" }, ...(files.length ? { files } : {}) },
+          body: { text, metadata: { source: "phone", ...clientOf(args) }, ...(files.length ? { files } : {}) },
         })
       return { session: created }
     },
@@ -783,9 +951,14 @@ export function mobileApi(
       return call("POST", `/api/session/${str(args, "session")}/prompt`, {
         body: {
           text,
-          metadata: { source: "phone", ...metadata },
+          metadata: { source: "phone", ...clientOf(args), ...metadata },
           ...(files.length ? { files } : {}),
-          delivery: deliveryOf(args),
+          delivery: await deliveryOf(args, () =>
+            call("GET", "/api/session/active").then(
+              (r) => Object.keys(data<Record<string, unknown>>(r) ?? {}).includes(str(args, "session")),
+              () => true,
+            ),
+          ),
         },
       })
     },
@@ -801,7 +974,7 @@ export function mobileApi(
       const messages = Array.isArray(listed) ? (listed as StoredUser[]) : (data<StoredUser[]>(listed) ?? [])
       const message = messages.find((m) => m.type === "user" && m.id === str(args, "message"))
       if (!message) throw phoneRefusal("The message to repeat is not found")
-      const { model: _model, ...metadata } = message.metadata ?? {}
+      const { model: _model, client: _client, zone: _zone, ...metadata } = message.metadata ?? {}
       const files = (message.files ?? []).map((file) => ({
         uri: `data:${file.mime};base64,${file.data}`,
         ...(file.name ? { name: file.name } : {}),
@@ -810,7 +983,7 @@ export function mobileApi(
         body: {
           text: message.text ?? "",
           ...(files.length ? { files } : {}),
-          metadata: { ...metadata, source: "phone" },
+          metadata: { ...metadata, source: "phone", ...clientOf(args) },
         },
       })
     },
@@ -819,7 +992,8 @@ export function mobileApi(
       const decision = args.decision
       if (decision !== "once" && decision !== "always" && decision !== "reject")
         throw phoneRefusal("The decision is once, always or reject")
-      return call("POST", `/api/session/${str(args, "session")}/permission/${str(args, "request")}/reply`, {
+      // Запрос помощника отвечается из чата, который его запустил (R23-01): владелец — помощник.
+      return call("POST", `/api/session/${ownerOf(args)}/permission/${str(args, "request")}/reply`, {
         body: { decision, ...(typeof args.message === "string" ? { message: args.message } : {}) },
       })
     },
@@ -832,6 +1006,37 @@ export function mobileApi(
       }),
   }
 
+  const kit: Kit = {
+    call,
+    machine,
+    home,
+    projects,
+    project,
+    directoryOf,
+    takeUpload: (id) => {
+      const u = uploaded(id)
+      return { name: u.name, mime: u.mime, bytes: Buffer.from(u.parts.join(""), "base64") }
+    },
+  }
+  const memory = memoryOps(kit)
+  Object.assign(
+    ops,
+    machineOps(kit),
+    chatOps(kit),
+    projectOps(kit, memory.projectHome),
+    memory.ops,
+    mcpOps(kit),
+    pluginOps(kit),
+    storageOps(kit, { part: READ_PART, isText: BuffMobileText.isText }),
+  )
+
+  // Помощник — сессия с родителем; не прочиталась — пусть решит сама команда.
+  const helper = (session: string) =>
+    call("GET", `/api/session/${session}`).then(
+      (r) => Boolean(data<SessionInfo | undefined>(r)?.parentID),
+      () => false,
+    )
+
   return {
     state,
     async run(record, op, args) {
@@ -841,6 +1046,8 @@ export function mobileApi(
       try {
         const handler = ops[op]
         if (!handler) throw phoneRefusal("Not available from the phone: {op}", { op })
+        if (CHANGES_SESSION.has(op) && typeof input.session === "string" && (await helper(input.session)))
+          throw phoneRefusal("This is a helper's chat: the main chat's agent runs it, so it cannot be changed")
         const result = await handler(input, record)
         return { ok: true, ...(typeof result === "object" && result !== null ? (result as object) : { result }) }
       } catch (err) {

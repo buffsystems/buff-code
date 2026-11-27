@@ -129,7 +129,7 @@ export async function draft(
   if (title === undefined) return
   const prompt = await ui.prompt({
     title: t("What the agent should do"),
-    description: t("Each run is a new session: the agent does not see this conversation, write the whole task."),
+    description: t("Each run is a new chat: the agent does not see this conversation, write the whole task."),
     value: base?.prompt ?? "",
   })
   if (prompt === undefined) return
@@ -192,7 +192,7 @@ export function actions(
     ...(automation.last?.session
       ? [
           {
-            title: state === "waiting" ? t("Answer in the session") : t("Open the run session"),
+            title: state === "waiting" ? t("Answer in the chat") : t("Open the run chat"),
             value: "open" as const,
           },
         ]

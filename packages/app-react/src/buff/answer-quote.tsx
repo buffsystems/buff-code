@@ -60,7 +60,7 @@ export function BuffAnswerQuote(props: { onAdd?: (text: string) => void; onSide?
             if (side) take(side)
           }}
         >
-          {t("To a side conversation")}
+          {t("To a side chat")}
         </Button>
       )}
     </div>,

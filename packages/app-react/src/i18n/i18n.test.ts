@@ -11,7 +11,7 @@ test("Russian loads on demand and falls back to English for missing keys", async
   const ru = await loadDictionary("ru")
   const { t } = createTranslator("ru", ru)
   expect(t("common.requestFailed")).not.toBe(english["common.requestFailed"])
-  expect(ru["ui.sessionReview.title"]).toBe("Изменения сессии")
+  expect(ru["ui.sessionReview.title"]).toBe("Изменения чата")
 })
 
 test("templates fill every named parameter", () => {

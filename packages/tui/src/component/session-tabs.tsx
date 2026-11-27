@@ -724,7 +724,7 @@ function VerticalSessionTabs(props: {
               const hoveredTitleWidth = () => Math.max(1, restingTitleWidth() - 1)
               const titleWidth = () => (hovered() === tab.sessionID ? hoveredTitleWidth() : restingTitleWidth())
               const title = () =>
-                sessionLabel((props.controller ? undefined : session()?.title) ?? tab.title) ?? t("Untitled session")
+                sessionLabel((props.controller ? undefined : session()?.title) ?? tab.title) ?? t("Untitled chat")
               const scrolling = () => marquee.active() === tab.sessionID
               const visibleTitleParts = createMemo(() =>
                 scrolling()
@@ -1233,7 +1233,7 @@ function VerticalSessionTabs(props: {
                 {Locale.truncateWidth(
                   data?.session.get(sessionID())?.title ??
                     items().find((tab) => tab.sessionID === sessionID())?.title ??
-                    t("Untitled session"),
+                    t("Untitled chat"),
                   tooltipWidth() - 2,
                 )}
               </text>
@@ -1556,7 +1556,7 @@ function HorizontalSessionTabs(props: {
           const glows = () =>
             Boolean(status().attention || (!selected() && !status().busy && status().unread !== undefined))
           const title = () =>
-            sessionLabel(data?.session.get(tab.sessionID)?.title ?? tab.title) ?? t("Untitled session")
+            sessionLabel(data?.session.get(tab.sessionID)?.title ?? tab.title) ?? t("Untitled chat")
           const tabNumber = createMemo(() => items().findIndex((item) => item.sessionID === tab.sessionID) + 1)
           const numberWidth = () => Math.max(2, String(items().length).length)
           // Hovering reveals the close mark, so the title's right bound shifts left of it.

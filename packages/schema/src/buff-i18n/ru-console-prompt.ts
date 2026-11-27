@@ -36,7 +36,7 @@ export const consolePrompt = {
   "Remove editor context": "Убрать контекст редактора",
   Paste: "Вставить",
   "View image attachments": "Посмотреть вложенные картинки",
-  "Interrupt session": "Прервать сессию",
+  "Interrupt the agent": "Прервать работу агента",
   "Background blocking tools": "Увести блокирующие инструменты в фон",
   "Open editor": "Открыть редактор",
   "Manage workspaces": "Рабочие пространства",
@@ -50,11 +50,11 @@ export const consolePrompt = {
   "This prompt cannot be queued": "Этот запрос нельзя поставить в очередь",
   "Editor context cannot be queued": "Контекст редактора нельзя поставить в очередь",
   "Model unavailable": "Модель недоступна",
-  "{model} is not available in this session's location": "{model} недоступна там, где работает эта сессия",
-  "Failed to set up session": "Не удалось настроить сессию",
-  "Creating a session failed": "Не удалось создать сессию",
+  "{model} is not available in this chat's location": "{model} недоступна там, где работает этот чат",
+  "Failed to set up chat": "Не удалось настроить чат",
+  "Creating a chat failed": "Не удалось создать чат",
   "Failed to switch model: {error}": "Не удалось сменить модель: {error}",
-  "Failed to prepare session": "Не удалось подготовить сессию",
+  "Failed to prepare chat": "Не удалось подготовить чат",
   "Failed to run command": "Не удалось выполнить команду",
   "Failed to commit revert": "Не удалось закрепить откат",
   "Failed to send editor context": "Не удалось отправить контекст редактора",
@@ -68,18 +68,18 @@ export const consolePrompt = {
 
   // Перенос в рабочее пространство
   "Creating worktree": "Создаю рабочее дерево",
-  "Creating session": "Создаю сессию",
+  "Creating chat": "Создаю чат",
   "Submitting prompt": "Отправляю запрос",
-  "Unable to determine current session location": "Не удалось определить, где работает сессия",
+  "Unable to determine current chat location": "Не удалось определить, где работает чат",
   "Unable to determine current project": "Не удалось определить текущий проект",
   "No worktree directory returned": "Сервер не вернул папку рабочего дерева",
   "Creating workspace failed": "Не удалось создать рабочее пространство",
 
   // Побочный вопрос /btw
   "Ask a side question": "Задать побочный вопрос",
-  "One-shot answer from the session's context without adding to the conversation":
-    "Разовый ответ по контексту сессии — в разговор не попадёт",
-  "Open a session first": "Сначала откройте сессию",
+  "One-shot answer from the chat's context without adding to the conversation":
+    "Разовый ответ по контексту чата — в разговор не попадёт",
+  "Open a chat first": "Сначала откройте чат",
   "Ask anything": "Спросите что угодно",
   "Copy answer": "Копировать ответ",
   "↑/↓ scroll": "↑/↓ прокрутка",
@@ -183,10 +183,10 @@ export const consolePrompt = {
   "Switch diff source": "Сменить источник изменений",
 
   // Уведомления о ходе сессии
-  "Session done": "Сессия завершена",
+  "The agent is done": "Агент закончил работу",
   "Input needs response": "Нужен ваш ответ",
   "Permission needs input": "Нужно разрешение",
-  "Session failed": "Сессия завершилась с ошибкой",
+  "The agent failed": "Ошибка в работе агента",
 
   // Плагины
   System: "Система",
@@ -222,7 +222,7 @@ export const consolePrompt = {
   "day|days": "день|дня|дней",
   "best streak": "лучшая серия",
   "active days": "активных дней",
-  sessions: "сессии",
+  chats: "чаты",
   back: "назад",
   "{n} shell command|{n} shell commands": "{n} команда|{n} команды|{n} команд",
   commands: "команды",

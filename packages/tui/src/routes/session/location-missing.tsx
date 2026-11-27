@@ -20,14 +20,14 @@ export function SessionLocationUnavailable(props: { directory: string; onMove: (
   return (
     <SessionQuestion
       id="session.location-missing"
-      group={t("Session recovery")}
+      group={t("Chat recovery")}
       choicesLabel="Recovery actions"
       instance={props.directory}
-      title={t("Session location unavailable")}
+      title={t("Chat location unavailable")}
       body={
         <box paddingLeft={1} gap={1}>
           <text fg={theme.text.muted}>{directory()}</text>
-          <text fg={theme.text.base}>{t("Choose another directory to continue this session.")}</text>
+          <text fg={theme.text.base}>{t("Choose another directory to continue this chat.")}</text>
         </box>
       }
       options={{ move: t("Choose directory") }}

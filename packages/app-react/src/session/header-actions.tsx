@@ -2,6 +2,7 @@
 // a ring of the context window's use with cost, use and tokens on hover, opening the side panel's
 // Context tab through the panes' contract — and room for the review toggle floating over the corner.
 
+import { useSettings } from "../shell/settings-context"
 import { IconButton, ProgressCircle, Tooltip } from "@buff/ui/react"
 import { BuffContextWindow } from "@opencode/schema/buff-context-window"
 import type { SessionMessageInfo } from "@opencode/client/promise"
@@ -36,6 +37,7 @@ function ContextUsage() {
     directory ? state.location[locationKey({ directory })] : undefined,
   )
   const buffCost = useBuffSessionCost(server, sessionID, directory)
+  const simple = useSettings((settings) => settings.appearance.layout) === "simple"
   const usd = useMemo(() => new Intl.NumberFormat(i18n.intl, { style: "currency", currency: "USD" }), [i18n.intl])
   const last = messages.findLast((item) => item.type === "assistant" && !!item.tokens)
   const usage = (() => {
@@ -49,11 +51,19 @@ function ContextUsage() {
     return { total, percent: limit ? Math.round((total / limit) * 100) : undefined }
   })()
   const cost = buffCost ? buffCost.text || "—" : usd.format(info?.cost ?? 0)
-  const rows: [string, string][] = [
-    [i18n.t("context.usage.cost"), cost],
-    [i18n.t("context.usage.usage"), `${usage?.percent ?? 0}%`],
-    [i18n.t("context.usage.tokens"), usage?.total.toLocaleString(i18n.intl) ?? "0"],
-  ]
+  // #972 (CH-12): the simple layout says how full the chat is; the money is shown only where
+  // there is a sum to show (a subscription has none per chat), the token count — to a developer.
+  const priced = buffCost ? !!buffCost.text : (info?.cost ?? 0) > 0
+  const rows: [string, string][] = simple
+    ? [
+        ...(priced ? [[i18n.t("context.usage.cost"), cost] as [string, string]] : []),
+        [i18n.t("context.usage.usage"), `${usage?.percent ?? 0}%`],
+      ]
+    : [
+        [i18n.t("context.usage.cost"), cost],
+        [i18n.t("context.usage.usage"), `${usage?.percent ?? 0}%`],
+        [i18n.t("context.usage.tokens"), usage?.total.toLocaleString(i18n.intl) ?? "0"],
+      ]
   return (
     <Tooltip
       side="bottom"

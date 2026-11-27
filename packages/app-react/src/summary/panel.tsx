@@ -81,6 +81,9 @@ export function SessionSummaryPanel(props: {
               <ChevronDown aria-hidden className="session-summary-menu-indicator" />
             </>,
           )}
+          {/* #972 (CO-03): a branch is a fact of a folder under version control; elsewhere the row
+              said only «no branch» among the controls. */}
+          {(branch || project.vcs) && (
           <div className="session-summary-row">
             <GitBranch aria-hidden />
             {branch ? (
@@ -101,6 +104,7 @@ export function SessionSummaryPanel(props: {
               </span>
             )}
           </div>
+          )}
           <button type="button" className="session-summary-row" onClick={props.onReview}>
             <FileDiff aria-hidden />
             <ReviewLabel diffs={changes} />

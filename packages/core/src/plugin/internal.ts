@@ -105,8 +105,10 @@ import { BuffHookPlugin } from "../buff/hook.js"
 import { BuffTurnPlugin } from "../buff/turn.js"
 import { BuffRequestHeaders } from "../buff/request-headers.js"
 import { BuffSessionMarksPlugin } from "../buff/session-marks.js"
+import { BuffChatConnectionsPlugin } from "../buff/chat-connections.js"
 import { BuffLocale } from "../buff/locale.js"
 import { BuffSearchPlugin } from "../buff/search.js"
+import { BuffArtifactsPlugin } from "../buff/artifacts.js"
 import { BuffBackgroundStop } from "../buff/background.js"
 import { BuffTrust } from "../buff/trust.js"
 import { BuffAutomationPlugin } from "../buff/automation.js"
@@ -123,6 +125,8 @@ import { BuffSidePlugin } from "../buff/side.js"
 import { BuffSetupPlugin } from "../buff/setup.js"
 import { BuffSetupFormPlugin } from "../buff/setup-form.js"
 import { BuffConnectionPlugin } from "../buff/connection.js"
+import { BuffChatPluginStore } from "../buff/chat-plugin.js"
+import { BuffMcpRules } from "../buff/mcp-rules.js"
 import { BuffSecret } from "../buff/secret.js"
 import { BuffGoalService } from "../buff/goal-service.js"
 import { BuffWorkflowPlugin } from "../buff/workflow.js"
@@ -131,6 +135,7 @@ import { BuffGitPlugin } from "../buff/git.js"
 import { BuffSnapshotGitPlugin } from "../buff/snapshot-git.js"
 import { Database } from "../database/database.js"
 import { BuffLogin } from "../buff/login.js"
+import { BuffAccount } from "../buff/account.js"
 import { BuffWorkContext } from "../buff/context.js"
 import { WebSearchPlugins } from "./websearch/index.js"
 import { SkillPlugin } from "./skill.js"
@@ -285,6 +290,7 @@ const pre = [
   NativeCompactionPlugin.Plugin,
   ...ProviderPlugins,
   BuffLogin.Plugin,
+  BuffAccount.Plugin,
   BuffWorkContext.Plugin,
   BuffGitSeen.Plugin,
   BuffMcpPlugin.Plugin,
@@ -335,9 +341,13 @@ const post = [
   BuffTurnPlugin.Plugin,
   BuffRequestHeaders.Plugin,
   BuffSessionMarksPlugin.Plugin,
+  // Buff (#969, R13-07): подключение, выключенное в одном чате.
+  BuffChatConnectionsPlugin.Plugin,
   // Buff (#472): язык — один на окно, консоль и ядро.
   BuffLocale.Plugin,
   BuffSearchPlugin.Plugin,
+  // Buff (#969): «Результаты» — файлы, отданные агентом, из переписки.
+  BuffArtifactsPlugin.Plugin,
   BuffGitPlugin.Plugin,
   BuffSnapshotGitPlugin.Plugin,
   BuffBackgroundStop.Plugin,
@@ -354,6 +364,10 @@ const post = [
   BuffSetupPlugin.Plugin,
   BuffSetupFormPlugin.Plugin,
   BuffConnectionPlugin.Plugin,
+  // Buff (#595): плагины чатов — список, отрисовщики, инструкции включённых в системном промпте.
+  BuffChatPluginStore.Plugin,
+  // Buff (#969): последним — правила `mcp:<откуда>` разворачиваются после всех правил агентов.
+  BuffMcpRules.Plugin,
 ] as const satisfies readonly InternalPlugin[]
 
 export const list = Effect.fn("PluginInternal.list")(function* () {

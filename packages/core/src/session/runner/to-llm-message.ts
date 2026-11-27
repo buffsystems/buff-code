@@ -75,11 +75,10 @@ const directoryAttachment = (file: FileAttachment): ContentPart => ({
 const attachmentContent = (file: FileAttachment): ContentPart[] => {
   if (file.mime === "text/plain") return [textAttachment(file)]
   if (file.mime === "application/x-directory") return [directoryAttachment(file)]
-  if (imageMimes.has(file.mime) || file.mime === "application/pdf") {
-    const location = attachmentLocation(file)
-    return [...(location === undefined ? [] : [Message.text(`Attached file: ${location}`)]), media(file)]
-  }
-  return []
+  // Any other format (a .pptx, a .zip, a .docx) is not dropped (#971): it goes as media too, and the
+  // request names it to the model with the path it is saved at (SessionModelRequest.unsupportedParts).
+  const location = attachmentLocation(file)
+  return [...(location === undefined ? [] : [Message.text(`Attached file: ${location}`)]), media(file)]
 }
 
 const userAttachmentContent = (files: readonly FileAttachment[]) => {

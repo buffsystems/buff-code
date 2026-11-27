@@ -6,6 +6,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1, interactive-widget=resizes-content, viewport-fit=cover"
     />
+    <!-- Buff (#595): a frame holds only what the window wrote into it (a page of the chat, a
+         file's bytes) — a chat plugin's frame cannot take itself to a stranger's address. -->
+    <meta http-equiv="Content-Security-Policy" content="frame-src blob: data:" />
     <title>Buff Code</title>
     <script id="buff-theme-boot"></script>
   </head>

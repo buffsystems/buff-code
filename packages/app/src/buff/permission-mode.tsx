@@ -87,7 +87,7 @@ export function BuffPermissionModeControl() {
           {
             value: "custom" as const,
             label: Mode.short(undefined, t),
-            hint: t("The rules of this session are not set by a mode."),
+            hint: t("The rules of this chat are not set by a mode."),
           },
         ]),
     ...Mode.MODES.map((item) => ({ ...item, label: t(item.label), hint: t(item.hint) })),
@@ -161,12 +161,12 @@ export function BuffPermissionModeControl() {
         hidden={!hasSetup()}
         title={
           setup()
-            ? t("Setup: the agent connects itself to what you need. Click to get back to work.")
-            : t("Turn on Setup: connect a service, an account or a folder to the agent.")
+            ? t("Self-setup: the agent connects itself to what you need. Click to get back to work.")
+            : t("Turn on Self-setup: connect a service, an account or a folder to the agent.")
         }
         onClick={toggleSetup}
       >
-        {t("Setup")}
+        {t("Self-setup")}
       </button>
     </div>
   )

@@ -30,7 +30,7 @@ export function SideConversationTabTrigger(props: {
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <GitBranchPlus aria-hidden className="size-4 shrink-0" />
-        <span className="panes-tab-name max-w-40 truncate">{title ?? t("Side conversation")}</span>
+        <span className="panes-tab-name max-w-40 truncate">{title ?? t("Side chat")}</span>
       </span>
     </SortablePaneTab>
   )

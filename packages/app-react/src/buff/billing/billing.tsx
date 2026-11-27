@@ -99,7 +99,7 @@ function BillingDialog(props: { server: Server; directory: string; sessionID?: s
                 )}
                 {cost?.text && (
                   <>
-                    <Row label={t("This session")} value={cost.text} slot="session" />
+                    <Row label={t("This chat")} value={cost.text} slot="session" />
                     <span className="ui-hint">
                       {t(
                         "An estimate at tariff prices: cached input is counted as regular; Buff calculates the exact charge.",

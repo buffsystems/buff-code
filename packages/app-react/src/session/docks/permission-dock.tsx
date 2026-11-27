@@ -30,7 +30,8 @@ export function PermissionDock(props: {
     if (request.action === BuffWorkflow.PERMISSION_ACTION) return BuffWorkflow.permissionView(request.metadata, i18n.buff.t).hint
     const key = `settings.permissions.tool.${request.action}.description`
     const value = i18n.t(key as Parameters<typeof i18n.t>[0])
-    return value === key ? "" : value
+    // #972 (R23-04): an action the window has no words for — a connection's tool — is still said.
+    return value === key ? i18n.buff.t("The agent asks to run «{action}».", { action: request.action }) : value
   }
   const hint = description()
   const reject = () => props.onDecide("reject", feedback.trim() || undefined)

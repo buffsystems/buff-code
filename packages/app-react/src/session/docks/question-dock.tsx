@@ -2,6 +2,8 @@
 // question per tab with its options (one or several), an own answer typed in place, minimize to
 // the question alone, Escape to dismiss and Mod+Enter to go on. Unsent answers survive a remount.
 
+import { BuffPlan } from "@opencode/schema/buff-plan"
+import { isPlanApproval } from "./plan-approval"
 import { Button, IconButton, cx } from "@buff/ui/react"
 import type { FormInfo } from "@opencode/client/promise"
 import { Check, ChevronDown } from "lucide-react"
@@ -82,6 +84,12 @@ export function QuestionDock(props: { request: FormInfo; onSubmit(): void }) {
   const target = { sessionID: props.request.sessionID, formID: props.request.id }
   const submit = () => send(() => server.data.session.form.reply({ ...target, answer: formAnswer(questions, latest.current) }))
   const reject = () => send(() => server.data.session.form.cancel(target))
+  // #972 (R2-13): a plan is approved with one press that says so; with a remark typed, the same
+  // button sends the remark.
+  const plan = isPlanApproval(questions)
+  const remark = customOn && custom.trim() !== ""
+  const approve = () =>
+    send(() => server.data.session.form.reply({ ...target, answer: { [BuffPlan.FIELD]: BuffPlan.APPROVE } }))
 
   const go = (tab: number) => {
     if (sending) return
@@ -131,7 +139,9 @@ export function QuestionDock(props: { request: FormInfo; onSubmit(): void }) {
     }
     if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key === "Enter") {
       event.preventDefault()
-      if (!event.repeat) next()
+      if (event.repeat) return
+      if (plan && !remark) return approve()
+      next()
       return
     }
     if (editing || event.altKey || event.ctrlKey || event.metaKey) return
@@ -203,9 +213,21 @@ export function QuestionDock(props: { request: FormInfo; onSubmit(): void }) {
                   {i18n.t("ui.common.back")}
                 </Button>
               )}
-              <Button variant={last ? "primary" : "outline"} disabled={sending} onClick={next} aria-keyshortcuts="Meta+Enter Control+Enter">
-                {last ? i18n.t("ui.common.submit") : i18n.t("ui.common.next")}
-              </Button>
+              {plan ? (
+                <Button
+                  variant="primary"
+                  disabled={sending}
+                  data-action="plan-approve"
+                  onClick={remark ? submit : approve}
+                  aria-keyshortcuts="Meta+Enter Control+Enter"
+                >
+                  {remark ? i18n.buff.t("Send the remark") : i18n.buff.t("Approve and start")}
+                </Button>
+              ) : (
+                <Button variant={last ? "primary" : "outline"} disabled={sending} onClick={next} aria-keyshortcuts="Meta+Enter Control+Enter">
+                  {last ? i18n.t("ui.common.submit") : i18n.t("ui.common.next")}
+                </Button>
+              )}
             </div>
           </>
         }

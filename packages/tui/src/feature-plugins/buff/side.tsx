@@ -21,7 +21,7 @@ function Follow(props: { context: Context; sessionID: string }) {
       if (!context.ui.tabs.focus(event.data.side.id))
         context.ui.router.navigate({ type: "session", sessionID: event.data.side.id })
       context.ui.toast.show({
-        message: t("{title} is open. The main session is in the next tab.", { title: BuffSide.title(event.data.side.n, t) }),
+        message: t("{title} is open. The main chat is in the next tab.", { title: BuffSide.title(event.data.side.n, t) }),
         variant: "info",
       })
     }

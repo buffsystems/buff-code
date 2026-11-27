@@ -423,14 +423,14 @@ export function RunCommandMenuBody(props: {
     const session: CommandEntry[] = [
       {
         action: "editor",
-        category: t("Session"),
+        category: t("Chat"),
         display: t("Open editor"),
         footer: "/editor",
         keywords: "editor compose draft external editor",
       },
       {
         action: "status",
-        category: t("Session"),
+        category: t("Chat"),
         display: t("Show status"),
         keywords: "status activity model context usage footer",
       },
@@ -438,7 +438,7 @@ export function RunCommandMenuBody(props: {
         ? [
             {
               action: "subagent" as const,
-              category: t("Session"),
+              category: t("Chat"),
               display: t("View subagents"),
               footer:
                 activeSubagentCount() > 0
@@ -453,19 +453,19 @@ export function RunCommandMenuBody(props: {
         : []),
       {
         action: "slash",
-        category: t("Session"),
+        category: t("Chat"),
         name: "compact",
-        display: t("Compact session"),
+        display: t("Compact chat"),
         footer: "/compact",
-        keywords: "compact session context",
+        keywords: "compact chat session context",
       },
       {
         action: "slash",
-        category: t("Session"),
+        category: t("Chat"),
         name: "new",
-        display: t("New session"),
+        display: t("New chat"),
         footer: "/new",
-        keywords: "new session clear",
+        keywords: "new chat session clear",
       },
     ]
     const agent: CommandEntry[] = [

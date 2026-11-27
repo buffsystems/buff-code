@@ -119,7 +119,7 @@ export function ShareDialog(props: {
             )}
             <p className="text-[13px] text-muted-foreground">
               {t(
-                "The page reads the dialog from this machine while Buff Code runs; the links are managed in Settings → Public links.",
+                "The page reads the chat from this machine while Buff Code runs; the links are managed in Settings → Public links.",
               )}
             </p>
           </div>
@@ -145,7 +145,7 @@ export function ShareDialog(props: {
             value={mode}
             onChange={setMode}
             options={[
-              { id: "all", label: t("Whole dialog") },
+              { id: "all", label: t("Whole chat") },
               { id: "some", label: t("Selected messages") },
             ]}
           />
@@ -197,7 +197,7 @@ export function ShareDialog(props: {
             <Switch checked={tools} onCheckedChange={setTools} />
           </label>
           <label className="flex items-center justify-between gap-3 text-[13px]">
-            <span>{t("Follow the session live")}</span>
+            <span>{t("Follow the chat live")}</span>
             <Switch checked={live} onCheckedChange={setLive} />
           </label>
           {error && (

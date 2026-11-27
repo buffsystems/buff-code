@@ -322,7 +322,17 @@ export function Prompt(props: PromptProps) {
   // Buff (#457): без модели — почему и что сделать: войти в Buff (или подключить свой
   // провайдер, #562) или выбрать контекст.
   function promptModelWarning() {
-    const why = BuffFirstRun.noModel({ signedIn: connected(), context: false, models: false, own: false })
+    // #966: вошли аккаунтом Buff, а подписки нет — об этом и сказать, а не «выберите организацию».
+    const account = (data.location.integration.list() ?? []).some(
+      (item) => item.id === BuffFirstRun.ACCOUNT && item.connections.some((connection) => connection.type === "credential"),
+    )
+    const why = BuffFirstRun.noModel({
+      signedIn: connected() && !account,
+      context: false,
+      models: false,
+      own: false,
+      account,
+    })
     toast.show({
       variant: "warning",
       message: why?.action === "choose-context" ? `${t(why.text)} ${t("Command /org.")}` : t(why?.text ?? ""),
@@ -521,9 +531,9 @@ export function Prompt(props: PromptProps) {
         run: () => openImagePreview(0),
       },
       {
-        title: t("Interrupt session"),
+        title: t("Interrupt the agent"),
         name: "session.interrupt",
-        category: t("Session"),
+        category: t("Chat"),
         palette: undefined,
         enabled: status() === "running",
         run: () => {
@@ -555,7 +565,7 @@ export function Prompt(props: PromptProps) {
       {
         title: t("Background blocking tools"),
         name: "session.background",
-        category: t("Session"),
+        category: t("Chat"),
         palette: undefined,
         enabled: status() === "running",
         run: () => {
@@ -571,7 +581,7 @@ export function Prompt(props: PromptProps) {
       },
       {
         title: t("Open editor"),
-        category: t("Session"),
+        category: t("Chat"),
         name: "prompt.editor",
         slash: { name: "editor" },
         run: async () => {
@@ -642,7 +652,7 @@ export function Prompt(props: PromptProps) {
         title: t("Manage workspaces"),
         desc: t("Manage workspaces"),
         name: "session.move",
-        category: t("Session"),
+        category: t("Chat"),
         slash: { name: "worktrees" },
         run: () => {
           move.open()
@@ -1190,7 +1200,7 @@ export function Prompt(props: PromptProps) {
     if (usesModel && !local.model.available(selection)) {
       toast.show({
         title: t("Model unavailable"),
-        message: t("{model} is not available in this session's location", {
+        message: t("{model} is not available in this chat's location", {
           model: `${selection.providerID}/${selection.modelID}`,
         }),
         variant: "warning",
@@ -1275,7 +1285,7 @@ export function Prompt(props: PromptProps) {
         }),
         recover: (error) => {
           toast.show({
-            title: data.session.get(created.id) ? t("Failed to set up session") : t("Creating a session failed"),
+            title: data.session.get(created.id) ? t("Failed to set up chat") : t("Creating a chat failed"),
             message: errorMessage(error),
             variant: "error",
           })
@@ -1325,7 +1335,7 @@ export function Prompt(props: PromptProps) {
     if (!trimmed) {
       // Blank Enter in an existing session commits the composer's agent and
       // model selection, then hands off to the route (queued prompt promotion).
-      await attempt(t("Failed to prepare session"), async () => {
+      await attempt(t("Failed to prepare chat"), async () => {
         await commitSelection()
         await props.onEmptySubmit?.()
       })
@@ -1357,7 +1367,7 @@ export function Prompt(props: PromptProps) {
       )
     } else {
       move.startSubmit()
-      if (!(await attempt(t("Failed to prepare session"), prepareAgent))) return true
+      if (!(await attempt(t("Failed to prepare chat"), prepareAgent))) return true
       // Revert must settle before optimistic admission: its committed echo
       // splices every local row at or after the boundary, which would include
       // a freshly admitted prompt.
@@ -1612,7 +1622,7 @@ export function Prompt(props: PromptProps) {
     return [
       { label: working && current !== "build" ? Locale.titlecase(current) : t("Work"), active: working },
       ...(has("plan") ? [{ label: t("Plan"), active: current === "plan" }] : []),
-      ...(has(BuffSetup.AGENT) ? [{ label: t("Setup"), active: current === BuffSetup.AGENT }] : []),
+      ...(has(BuffSetup.AGENT) ? [{ label: t("Self-setup"), active: current === BuffSetup.AGENT }] : []),
     ]
   })
   const animateMetadata = !revealedPromptMetadata.has(local)

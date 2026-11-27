@@ -34,7 +34,7 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
     try {
       const sessionID = input.sessionID()
       const session = sessionID ? await resolveSession(sessionID) : undefined
-      if (sessionID && !session) throw new Error(t("Unable to determine current session location"))
+      if (sessionID && !session) throw new Error(t("Unable to determine current chat location"))
       const location = session?.location ?? homeLocation()
       if (!data.location.info(location)) await data.location.syncInfo(location)
       const project = data.location.info(location)?.project
@@ -51,7 +51,7 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
       // optimistic session without its project until the create request echoes.
       await data.location.syncInfo({ directory })
 
-      setProgress(t("Creating session"))
+      setProgress(t("Creating chat"))
       return directory
     } catch (err) {
       setDestination(undefined)

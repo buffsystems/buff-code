@@ -22,10 +22,10 @@ export const session = {
   "The model does not read PDF itself — it opens the file with its tools.":
     "Модель не читает PDF сама — откроет файл инструментами.",
   "The model reads this file with its tools.": "Модель прочитает этот файл инструментами.",
-  "Session undo and changes are off: they need git 2.35 or newer, this computer has {version}.":
-    "Откат и изменения сессии отключены: нужен git 2.35 или новее, на этом компьютере {version}.",
-  "Session undo and changes are off: install git 2.35 or newer.":
-    "Откат и изменения сессии отключены: установите git 2.35 или новее.",
+  "Chat undo and changes are off: they need git 2.35 or newer, this computer has {version}.":
+    "Откат и изменения чата отключены: нужен git 2.35 или новее, на этом компьютере {version}.",
+  "Chat undo and changes are off: install git 2.35 or newer.":
+    "Откат и изменения чата отключены: установите git 2.35 или новее.",
   new: "новый",
   modified: "изменён",
   deleted: "удалён",
@@ -87,7 +87,7 @@ export const session = {
   "Request without text": "Запрос без текста",
   "The answer is still coming": "Ответ ещё идёт",
   "No answer yet": "Ответа пока нет",
-  "Side conversation {n}": "Побочный диалог {n}",
+  "Side chat {n}": "Побочный чат {n}",
   "A question before every file edit and every command. The agent may read and search on its own.":
     "Перед каждой правкой файла и каждой командой — вопрос. Читать и искать агент может сам.",
   "The agent edits project files on its own; shell commands get a question first.":
@@ -204,7 +204,7 @@ export const session = {
   "Added to the message": "Добавлено в сообщение",
   "The answer fragment is in the input.": "Фрагмент ответа — в поле ввода.",
   "Add to message": "Добавить в сообщение",
-  "To a side conversation": "В побочный диалог",
+  "To a side chat": "В побочный чат",
   "This file type is not shown here.": "Этот тип файла здесь не показывается.",
   "The preview is available until the window restarts.": "Просмотр доступен, пока окно не перезапускали.",
   "Open in app": "Открыть в приложении",
@@ -245,7 +245,7 @@ export const session = {
   Pause: "Пауза",
   Resume: "Продолжить",
   Reset: "Сбросить",
-  "The rules of this session are not set by a mode.": "Правила этой сессии заданы не режимом.",
+  "The rules of this chat are not set by a mode.": "Правила этого чата заданы не режимом.",
   "Permission mode": "Режим разрешений",
   "Could not change the mode.": "Не удалось сменить режим.",
   "Plan: the agent only reads and drafts a plan. Click to get back to work.":
@@ -254,21 +254,21 @@ export const session = {
     "Включить план: агент не правит файлы, а составляет план.",
   "Request map": "Карта запросов",
   "Go to request {index}": "Перейти к запросу {index}",
-  "Side conversation": "Побочный диалог",
+  "Side chat": "Побочный чат",
   "Did not open.": "Не открылся.",
   "The message was not sent.": "Сообщение не ушло.",
-  "To the main conversation": "В основной диалог",
-  "The fragment is in the input of the main session.": "Фрагмент — в поле ввода основной сессии.",
+  "To the main chat": "В основной чат",
+  "The fragment is in the input of the main chat.": "Фрагмент — в поле ввода основного чата.",
   "Full screen": "Во весь экран",
-  "The side conversation sees the whole main session, but the main one does not see it. Ask here without derailing the main task.":
-    "Побочный диалог видит всю основную сессию, а она его — нет. Спросите здесь, не сбивая основную задачу.",
+  "The side chat sees the whole main chat, but the main one does not see it. Ask here without derailing the main task.":
+    "Побочный чат видит весь основной чат, а тот его — нет. Спросите здесь, не сбивая основную задачу.",
   "Tools: {tools}": "Инструменты: {tools}",
   // Сжатие сессии (#470): сводка для модели — под переключателем.
   "Summary for the model": "Сводка для модели",
   "Hide the summary for the model": "Скрыть сводку для модели",
   "Answering…": "Отвечает…",
-  "Ask in the side conversation… Enter — send, Shift+Enter — new line":
-    "Спросите в побочном диалоге… Enter — отправить, Shift+Enter — новая строка",
+  "Ask in the side chat… Enter — send, Shift+Enter — new line":
+    "Спросите в побочном чате… Enter — отправить, Shift+Enter — новая строка",
   Send: "Отправить",
   Stop: "Остановить",
   "changed after the turn": "изменён после хода",
@@ -296,28 +296,28 @@ export const session = {
   "Tick the files — the message is composed from their changes.":
     "Отметьте файлы — сообщение сочиняется по их изменениям.",
   "The model did not answer: {message}": "Модель не ответила: {message}",
-  "Send the first message of the session: the commit message is composed in its context.":
-    "Сначала отправьте первое сообщение сессии: сообщение коммита сочиняется в её контексте.",
+  "Send the first message of the chat: the commit message is composed in its context.":
+    "Сначала отправьте первое сообщение чата: сообщение коммита сочиняется в его контексте.",
   "The model did not suggest a message — write it yourself or try again.":
     "Модель не предложила сообщение — напишите его сами или попробуйте ещё раз.",
   "Goal: {text}": "Цель: {text}",
-  "Session goal: the agent works in iterations until the check accepts the goal":
-    "Цель сессии: агент работает итерациями, пока проверка не засчитает цель",
+  "Chat goal: the agent works in iterations until the check accepts the goal":
+    "Цель чата: агент работает итерациями, пока проверка не засчитает цель",
   "The goal check reached no decision — the goal is paused; resume when ready. The check answered: {answer}":
     "Проверка цели не вынесла решения — цель на паузе; продолжите, когда будете готовы. Ответ проверки: {answer}",
   "The goal check failed — the goal is paused; resume when ready. Reason: {cause}":
     "Проверка цели не прошла — цель на паузе; продолжите, когда будете готовы. Причина: {cause}",
-  "Side conversation: a branch of this session in a tab nearby — the main one does not change":
-    "Побочный диалог: ответвление этой сессии во вкладке рядом — основная не меняется",
+  "Side chat: a branch of this chat in a tab nearby — the main one does not change":
+    "Побочный чат: ответвление этого чата во вкладке рядом — основной не меняется",
   "Message not found.": "Сообщение не найдено.",
   Untitled: "Без названия",
   "In the conversation": "В переписке",
-  "Session archive": "Архив сессий",
-  "Show sessions": "Показать сессии",
+  "Chat archive": "Архив чатов",
+  "Show chats": "Показать чаты",
   "Show archive": "Показать архив",
   "out of archive": "из архива",
   "to archive": "в архив",
-  sessions: "сессии",
+  chats: "чаты",
   archive: "архив",
   "Command /org.": "Команда /org.",
   "Create automation": "Создать автоматизацию",
@@ -328,7 +328,7 @@ export const session = {
   "Git: commit the changes": "Git: закоммитить изменения",
   "Git: push the branch": "Git: отправить ветку",
   "ctrl+p — pause, resume, reset": "ctrl+p — пауза, продолжить, сбросить",
-  "Open a session with a goal.": "Откройте сессию с целью.",
+  "Open a chat with a goal.": "Откройте чат с целью.",
   "Failed.": "Не удалось.",
   "Buff: goal — pause": "Buff: цель — пауза",
   "The goal is paused.": "Цель на паузе.",
@@ -336,13 +336,13 @@ export const session = {
   "The goal is in progress again.": "Цель снова в работе.",
   "Buff: goal — reset": "Buff: цель — сбросить",
   "The goal is reset.": "Цель сброшена.",
-  "The mode is set in a session: send a message first.": "Режим задаётся в сессии: сначала отправьте сообщение.",
+  "The mode is set in a chat: send a message first.": "Режим задаётся в чате: сначала отправьте сообщение.",
   "Mode: {mode}": "Режим: {mode}",
   "Permission mode: ask, edit on its own, full access": "Режим разрешений: спрашивать, править самому, полный доступ",
   "Buff: to-do list": "Buff: список дел",
-  "This session has no to-do list yet.": "Списка дел в этой сессии пока нет.",
+  "This chat has no to-do list yet.": "Списка дел в этом чате пока нет.",
   "Buff: go to a request": "Buff: перейти к запросу",
-  "{title} is open. The main session is in the next tab.": "{title} открыт. Основная сессия — в соседней вкладке.",
+  "{title} is open. The main chat is in the next tab.": "{title} открыт. Основной чат — в соседней вкладке.",
   "{hint}. Empty — just reject.": "{hint}. Пусто — просто отказать.",
   "Add to chat": "Добавить в чат",
   "{cost} — estimated by the tariff": "{cost} — оценка по тарифу",
@@ -412,7 +412,7 @@ export const session = {
   "Set it in Settings → Providers": "Задаётся в «Настройки → Провайдеры»",
   Compact: "Компактный",
   "Mid-size": "Средний",
-  "Cheaper and faster: the dialogue is compacted sooner": "Дешевле и быстрее — диалог уплотняется раньше",
+  "Cheaper and faster: the chat is compacted sooner": "Дешевле и быстрее — чат сжимается раньше",
   "A balance of memory and cost": "Баланс памяти и стоимости",
   Large: "Большой",
   "Keeps long work in mind: costlier": "Держит в памяти долгую работу — дороже",
@@ -426,15 +426,13 @@ export const session = {
   "Failed to change the context window": "Не удалось изменить окно контекста",
   "Switch context window": "Сменить окно контекста",
   "Select context window": "Выбор окна контекста",
-  "For a new session, until it names its own": "Для новой сессии, пока она не назовёт своё",
+  "For a new chat, until it names its own": "Для нового чата, пока он не назовёт своё",
   "How long the model thinks before answering": "Сколько модель думает перед ответом",
-  "How much of the dialogue the model keeps in mind before compaction":
-    "Сколько диалога модель держит в памяти до уплотнения",
+  "How much of the chat the model keeps in mind before compaction":
+    "Сколько чата модель держит в памяти до сжатия",
   // #765: режим «Настройка» — подтверждение перехода и команда /setup.
-  "Open a setup session «{title}»": "Открыть сессию настройки «{title}»",
+  "Open a self-setup chat «{title}»": "Открыть чат самонастройки «{title}»",
   "Task: {task}": "Задача: {task}",
-  "Setup: a new session where the agent connects itself to what you need":
-    "Настройка: новая сессия, где агент сам подключает себя к тому, что вам нужно",
   // #765: инструменты подключений — подтверждения и форма входа.
   "Save connection «{name}» for {where}": "Сохранить подключение «{name}» для: {where}",
   "this project": "этот проект",
@@ -463,12 +461,31 @@ export const session = {
   "Work: the agent does the task — reads, edits and runs by the permission mode.":
     "Работа: агент выполняет задачу — читает, правит и запускает по режиму разрешений.",
   "Plan: the agent does not edit files, it drafts a plan.": "План: агент не правит файлы, а составляет план.",
-  "Setup: the agent connects itself to a service, an account or a folder you need.":
-    "Настройка: агент сам подключает себя к сервису, аккаунту или папке, которые вам нужны.",
   // #765: переключатель режима «Настройка» и форма режима.
-  "Setup: the agent connects itself to what you need. Click to get back to work.":
-    "Настройка: агент сам подключает себя к тому, что вам нужно. Нажмите, чтобы вернуться к работе.",
-  "Turn on Setup: connect a service, an account or a folder to the agent.":
-    "Включить настройку: подключить к агенту сервис, аккаунт или папку.",
+  "Self-setup: the agent connects itself to what you need. Click to get back to work.":
+    "Самонастройка: агент сам подключается к тому, что вам нужно. Нажмите, чтобы вернуться к работе.",
+  "Turn on Self-setup: connect a service, an account or a folder to the agent.":
+    "Включить самонастройку: подключить к агенту сервис, аккаунт или папку.",
   "Own answer": "Свой вариант",
+  // Buff (#969, R13-07): подключение, выключенное в одном чате — слова для модели.
+  "The user turned the connection «{server}» off in this chat, so its tools are not available here. Do not retry and do not reach the same service another way; tell the user it is off in this chat — only they can turn it back on.":
+    "Пользователь выключил подключение «{server}» в этом чате, поэтому его инструменты здесь недоступны. Не повторяй вызов и не обращайся к тому же сервису другим путём; скажи пользователю, что подключение выключено в этом чате, — включить его может только он.",
+  "Your unsent text was set aside": "Ваш неотправленный текст отложен",
+  "The box now holds the request you went back to.": "В поле ввода теперь запрос, к которому вы вернулись.",
+  "Bring my text back": "Вернуть мой текст",
+  "Send the remark": "Отправить замечание",
+  "Connections in this chat": "Подключения в этом чате",
+  "Turn a connection off for this chat only": "Выключить подключение только для этого чата",
+  "A connection turned off here is out of this chat only; the other chats keep it.":
+    "Выключенное здесь подключение не используется только в этом чате; в остальных оно остаётся.",
+  "Used in this chat": "Используется в этом чате",
+  "Off in this chat": "Выключено в этом чате",
+  "Nothing is connected yet.": "Пока ничего не подключено.",
+  "The agent asks to run «{action}».": "Агент просит выполнить «{action}».",
+  "This is a copy of the chat: ask here apart — the main chat does not change.":
+    "Это копия чата: спрашивайте здесь отдельно — основной чат не изменится.",
+  "Leave as it is": "Оставить как есть",
+  "The chat's connections could not be read. If this Buff Code has not been updated for long — update it.":
+    "Не удалось прочитать подключения чата. Если этот Buff Code давно не обновлялся — обновите его.",
+  "On its way — the agent gets it at its next step": "В пути — агент получит на следующем шаге",
 } as const

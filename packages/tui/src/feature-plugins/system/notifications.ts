@@ -39,7 +39,7 @@ export default Plugin.define({
         return
       }
       const session = context.data.session.get(sessionID)
-      notify(context, sessionID, t("Session done"), session?.parentID ? "subagent_done" : "done")
+      notify(context, sessionID, t("The agent is done"), session?.parentID ? "subagent_done" : "done")
     }
 
     const dispose = [
@@ -70,7 +70,7 @@ export default Plugin.define({
         notify(context, sessionID, event.data.error.message, "error")
         context.ui.toast.show({
           sessionID,
-          title: t("Session failed"),
+          title: t("The agent failed"),
           message: event.data.error.message,
           variant: "error",
         })

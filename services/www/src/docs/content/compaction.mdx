@@ -2,8 +2,8 @@
 title: "Compaction"
 ---
 
-Compaction gives a long session more context space by replacing its older active
-context with a generated checkpoint. Earlier session messages remain stored,
+Compaction gives a long chat more context space by replacing its older active
+context with a generated checkpoint. Earlier chat messages remain stored,
 but future model requests start from the latest completed checkpoint.
 
 ## Start
@@ -22,7 +22,7 @@ about 15,000 tokens of recent conversation beside the generated summary:
 }
 ```
 
-Continue using the session normally. When its active context approaches the
+Continue using the chat normally. When its active context approaches the
 model limit, OpenCode creates a checkpoint and retries the pending work with
 more room. Compaction is lossy, so increase `keep.tokens` when exact recent
 details matter.
@@ -38,8 +38,8 @@ curl -X POST http://localhost:4096/api/session/ses_example/compact \
   -d '{}'
 ```
 
-OpenCode stores the request before waking the session. The response confirms
-admission; it does not wait for the summary. Wait for the session or follow
+OpenCode stores the request before waking the chat. The response confirms
+admission; it does not wait for the summary. Wait for the chat or follow
 `session.compaction.*` events to learn when it finishes. See the generated
 [API reference](/api) for the full operation.
 
@@ -165,7 +165,7 @@ A model setting overrides the provider setting.
 | Scheduling | Checkpoints run at normal safe step boundaries. `compaction.auto: false` disables all new automatic work. |
 | Usage | After a native checkpoint is installed, automatic checks wait for fresh model usage because encrypted checkpoint bytes cannot provide a meaningful token count. |
 | OpenAI | Responses routes use a streamed compaction trigger when supported; endpoint-only routes use the standalone compaction endpoint. Deployment and model support vary. |
-| Retries | Transient provider failures use the normal session retry policy and plugin hook. Nothing is installed until the provider returns a checkpoint. |
+| Retries | Transient provider failures use the normal chat retry policy and plugin hook. Nothing is installed until the provider returns a checkpoint. |
 | Routes | Unsupported routes fail during model resolution. Configure custom endpoints with provider or model `settings.baseURL`. Native compaction rejects endpoint rewrites made by a `model.request` hook. |
 | Replay | Native checkpoints are reused only with the same provider, model, protocol, and endpoint. An incompatible route falls back to an earlier compatible checkpoint or retained transcript. |
 
@@ -192,7 +192,7 @@ fallback. Manual native compaction also returns errors without fallback.
 
 ## Checkpoints
 
-For local compaction, OpenCode uses the session's selected agent, model, and
+For local compaction, OpenCode uses the chat's selected agent, model, and
 variant. It sends the normal instructions, tools, and older history followed by
 a request for a structured checkpoint:
 
@@ -205,7 +205,7 @@ Finish the authentication migration.
 - Verify the login flow.
 ```
 
-Context hooks run as they do for a normal session request. Local tool calls are
+Context hooks run as they do for a normal chat request. Local tool calls are
 not dispatched, and compaction does not override tool choice. Provider-hosted
 tools remain subject to provider behavior.
 
@@ -247,7 +247,7 @@ initial instructions → instruction update → completed checkpoint → new bas
 
 When compaction completes, the instruction values already accepted at that exact
 point become the new baseline. Compaction does not reread sources or emit a new
-instruction update. Moving a session keeps this state, so instructions changed
+instruction update. Moving a chat keeps this state, so instructions changed
 at the destination appear chronologically. A committed revert clears it, and
 the next model attempt performs one complete source read. See
 [Instructions](/instructions) for source ordering and update behavior.

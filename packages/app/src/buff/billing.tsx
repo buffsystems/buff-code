@@ -194,7 +194,7 @@ function BillingDialog(props: { billing: Billing; sessionCost: Accessor<{ readon
                     {(cost) => (
                       <>
                         <div class="buff-billing-row" data-slot="session">
-                          <span class="buff-billing-label">{t("This session")}</span>
+                          <span class="buff-billing-label">{t("This chat")}</span>
                           <span class="buff-billing-value">{cost()}</span>
                         </div>
                         <span class="buff-billing-note">

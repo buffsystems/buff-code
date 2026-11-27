@@ -1,4 +1,4 @@
-// Побочный диалог (#464): ответвление основной сессии — номер, название, список.
+// Побочный чат (#464): ответвление основной сессии — номер, название, список.
 import { describe, expect, test } from "bun:test"
 import { BuffSide } from "../src/buff-side.js"
 import { BuffI18n } from "../src/buff-i18n.js"
@@ -7,7 +7,7 @@ const ru: BuffI18n.T = (text, params) => BuffI18n.t("ru", text, params)
 
 describe("side conversations of a session", () => {
   test("numbered in order, titled for the user", () => {
-    expect(BuffSide.title(1, ru)).toBe("Побочный диалог 1")
+    expect(BuffSide.title(1, ru)).toBe("Побочный чат 1")
     expect(BuffSide.next([])).toBe(1)
     expect(
       BuffSide.next([

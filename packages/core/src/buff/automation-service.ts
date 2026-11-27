@@ -1,5 +1,7 @@
 export * as BuffAutomationService from "./automation-service.js"
 
+import { mkdir, rename, writeFile } from "node:fs/promises"
+import path from "node:path"
 import { Cause, Context, Duration, Effect, Layer, Option, Schema, Semaphore, Stream } from "effect"
 import type { Scope } from "effect"
 import { BuffAutomation } from "@opencode/schema/buff-automation"
@@ -48,6 +50,24 @@ const TICK = Duration.seconds(30)
 const decodeModel = Schema.decodeUnknownSync(Model.Ref)
 const decodeLocation = Schema.decodeUnknownSync(Location.Ref)
 
+/**
+ * Облачная машина спит без дела (#969): её служба будит машину к ближайшему сроку, и движок пишет
+ * этот срок в файл, который назвала служба (`BUFF_WAKE_FILE`, `{"next": мс | null}`). Без
+ * переменной — свой компьютер — ничего не пишется. Пишется только изменившийся срок.
+ */
+export const wakeWriter = (file: string | undefined) => {
+  let written: number | null | undefined
+  return (next: number | null) =>
+    !file || next === written
+      ? Effect.void
+      : Effect.tryPromise(async () => {
+          await mkdir(path.dirname(file), { recursive: true })
+          await writeFile(`${file}.tmp`, JSON.stringify({ next }) + "\n")
+          await rename(`${file}.tmp`, file)
+          written = next
+        }).pipe(Effect.catchCause((cause) => Effect.logWarning("buff automation wake file not written", { cause })))
+}
+
 const reason = (cause: unknown): string =>
   typeof cause === "object" &&
   cause !== null &&
@@ -55,7 +75,7 @@ const reason = (cause: unknown): string =>
   typeof cause.message === "string" &&
   cause.message
     ? cause.message
-    : "The run session could not be started."
+    : "The run chat could not be started."
 
 const layer = Layer.effect(
   Service,
@@ -64,7 +84,16 @@ const layer = Layer.effect(
     const sessions = yield* Session.Service
     const bus = yield* Bus.Service
     const lock = yield* Semaphore.make(1)
-    const locked = <A>(effect: Effect.Effect<A>) => lock.withPermits(1)(effect)
+    const writeWake = wakeWriter(process.env.BUFF_WAKE_FILE)
+    // Каждое изменение под замком заканчивается записью ближайшего срока (#969).
+    const locked = <A>(effect: Effect.Effect<A>) =>
+      lock.withPermits(1)(
+        effect.pipe(
+          Effect.tap(() =>
+            deps.store.list().pipe(Effect.flatMap((list) => writeWake(BuffAutomationRunner.nextWake(list)))),
+          ),
+        ),
+      )
     let sequence = 0
     const deps: BuffAutomationRunner.Deps = {
       store: BuffAutomationStore.make(storage(kv, "buff.automation")),

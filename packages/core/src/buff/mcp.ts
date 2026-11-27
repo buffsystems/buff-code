@@ -1,5 +1,6 @@
 export * as BuffMcpPlugin from "./mcp.js"
 
+import path from "node:path"
 import { Duration, Effect, Option, Schema } from "effect"
 import type { Scope } from "effect"
 import { define, type Context } from "@opencode/plugin/effect/plugin"
@@ -9,6 +10,8 @@ import { BuffSkill } from "@opencode/schema/buff-skill"
 import { ServerConfig } from "@opencode/schema/mcp"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { Event as ConfigEvent } from "@opencode/schema/config"
+import { Bus } from "../bus.js"
 import { Config } from "../config.js"
 import { BuffConfigFiles } from "./config-files.js"
 import { BuffConnectionScript } from "./connection-script.js"
@@ -35,6 +38,11 @@ const { refuse } = BuffConfigFiles
 export interface Options {
   /** Сколько ждать, пока изменённый файл перечитают и серверы переподключатся. */
   readonly settle: Duration.Input
+  /**
+   * Попросить ядро перечитать конфигурацию во всех открытых местах (#969): правка из интерфейса
+   * не ждёт наблюдателя за файлами — в песочнице облачной машины он не работает вовсе.
+   */
+  readonly reread: Effect.Effect<void>
   /** Каталог конфигурации пользователя — общий для всех проектов. */
   readonly userDirectory: string
   /** Личная папка проекта (#951); вне проекта её нет. */
@@ -63,8 +71,20 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
     return found
   })
 
+  // Порядок, в котором человек добавлял свои серверы (R16-02): по нему предел оператора оставляет
+  // первые добавленные. Рядом с конфигурацией пользователя.
+  const orderFile = path.join(options.userDirectory, BuffMcp.ORDER_FILE)
+  const order = text(orderFile).pipe(Effect.map(BuffMcp.parseOrder))
+  const reorder = (change: (order: string[]) => string[]) =>
+    Effect.gen(function* () {
+      const before = yield* order
+      const after = change(before)
+      if (JSON.stringify(after) !== JSON.stringify(before)) yield* write(orderFile, JSON.stringify({ order: after }) + "\n")
+    })
+
   const list = Effect.gen(function* () {
     const where = yield* placed
+    const added = yield* order
     const statuses = new Map((yield* mcp.servers()).map((server) => [String(server.name), server.status]))
     const own = [...where].map(
       ([name, at]): BuffMcp.Entry => ({
@@ -74,6 +94,7 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
         config: Option.getOrUndefined(decodeConfig(at.raw)),
         // Файл уже изменён, а ядро сервер ещё не подняло — это «подключается».
         status: statuses.get(name) ?? { status: "pending" },
+        ...(at.scope === "user" && added.includes(name) ? { added: added.indexOf(name) } : {}),
       }),
     )
     const builtin = [...statuses]
@@ -124,7 +145,7 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
     if (problem) return yield* refuse("invalid", problem)
   })
 
-  const settled = Effect.sleep(options.settle)
+  const settled = options.reread.pipe(Effect.andThen(Effect.sleep(options.settle)))
 
   let changed: Effect.Effect<void> = Effect.void
   const registration = yield* ctx.rpc
@@ -143,6 +164,9 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
             yield* erase(previous.scope, previous.name)
           if (script) yield* script.drop
           if (rescoped) yield* instructionsMove(rescoped, input)
+          const renamed = previous?.scope === "user" ? previous.name : undefined
+          if (input.scope === "user") yield* reorder((names) => BuffMcp.orderAdded(names, input.name, renamed))
+          else if (renamed) yield* reorder((names) => BuffMcp.orderRemoved(names, renamed))
           yield* settled
           yield* changed
           return undefined
@@ -151,6 +175,7 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
         Effect.gen(function* () {
           yield* check(input.name)
           yield* erase(input.scope, input.name)
+          if (input.scope === "user") yield* reorder((names) => BuffMcp.orderRemoved(names, input.name))
           yield* settled
           yield* changed
           return undefined
@@ -174,12 +199,16 @@ export const register = Effect.fn("BuffMcp.register")(function* (ctx: Context, o
   changed = registration.events.emit("changed", {}).pipe(Effect.ignore)
 })
 
-export const Plugin = define<Config.Service | Mcp.Service | FSUtil.Service | Global.Service | Scope.Scope>({
+/** «Конфигурация изменилась» без места: её перечитывает каждое открытое место — и переподключает серверы. */
+export const reread = (bus: Bus.Interface) => bus.publish(ConfigEvent.Updated, {}, { global: true }).pipe(Effect.asVoid)
+
+export const Plugin = define<Bus.Service | Config.Service | Mcp.Service | FSUtil.Service | Global.Service | Scope.Scope>({
   id: "buff.mcp",
-  // Ядро перечитывает изменённый файл с задержкой и затем переподключает серверы.
+  // Правка перечитывается сразу, не дожидаясь наблюдателя; ядро затем переподключает серверы.
   effect: Effect.fn(function* (ctx) {
     const global = yield* Global.Service
     yield* register(ctx, {
+      reread: reread(yield* Bus.Service),
       settle: "400 millis",
       userDirectory: global.config,
       localDirectory: yield* BuffProjectDir.personalFor(ctx.location.project),

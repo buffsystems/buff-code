@@ -26,7 +26,7 @@ export function isSetup(session: { readonly agent?: string }): boolean {
 
 /** Строки запроса разрешения — то, что человек подтверждает, на его языке. */
 export function confirmation(input: { readonly title: string; readonly task: string }, t: BuffI18n.T): string[] {
-  return [t("Open a setup session «{title}»", { title: input.title }), t("Task: {task}", { task: input.task })]
+  return [t("Open a self-setup chat «{title}»", { title: input.title }), t("Task: {task}", { task: input.task })]
 }
 
 const portable = Schema.toStandardSchemaV1

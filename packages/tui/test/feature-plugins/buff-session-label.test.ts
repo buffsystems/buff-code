@@ -3,10 +3,10 @@
 import { expect, test } from "bun:test"
 import { sessionLabel } from "../../src/feature-plugins/buff/session-label"
 
-test("сессия без названия — «Новая сессия», вложенная — «Сессия субагента», без метки времени", () => {
-  expect(sessionLabel("New session - 2026-10-04T06:49:50.199Z")).toBe("Новая сессия")
-  expect(sessionLabel("Child session - 2026-10-04T06:49:50.199Z")).toBe("Сессия субагента")
-  expect(sessionLabel("New session")).toBe("Новая сессия")
+test("чат без названия — «Новый чат», вложенная — «Чат субагента», без метки времени", () => {
+  expect(sessionLabel("New session - 2026-10-04T06:49:50.199Z")).toBe("Новый чат")
+  expect(sessionLabel("Child session - 2026-10-04T06:49:50.199Z")).toBe("Чат субагента")
+  expect(sessionLabel("New chat")).toBe("Новый чат")
 })
 
 test("настоящее название — как есть; нет названия — нет подписи", () => {

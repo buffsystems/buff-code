@@ -16,7 +16,7 @@ export const account = {
   "No balance information yet.": "Сведений об остатке пока нет.",
   "Tariff": "Тариф",
   "not assigned": "не назначен",
-  "This session": "Эта сессия",
+  "This chat": "Этот чат",
   "An estimate at tariff prices: cached input is counted as regular; Buff calculates the exact charge.": "Оценка по ценам тарифа: вход из кеша посчитан как обычный, точное списание считает Buff.",
   "The organization administrator tops up the balance in the Buff cabinet: «Settings» → organization → «Balance».": "Баланс пополняет администратор организации в кабинете Buff: «Настройки» → организация → «Баланс».",
   "Open cabinet": "Открыть кабинет",
@@ -60,7 +60,7 @@ export const account = {
   "Untitled": "Без названия",
   "Search the conversations": "Поиск по переписке",
   "What you wrote or what the model answered": "Что писали вы или что отвечала модель",
-  "Searches the message text in all sessions.": "Ищет по тексту сообщений во всех сессиях.",
+  "Searches the message text in all chats.": "Ищет по тексту сообщений во всех чатах.",
   "Searching…": "Ищу…",
   "Nothing found.": "Ничего не найдено.",
   "Getting to know Buff Code": "Знакомство с Buff Code",
@@ -70,6 +70,8 @@ export const account = {
   "Back": "Назад",
   "Next": "Далее",
   "Show the Buff Code introduction": "Показать знакомство с Buff Code",
+  "Five short steps: what you do, how a chat and the window look, memory and the hooks check, self-setup. Shortcut — Ctrl+Shift+H.":
+    "Пять коротких шагов: род занятий, вид чата и окна, память и проверка хуков, самонастройка. Сочетание — Ctrl+Shift+H.",
   "Three short steps: what you do, the theme, memory and the hooks check. Shortcut — Ctrl+Shift+H.": "Три коротких шага: род занятий, тема, память и проверка хуков. Сочетание — Ctrl+Shift+H.",
   "Go through again": "Пройти заново",
   "Could not load the worktrees": "Не удалось загрузить рабочие деревья",
@@ -113,6 +115,31 @@ export const account = {
   "This decides how much Buff Code does on its own without asking.": "От этого зависит, сколько Buff Code делает сам, не спрашивая.",
   "How should Buff Code look?": "Как будет выглядеть Buff Code?",
   "You can change the theme and text size in settings at any time.": "Тему и размер текста можно сменить в любой момент в настройках.",
+  "How should a chat look?": "Как показывать чат?",
+  // #595, #987: последний шаг знакомства — самонастройка и саморасширение.
+  "Buff Code sets itself up": "Buff Code настраивает себя сам",
+  "Open «Self-setup» in the sidebar and say what is missing — the agent does it, checks it and shows you.":
+    "Откройте «Самонастройку» в боковой панели и скажите, чего не хватает, — агент сделает, проверит и покажет.",
+  "Connects to what you use": "Подключается к тому, чем вы пользуетесь",
+  "A tracker, mail, a database, a folder — say its name or give a link.":
+    "Трекер, почта, база данных, папка — назовите или дайте ссылку.",
+  "Draws its answers": "Рисует ответы",
+  "Charts are built in. Ask for a diagram or a board of your own and it makes a chat plugin.":
+    "Графики уже встроены. Попросите свою схему или доску — он сделает плагин чатов.",
+  "Learns your ways": "Учится вашим правилам",
+  "A skill or a rule it keeps for every next chat — proposed first, saved after your yes.":
+    "Умение или правило на все следующие чаты: сначала предложит, сохранит после вашего «да».",
+  "You can switch at any time: Settings → Appearance → Chat layout.":
+    "Сменить можно в любой момент: Настройки → Внешний вид → Раскладка чата.",
+  "Simple": "Просто",
+  "The agent's work is one line — «Worked 21 s · 9 steps». Open it to see the steps in plain words. For talking to the agent.":
+    "Работа агента — одной строкой: «Работал 21 с · 9 шагов». Раскройте её, чтобы увидеть шаги простыми словами. Для разговора с агентом.",
+  "For a developer": "Для разработчика",
+  "Every command, edit and thought of the agent is a block of its own, and you set how much of it to show.":
+    "Каждая команда, правка и мысль агента — отдельным блоком, а сколько из этого показывать, настраивается.",
+  "Chat layout": "Раскладка чата",
+  "Simple — the agent's work in one line; for a developer — every command and edit as its own block.":
+    "Просто — работа агента одной строкой; для разработчика — каждая команда и правка отдельным блоком.",
   "What to turn on?": "Что включить?",
   "Both switches are also in the extensions settings.": "Оба переключателя есть и в настройках расширений.",
   "Development": "Разработка",
@@ -159,7 +186,7 @@ export const account = {
   "Balance of {org}": "Остаток {org}",
   "Will last at the current spending": "Хватит при текущем расходе",
   "Price per 1M tokens": "Цена за 1 млн токенов",
-  "This session (estimate)": "Эта сессия (оценка)",
+  "This chat (estimate)": "Этот чат (оценка)",
   "Buff cabinet: {url}": "Кабинет Buff: {url}",
   "Buff: balance and spending": "Buff: баланс и расход",
   "{warning} /balance — details.": "{warning} /balance — подробности.",

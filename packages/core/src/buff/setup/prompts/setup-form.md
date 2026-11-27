@@ -1,4 +1,4 @@
-Show the user a form and get their answers: addresses, logins, paths, choices, numbers, a link they must open — and secrets. Setup mode only.
+Show the user a form and get their answers: addresses, logins, paths, choices, numbers, a link they must open — and secrets. Self-setup mode only.
 
 Call it the moment you know what the connection needs from the user and the user has agreed to connect it. Ask everything one connection needs in one form; a second form only when the first answers decide what else is needed. Never ask for a password, key or token in the chat — only through a `secret` field here.
 

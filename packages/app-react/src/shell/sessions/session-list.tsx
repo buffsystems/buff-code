@@ -128,7 +128,7 @@ function ServerSessionList(props: { server: Server; current?: string }) {
   return (
     <div data-component="buff-sessions" className="mt-4 flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex shrink-0 flex-col gap-1.5 px-1">
-        <span className="ui-eyebrow">{i18n.buff.t("All sessions")}</span>
+        <span className="ui-eyebrow">{i18n.buff.t("All chats")}</span>
         <Input
           compact
           aria-label={i18n.buff.t("Search by title")}
@@ -146,7 +146,7 @@ function ServerSessionList(props: { server: Server; current?: string }) {
               <span className="ui-note px-1.5 text-xs">
                 {section.kind === "setup"
                   ? i18n.buff.t("Nothing connected yet — press + and ask to connect something.")
-                  : i18n.buff.t("Empty — add a session from its menu.")}
+                  : i18n.buff.t("Empty — add a chat from its menu.")}
               </span>
             ) : (
               section.items.map((row) => (
@@ -163,7 +163,7 @@ function ServerSessionList(props: { server: Server; current?: string }) {
         ))}
         {sections.length === 0 && (
           <span className="ui-note px-1.5 text-xs">
-            {query ? i18n.buff.t("Nothing found by title.") : i18n.buff.t("No sessions yet.")}
+            {query ? i18n.buff.t("Nothing found by title.") : i18n.buff.t("No chats yet.")}
           </span>
         )}
         {search.results.length > 0 && (
@@ -212,7 +212,7 @@ function useMarkChange(server: Server) {
         (next) => client.setQueryData(["session-marks", server.key], next),
         (error: unknown) =>
           showToast({
-            title: i18n.buff.t("Sessions"),
+            title: i18n.buff.t("Chats"),
             description: i18n.buff.t(error instanceof Error ? error.message : "Could not save."),
           }),
       )
@@ -258,7 +258,7 @@ function SessionRow(props: {
         () => props.server.data.session.remember({ ...props.row.session, title }),
         (error: unknown) =>
           showToast({
-            title: i18n.buff.t("Sessions"),
+            title: i18n.buff.t("Chats"),
             description: error instanceof Error ? error.message : i18n.buff.t("Could not rename."),
           }),
       )
@@ -287,7 +287,7 @@ function SessionRow(props: {
             <DropdownMenuItem
               data-action="buff-sessions-rename"
               onSelect={() =>
-                ask({ title: i18n.buff.t("Rename session"), name: props.row.title }, (name) => void rename(name))
+                ask({ title: i18n.buff.t("Rename chat"), name: props.row.title }, (name) => void rename(name))
               }
             >
               {i18n.buff.t("Rename")}
@@ -411,7 +411,7 @@ function SectionTitle(props: {
             {i18n.buff.t("Edit group")}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void change({ type: "group.remove", groupID: group.id })}>
-            {i18n.buff.t("Delete group — sessions stay")}
+            {i18n.buff.t("Delete group — chats stay")}
           </DropdownMenuItem>
         </>
       }
@@ -436,17 +436,17 @@ function SetupTitle(props: { server: Server; onOpen: (session: SessionInfo) => v
   const t = i18n.buff.t
   const add = () =>
     openSetupSession(props.server.api(), props.onOpen).catch((error: unknown) =>
-      showToast({ title: t("Setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
+      showToast({ title: t("Self-setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
     )
   return (
     <span data-component="buff-sessions-setup" className="ui-eyebrow flex items-center justify-between px-1.5">
-      {t("Setup")}
+      {t("Self-setup")}
       <IconButton
         data-action="buff-setup-new"
         icon={Plus}
         size="xs"
-        title={t("New setup")}
-        aria-label={t("New setup")}
+        title={t("New self-setup")}
+        aria-label={t("New self-setup")}
         onClick={() => void add()}
       />
     </span>

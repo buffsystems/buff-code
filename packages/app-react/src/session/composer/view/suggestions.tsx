@@ -11,7 +11,12 @@ import { useI18n } from "../../../i18n/provider"
 import { useStore } from "../../../react/use-store"
 import type { ComposerController } from "../editor/controller"
 
-export function Suggestions(props: { controller: ComposerController }) {
+/** The DOM id of a suggestion — what the box names as its active descendant (#972, R2-26). */
+export function suggestionId(listId: string, id: string) {
+  return `${listId}-${id.replace(/[^\w-]/g, "_")}`
+}
+
+export function Suggestions(props: { controller: ComposerController; listId: string }) {
   const i18n = useI18n()
   const controller = props.controller
   const popover = useStore(controller.interaction, (state) => state.popover)
@@ -34,10 +39,16 @@ export function Suggestions(props: { controller: ComposerController }) {
         />
       )}
       {items.length === 0 && <div className="composer-suggestions__empty">{i18n.t("ui.promptInput.noMatchingItems")}</div>}
+      <div id={props.listId} role="listbox" aria-label={i18n.t("ui.promptInput.commands")} className="contents">
       {items.map((item) => (
         <button
           key={item.id}
           type="button"
+          id={suggestionId(props.listId, item.id)}
+          role="option"
+          aria-selected={active === item.id}
+          // The box keeps focus and names the active one; Tab does not walk the list.
+          tabIndex={-1}
           data-suggestion-id={item.id}
           data-active={active === item.id ? "" : undefined}
           className="composer-suggestions__item"
@@ -54,6 +65,7 @@ export function Suggestions(props: { controller: ComposerController }) {
           )}
         </button>
       ))}
+      </div>
     </div>
   )
 }

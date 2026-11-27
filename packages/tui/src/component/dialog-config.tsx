@@ -48,7 +48,7 @@ export const settings: Setting[] = [
   },
   {
     title: "Sidebar",
-    category: "Session",
+    category: "Chat",
     path: ["session", "sidebar"],
     default: "auto",
     values: ["hide", "auto"],
@@ -56,7 +56,7 @@ export const settings: Setting[] = [
   },
   {
     title: "Scrollbar",
-    category: "Session",
+    category: "Chat",
     path: ["session", "scrollbar"],
     default: false,
     values: [false, true],
@@ -65,7 +65,7 @@ export const settings: Setting[] = [
   },
   {
     title: "Thinking",
-    category: "Session",
+    category: "Chat",
     path: ["session", "thinking"],
     default: "hide",
     values: ["hide", "show"],
@@ -73,7 +73,7 @@ export const settings: Setting[] = [
   },
   {
     title: "Markdown",
-    category: "Session",
+    category: "Chat",
     path: ["session", "markdown"],
     default: "rendered",
     values: ["source", "rendered"],
@@ -81,7 +81,7 @@ export const settings: Setting[] = [
   },
   {
     title: "Tool grouping",
-    category: "Session",
+    category: "Chat",
     path: ["session", "grouping"],
     default: "auto",
     values: ["none", "auto"],
@@ -89,7 +89,7 @@ export const settings: Setting[] = [
   },
   {
     title: "Transcript images",
-    category: "Session",
+    category: "Chat",
     path: ["session", "image_preview"],
     default: false,
     values: [false, true],
@@ -98,7 +98,7 @@ export const settings: Setting[] = [
   },
   {
     title: "TPS",
-    category: "Session",
+    category: "Chat",
     path: ["session", "tps"],
     default: true,
     values: [false, true],
@@ -106,17 +106,17 @@ export const settings: Setting[] = [
     keywords: ["tokens per second", "throughput"],
   },
   {
-    title: "New session location",
-    category: "Session",
+    title: "New chat location",
+    category: "Chat",
     path: ["session", "new_location"],
     default: "launch",
     values: ["launch", "inherit"],
-    labels: ["launch directory", "active session"],
+    labels: ["launch directory", "active chat"],
     keywords: ["directory", "cwd", "inherit"],
   },
   {
     title: "Permissions",
-    category: "Session",
+    category: "Chat",
     path: ["session", "permissions"],
     default: "prompt",
     values: ["prompt", "autoaccept"],

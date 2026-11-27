@@ -12,7 +12,18 @@ import { DialogConnectProvider, useProviderConnectController } from "@/providers
 import { SettingsList } from "@/settings/list"
 import { useSettingsDirectory } from "@/settings/server-scope"
 import { BuffBillingSection } from "@/buff/billing"
-import { BUFF_PROVIDER, connectedRows, providerTag, signInOffered, type ConnectedRow } from "@/buff/providers"
+import { BuffSubscriptionSection } from "@/buff/subscription"
+import {
+  accountSignedIn,
+  accountSignInOffered,
+  BUFF_ACCOUNT,
+  BUFF_PROVIDER,
+  connectedRows,
+  pendingNote,
+  providerTag,
+  signInOffered,
+  type ConnectedRow,
+} from "@/buff/providers"
 import { useBuffText } from "@/buff/i18n"
 import { BuffChooseContextButton } from "@/buff/context-chip"
 import "@/settings/settings.css"
@@ -177,7 +188,7 @@ export const SettingsProviders: Component<{
                         </Show>
                         <Show when={item.pending}>
                           <span class="settings-provider-description">
-                            {t("Models will appear after you choose an organization and project")}
+                            {t(pendingNote(item.id))}
                           </span>
                         </Show>
                       </div>
@@ -206,6 +217,15 @@ export const SettingsProviders: Component<{
 
         {/* Buff (#455): остаток организации и ссылка в кабинет. */}
         <BuffBillingSection directory={directory()} />
+        {/* Buff (#966): подписка личного аккаунта — тариф и лимиты. */}
+        <BuffSubscriptionSection directory={directory()} account={accountSignedIn(integrations.list())} />
+        <Show when={accountSignInOffered(integrations.list())}>
+          <div class="settings-section" data-component="buff-account-sign-in-section">
+            <Button size="normal" variant="neutral" icon="plus" data-action="buff-account-sign-in" onClick={() => connect(BUFF_ACCOUNT)}>
+              {t("Sign in with a Buff account")}
+            </Button>
+          </div>
+        </Show>
 
         <Show when={signInOffered(integrations.list())}>
           <div class="settings-section" data-component="buff-sign-in-section">

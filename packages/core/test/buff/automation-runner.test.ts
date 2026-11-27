@@ -209,3 +209,20 @@ describe("how a run ends", () => {
     w.go(BuffAutomationRunner.settle(w.deps, "ses_other", { type: "failed", error: "x" }))
   })
 })
+
+// #969: облачная машина спит без дела; служба будит её к ближайшему сроку, который пишет движок.
+describe("the next wake", () => {
+  test("the earliest time among automations that are not paused; none — null", () => {
+    const w = world()
+    expect(BuffAutomationRunner.nextWake([])).toBeNull()
+    const daily = w.create()
+    const hourly = w.go(
+      BuffAutomationRunner.save(w.deps, undefined, { ...draft, schedule: { kind: "interval", every: 1, unit: "hours" } }),
+    ).automation!
+    expect(BuffAutomationRunner.nextWake(w.go(w.store.list()))).toBe(Math.min(daily.next, hourly.next))
+    w.go(BuffAutomationRunner.pause(w.deps, hourly.id, true))
+    expect(BuffAutomationRunner.nextWake(w.go(w.store.list()))).toBe(daily.next)
+    w.go(BuffAutomationRunner.pause(w.deps, daily.id, true))
+    expect(BuffAutomationRunner.nextWake(w.go(w.store.list()))).toBeNull()
+  })
+})

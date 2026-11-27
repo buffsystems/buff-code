@@ -2110,6 +2110,13 @@ testEffect(Layer.empty).live("isolates invalid MCP tools and preserves plugin tr
       expect((yield* toolDefinitions(registry)).find((tool) => tool.name === "other_lookup")?.description).toBe(
         "lookup updated",
       )
+      // R5-03: an MCP registration carries its server; a plugin's override of the same id does not.
+      const origins = new Map((yield* registry.list()).map((tool) => [tool.id, McpTool.server(tool)]))
+      expect([origins.get("demo_search"), origins.get("other_lookup"), origins.get("demo_added")]).toEqual([
+        undefined,
+        "other",
+        "demo",
+      ])
       yield* Effect.forEach(["demo_search", "other_lookup"], (name) =>
         executeTool(registry, {
           sessionID: Session.ID.make("ses_mcp_invalid_catalog"),

@@ -59,9 +59,9 @@ export const phone = {
   "«{name}» loses access to this machine; pairing it again takes a new code.":
     "«{name}» потеряет доступ к этой машине; чтобы подключить его снова, понадобится новый код.",
   // сессия с телефона
-  "Started on the phone": "Начата с телефона",
-  "Started on the phone «{device}» — continue here or on the phone, it is one session.":
-    "Начата с телефона «{device}» — продолжайте здесь или на телефоне, это одна сессия.",
+  "Started on the phone": "Начат с телефона",
+  "Started on the phone «{device}» — continue here or on the phone, it is one chat.":
+    "Начат с телефона «{device}» — продолжайте здесь или на телефоне, это один чат.",
   "from the phone «{device}»": "с телефона «{device}»",
   "from the phone": "с телефона",
   // дом машины (#639)
@@ -73,7 +73,7 @@ export const phone = {
     "Нет связи со шлюзом {gateway}: проверьте интернет — подключение повторяется само.",
   "The request was refused ({status})": "Запрос отклонён ({status})",
   "The terminal is not open": "Терминал не открыт",
-  "No such compaction in the session": "В сессии нет такого сжатия",
+  "No such compaction in the chat": "В чате нет такого сжатия",
   "The Buff Code service is not running — the phone works through it.":
     "Служба Buff Code не запущена — телефон работает через неё.",
   "The field {key} is required": "Нужно поле {key}",
@@ -83,6 +83,7 @@ export const phone = {
   "Only inside the project": "Только внутри проекта",
   "Reading files is unavailable": "Чтение файлов недоступно",
   "No such file": "Файла нет",
+  "No preview for this file": "Для этого файла нет превью",
   "The file cannot be read — it is outside the project or unavailable":
     "Файл не прочитать — он вне проекта или недоступен",
   "The terminal is unavailable": "Терминал недоступен",
@@ -96,7 +97,7 @@ export const phone = {
   "The agent waits for a permission": "Агент ждёт разрешения",
   "The agent asked a question": "Агент задал вопрос",
   "The turn is done": "Ход завершён",
-  "The session failed": "Ошибка в сессии",
+  "The chat failed": "Ошибка в чате",
   // #929: отказы, что раньше шли только по-английски.
   "Not available from the phone: {op}": "Недоступно с телефона: {op}",
   "Public links are not served by this machine": "Эта машина не обслуживает публичные ссылки",
@@ -104,4 +105,46 @@ export const phone = {
   "The machine is not connected to the gateway": "Машина не подключена к шлюзу",
   "Not available to the link viewer: {op}": "Недоступно при просмотре ссылки: {op}",
   "A wrong request to the link: {code}": "Неверный запрос к ссылке: {code}",
+  // веб-клиент (#969): действия с чатом и выгрузка
+  "The chat is working — wait for it to finish or stop it": "Чат работает — дождитесь конца или остановите его",
+  "The format is md or json": "Формат — md или json",
+  "Branch: {title}": "Ветка: {title}",
+  Chat: "Чат",
+  You: "Вы",
+  "File: {name}": "Файл: {name}",
+  // веб-клиент (#969): проекты облачной машины
+  "Available on a cloud machine only": "Доступно только на облачной машине",
+  "Chats outside projects are not a project to change": "Чаты вне проектов — не проект, его нельзя изменить",
+  "A project cannot be made here: the home folder is itself a repository, and every folder inside belongs to it":
+    "Проект здесь не создать: домашняя папка сама стала репозиторием, и любая папка в ней — его часть",
+  "Only a project made here can be removed here": "Отсюда удаляется только проект, созданный здесь",
+  "Choose what happens to the project's chats: delete or keep": "Выберите, что делать с чатами проекта: удалить или оставить",
+  // веб-клиент (#969): хранилище облачной машины
+  "Only inside your storage": "Только внутри вашего хранилища",
+  "This folder holds settings and cannot be changed here": "В этой папке настройки — здесь её менять нельзя",
+  "No such folder": "Такой папки нет",
+  "A file with this name is already there": "Файл с таким именем уже есть",
+  "The file is larger than {n} MB": "Файл больше {n} МБ",
+  // веб-клиент (#969): инструкции и память
+  "The scope is account or project": "Область — account или project",
+  "Instructions are unavailable here": "Инструкции здесь недоступны",
+  "Memory notes are unavailable here": "Заметки памяти здесь недоступны",
+  "No such note": "Такой заметки нет",
+  "No such part of the file": "Такой части файла нет",
+  "Write the note.": "Напишите заметку.",
+  // веб-клиент (#969): подключения
+  "No such connection": "Такого подключения нет",
+  "This connection is managed by the service": "Этим подключением управляет служба",
+  "The name «{name}» is taken by the service — choose another.": "Имя «{name}» занято службой — выберите другое.",
+  "The address starts with https:// or http://": "Адрес начинается с https:// или http://",
+  "No more connections can be added: the limit is {n}": "Больше подключений добавить нельзя: предел — {n}",
+  // веб-клиент (#969, R13-04): чат помощника только читается
+  "This is a helper's chat: the main chat's agent runs it, so it cannot be changed":
+    "Это чат помощника: его ведёт агент основного чата, поэтому изменить его нельзя",
+  "Disconnect all phones": "Отключить все телефоны",
+  "Disconnect all phones?": "Отключить все телефоны?",
+  "Each phone will have to be paired with this computer again.": "Каждый телефон придётся подключать к этому компьютеру заново.",
+  "Disconnect all": "Отключить все",
+  "Not every phone was disconnected.": "Не все телефоны удалось отключить.",
+  "All phones are disconnected.": "Все телефоны отключены.",
 }

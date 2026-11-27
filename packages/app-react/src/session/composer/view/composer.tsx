@@ -6,7 +6,7 @@ import { cx } from "@buff/ui/react"
 import { BuffVariant } from "@opencode/schema/buff-variant"
 import { Brain, Layers } from "lucide-react"
 import { BuffContextWindow } from "@opencode/schema/buff-context-window"
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react"
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { isAttachment } from "@opencode/app/react-reuse/composer-prompt-parts"
 import type { ContextItem } from "@opencode/app/react-reuse/composer-schema"
 import { shallowEqual, useStore } from "../../../react/use-store"
@@ -17,7 +17,7 @@ import type { ComposerController, ComposerDelivery } from "../editor/controller"
 import { promptText } from "../draft/draft"
 import { AttachmentStrip } from "./attachments"
 import { AddMenu, AlternateDelivery, ExitShell, SelectControl, SubmitButton, type SelectOption } from "./controls"
-import { Suggestions } from "./suggestions"
+import { Suggestions, suggestionId } from "./suggestions"
 import { openAttachment } from "./preview"
 import { useDialog } from "../../../dialog/dialogs"
 import { ScrollThumb } from "../../../react/scroll-thumb"
@@ -40,6 +40,8 @@ export type ComposerViewProps = {
   available: boolean
   working: boolean
   queue?: { alternate(): ComposerDelivery | undefined; editing(): string | undefined }
+  /** Buff (#972): opens «Подключения в этом чате». */
+  onConnections?(): void
   agent?: { options: SelectOption[]; current: string; onSelect(id: string): void }
   variant: { options: SelectOption[]; current: string; onSelect(id: string): void }
   /** #836: the session's context cap, beside the thinking mode. */
@@ -60,6 +62,11 @@ export function ComposerView(props: ComposerViewProps) {
   const controller = props.controller
   const draft = controller.draft
   const mode = useStore(controller.interaction, (state) => state.mode)
+  // #972 (R2-26): the box is a combobox over the suggestions — a screen reader hears the list
+  // open and which suggestion is active, while focus stays in the box.
+  const listId = useId()
+  const popover = useStore(controller.interaction, (state) => state.popover)
+  const suggesting = popover.type === "command-inline" || popover.type === "context"
   const activeContextID = useStore(controller.interaction, (state) => state.activeContextID)
   const empty = useStore(draft.store, (state) => promptText(state.prompt) === "")
   const attachments = useStore(draft.store, (state) => state.prompt.filter(isAttachment), shallowEqual)
@@ -100,7 +107,7 @@ export function ComposerView(props: ComposerViewProps) {
           event.currentTarget.value = ""
         }}
       />
-      <Suggestions controller={controller} />
+      <Suggestions controller={controller} listId={listId} />
       <form
         data-component="composer"
         data-dock-border-underlay={props.borderUnderlay ? "true" : undefined}
@@ -147,6 +154,11 @@ export function ComposerView(props: ComposerViewProps) {
             data-component="composer-editor"
             role="textbox"
             aria-multiline="true"
+            aria-haspopup="listbox"
+            aria-autocomplete="list"
+            aria-expanded={suggesting}
+            aria-controls={suggesting ? listId : undefined}
+            aria-activedescendant={suggesting && popover.activeID ? suggestionId(listId, popover.activeID) : undefined}
             aria-label={i18n.t("ui.promptInput.label")}
             dir={shell ? "ltr" : "auto"}
             contentEditable
@@ -173,6 +185,7 @@ export function ComposerView(props: ComposerViewProps) {
               onCommands={() => controller.dispatch({ type: "commands.open" })}
               onContext={() => controller.dispatch({ type: "context.open" })}
               onShell={() => controller.dispatch({ type: "mode.shell" })}
+              {...(props.onConnections ? { onConnections: props.onConnections } : {})}
             />
           </div>
           <Controls shell={shell} className={fade}>

@@ -23,8 +23,8 @@ export const cliHelp = {
   "Run with a private server instead of the background service": "Запустить со своим сервером вместо фоновой службы",
   "Connect to a server URL instead of the background service": "Подключиться к серверу по адресу вместо фоновой службы",
   "Auto-approve permissions that are not explicitly denied": "Сразу разрешать всё, что не запрещено явно",
-  "Continue the last session": "Продолжить последнюю сессию",
-  "Session ID to continue": "ID сессии, которую продолжить",
+  "Continue the last chat": "Продолжить последний чат",
+  "Chat ID to continue": "ID чата, который продолжить",
   "Prompt to use": "Начальный запрос",
   "Directory to start Buff Code in": "Каталог, в котором запустить Buff Code",
   // Подкоманды верхнего уровня.
@@ -40,7 +40,7 @@ export const cliHelp = {
   "Show shareable usage statistics": "Статистика использования, которой можно поделиться",
   "Start the minimal interactive interface": "Запустить минимальный интерактивный интерфейс",
   "Run Buff Code with a message": "Запустить Buff Code с сообщением",
-  "Manage sessions": "Сессии",
+  "Manage chats": "Чаты",
   "Manage the background server": "Фоновый сервер",
   "Reload configuration": "Перечитать настройки",
   "Show server pairing information": "Данные для подключения к серверу",
@@ -49,7 +49,7 @@ export const cliHelp = {
   "Installation method to use": "Способ установки",
   "Version to upgrade to (with or without a leading v)": "Версия для обновления, с «v» в начале или без",
   "Keep configuration files": "Оставить файлы настроек",
-  "Keep session data and snapshots": "Оставить данные сессий и снимки",
+  "Keep chat data and snapshots": "Оставить данные чатов и снимки",
   "Show what would be removed without removing": "Показать, что будет удалено, ничего не удаляя",
   "Skip confirmation prompts": "Не спрашивать подтверждения",
   "Request body": "Тело запроса",
@@ -111,24 +111,24 @@ export const cliHelp = {
   "Number of rows in detailed sections": "Число строк в подробных разделах",
   "Output statistics as JSON": "Вывести статистику в JSON",
   // mini и run.
-  "Fork the session when continuing": "Продолжить в копии сессии",
-  "Restore session history on resume and resize (disable with --no-replay)":
-    "Восстанавливать историю сессии при возобновлении и смене размера (отключить — --no-replay)",
+  "Fork the chat when continuing": "Продолжить в копии чата",
+  "Restore chat history on resume and resize (disable with --no-replay)":
+    "Восстанавливать историю чата при возобновлении и смене размера (отключить — --no-replay)",
   "Limit replay to the newest N messages (default: 200)":
     "Восстанавливать только N последних сообщений (по умолчанию 200)",
   "Model to use in the format provider/model": "Модель в виде провайдер/модель",
   "Agent to use": "Агент",
-  "Fork the session before continuing": "Скопировать сессию и продолжить в копии",
+  "Fork the chat before continuing": "Скопировать чат и продолжить в копии",
   "Model to use in the format provider/model#variant": "Модель в виде провайдер/модель#вариант",
   "File to attach to the message": "Файл, который приложить к сообщению",
   "Show thinking blocks": "Показывать размышления модели",
   "Message to send": "Сообщение",
   // session.
-  "List top-level sessions in the current project, newest first":
-    "Сессии верхнего уровня в текущем проекте, новые сверху",
-  "Delete a session and its child sessions": "Удалить сессию вместе с дочерними",
-  "Limit to N most recent sessions (default: 100)": "Только N последних сессий (по умолчанию 100)",
-  "Session ID to delete": "ID сессии, которую удалить",
+  "List top-level chats in the current project, newest first":
+    "Чаты верхнего уровня в текущем проекте, новые сверху",
+  "Delete a chat and its child chats": "Удалить чат вместе с дочерними",
+  "Limit to N most recent chats (default: 100)": "Только N последних чатов (по умолчанию 100)",
+  "Chat ID to delete": "ID чата, который удалить",
   // service.
   "Start the background server": "Запустить фоновый сервер",
   "Restart the background server": "Перезапустить фоновый сервер",

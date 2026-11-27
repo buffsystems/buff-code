@@ -1,6 +1,7 @@
 // The read-only tools (#584): read, list, glob, grep, web fetch and search, questions, skills,
 // Buff's to-do and plan cards, and the generic "Called `tool`" row for everything else.
 
+import { showToast } from "../../../shell/notifications/toast"
 import { Button } from "@buff/ui/react"
 import { BuffPlan } from "@opencode/schema/buff-plan"
 import { BuffQuestion } from "@opencode/schema/buff-question"
@@ -481,7 +482,16 @@ export function SendFileTool(props: ToolProps) {
       </div>
       {local && (
         <div className="sent-file__actions">
-          <Button size="sm" variant="ghost" data-action="buff-file-open" onClick={() => void platform.openPath?.(full)}>
+          <Button size="sm" variant="ghost" data-action="buff-file-open" onClick={() =>
+              void platform.openPath?.(full).catch((error: unknown) =>
+                showToast({
+                  variant: "error",
+                  title: i18n.buff.t("The file did not open"),
+                  description: error instanceof Error ? error.message : String(error),
+                }),
+              )
+            }
+          >
             {i18n.buff.t("Open")}
           </Button>
           {platform.revealPath && (

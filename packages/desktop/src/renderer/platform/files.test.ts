@@ -71,3 +71,15 @@ describe("desktop attachment files", () => {
     expect(events).toEqual(["clipboard:ses_123"])
   })
 })
+
+describe("opening a path with the system", () => {
+  test("the system's reason for not opening is a failure, not silence", async () => {
+    const refusing = { ...fileApi([]), openPath: async () => "No application is associated with the file" }
+    for (const os of ["linux", "windows"] as const) {
+      const files = createDesktopFiles(refusing, os)
+      await expect(files.openPath("/tmp/a.xyz")).rejects.toThrow("No application is associated")
+    }
+    // An opened path says nothing.
+    await expect(createDesktopFiles(fileApi([]), "linux").openPath("/tmp/a.txt")).resolves.toBeUndefined()
+  })
+})

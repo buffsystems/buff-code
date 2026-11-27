@@ -35,6 +35,7 @@ export const automations = {
   // ошибки расписания
   "Interval — from 1 to {max}.": "Интервал — от 1 до {max}.",
   "Time — as HH:MM, for example 09:00.": "Время — в виде ЧЧ:ММ, например 09:00.",
+  "Unknown time zone: {zone}.": "Неизвестный часовой пояс: {zone}.",
   "Choose at least one day of the week.": "Выберите хотя бы один день недели.",
   "Day of the month — from 1 to 31.": "Число месяца — от 1 до 31.",
   // следующий запуск
@@ -46,14 +47,18 @@ export const automations = {
   // запуски
   "the previous run was still going": "предыдущий запуск ещё шёл",
   "A run is already in progress — wait for it or stop it.": "Запуск уже идёт — дождитесь его или остановите.",
+  "Permission was awaited for more than an hour — the service stopped the run. Open the chat and continue yourself.":
+    "Разрешение ждали дольше часа — служба прервала запуск. Откройте чат и продолжите сами.",
+  // The texts below are what history rows written before «session» became «chat» carry (#972).
   "Permission was awaited for more than an hour — the service stopped the run. Open the session and continue yourself.":
-    "Разрешение ждали дольше часа — служба прервала запуск. Откройте сессию и продолжите сами.",
+    "Разрешение ждали дольше часа — служба прервала запуск. Откройте чат и продолжите сами.",
+  "The run session could not be started.": "Не удалось начать чат запуска.",
   "The run showed no signs of life for an hour — the service stopped it.":
     "Запуск час не подавал признаков жизни — служба его прервала.",
   "The agent proposes an automation — a task Buff Code will run by itself on a schedule. Check what, when and where — confirming creates it.":
     "Агент предлагает автоматизацию — задачу, которую Buff Code будет запускать сам по расписанию. Проверьте, что, когда и где, — подтверждение создаст её.",
   "The automation was not found — it was already deleted.": "Автоматизация не найдена — её уже удалили.",
-  "The run session could not be started.": "Сессию запуска не удалось начать.",
+  "The run chat could not be started.": "Не удалось начать чат запуска.",
   Running: "Выполняется",
   "Waiting for permission": "Ждёт разрешения",
   Completed: "Выполнен",
@@ -61,7 +66,7 @@ export const automations = {
   Stopped: "Остановлен",
   Skipped: "Пропущено",
   "Failed: {reason}": "Сбой: {reason}",
-  "no reason came — open the session": "причина не пришла — откройте сессию",
+  "no reason came — open the chat": "причина не пришла — откройте чат",
   "Skipped: {n} run ({reason})|Skipped: {n} runs ({reason})":
     "Пропущено: {n} запуск ({reason})|Пропущено: {n} запуска ({reason})|Пропущено: {n} запусков ({reason})",
   "the machine was off": "машина была выключена",
@@ -97,16 +102,16 @@ export const automations = {
   Name: "Название",
   "Morning report": "Утренний отчёт",
   "What the agent should do": "Что сделать агенту",
-  "Each run is a new session: the agent does not see this conversation, write the whole task.":
-    "Каждый запуск — новая сессия: агент не видит этого разговора, пишите задачу целиком.",
+  "Each run is a new chat: the agent does not see this conversation, write the whole task.":
+    "Каждый запуск — новый чат: агент не видит этого разговора, пишите задачу целиком.",
   "Permissions in a run": "Разрешения в запуске",
   paused: "на паузе",
   "{title} · runs: {count}": "{title} · запусков: {count}",
   "{runs} · last: {last}": "{runs} · последний: {last}",
   "Stop the run": "Остановить запуск",
   "Run now": "Запустить сейчас",
-  "Answer in the session": "Ответить в сессии",
-  "Open the run session": "Открыть сессию запуска",
+  "Answer in the chat": "Ответить в чате",
+  "Open the run chat": "Открыть чат запуска",
   Resume: "Продолжить",
   Pause: "Пауза",
   Edit: "Изменить",
@@ -116,8 +121,11 @@ export const automations = {
   "on schedule": "по расписанию",
   // страница и редактор в окне
   Automations: "Автоматизации",
-  "Tasks for the agent on a schedule. The Buff Code service on this machine runs them — even with the window closed; each run is a new session in the project.":
-    "Задачи агенту по расписанию. Запускает служба Buff Code на этой машине — и при закрытом окне; каждый запуск — новая сессия в проекте.",
+  "Tasks for the agent on a schedule. The Buff Code service on this machine runs them — even with the window closed; each run is a new chat in the project.":
+    "Задачи агенту по расписанию. Запускает служба Buff Code на этой машине — и при закрытом окне; каждый запуск — новый чат в проекте.",
+  // #972: the window says «each run is a new session» once — where the task is written.
+  "Tasks for the agent on a schedule. The Buff Code service on this machine runs them — even with the window closed.":
+    "Задачи агенту по расписанию. Запускает служба Buff Code на этой машине — и при закрытом окне.",
   "New automation": "Новая автоматизация",
   "No automations yet. Create the first one with the «New automation» button — or ask the agent in the chat: «every morning at 9 check the build and write what failed».":
     "Автоматизаций пока нет. Создайте первую кнопкой «Новая автоматизация» — или попросите агента в чате: «каждое утро в 9 проверяй сборку и пиши, что упало».",
@@ -126,7 +134,7 @@ export const automations = {
   "Runs: {count}": "Запусков: {count}",
   "Last: {run}": "Последний: {run}",
   Stop: "Остановить",
-  "Open session": "Открыть сессию",
+  "Open chat": "Открыть чат",
   History: "История",
   "Edit automation": "Изменить автоматизацию",
   "Morning commit report": "Утренний отчёт по коммитам",
@@ -139,11 +147,11 @@ export const automations = {
     "Время местное ({zone}). Запускает служба Buff Code на этой машине — и при закрытом окне.",
   "Summarize yesterday's commits and write it to REPORT.md":
     "Собери сводку по вчерашним коммитам и запиши её в REPORT.md",
-  "Each run is a new session: the agent does not see past conversations, write the whole task.":
-    "Каждый запуск — новая сессия: агент не видит прошлых разговоров, пишите задачу целиком.",
+  "Each run is a new chat: the agent does not see past conversations, write the whole task.":
+    "Каждый запуск — новый чат: агент не видит прошлых разговоров, пишите задачу целиком.",
   Project: "Проект",
-  "If a run asks anyway, it will wait for your answer in the session.":
-    "Если запуск всё же спросит — он будет ждать вашего ответа в сессии.",
+  "If a run asks anyway, it will wait for your answer in the chat.":
+    "Если запуск всё же спросит — он будет ждать вашего ответа в чате.",
   Model: "Модель",
   "Project default": "Как в проекте по умолчанию",
   Cancel: "Отмена",
@@ -161,14 +169,14 @@ export const automations = {
   "The automation run did not stop.": "Запуск не остановился.",
   "It did not work.": "Не удалось.",
   "Delete the automation «{title}»?": "Удалить автоматизацию «{title}»?",
-  "It will no longer run, its run history will be deleted. The run sessions will stay.":
-    "Она больше не будет запускаться, история её запусков удалится. Сессии запусков останутся.",
+  "It will no longer run, its run history will be deleted. The run chats will stay.":
+    "Она больше не будет запускаться, история её запусков удалится. Чаты запусков останутся.",
   "The automation was not deleted.": "Автоматизация не удалилась.",
   "The record was not deleted.": "Запись не удалилась.",
   // консоль
   "Not saved.": "Не сохранилось.",
   "Saved: {schedule}, next run — {next}": "Сохранено: {schedule}, следующий запуск — {next}",
-  "History: {title} · Enter — open the run session": "История: {title} · Enter — открыть сессию запуска",
+  "History: {title} · Enter — open the run chat": "История: {title} · Enter — открыть чат запуска",
   "The run started.": "Запуск начался.",
   "The run was stopped.": "Запуск остановлен.",
   "The run had already finished.": "Запуск уже закончился.",

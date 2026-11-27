@@ -15,7 +15,7 @@ describe("session tab titles", () => {
   })
 
   test("preserves generated and user-supplied titles", () => {
-    for (const title of ["Generated title", "New session", "New session - custom"]) {
+    for (const title of ["Generated title", "New chat", "New session - custom"]) {
       expect(sessionTabTitle(title, "Session")).toBe(title)
     }
   })

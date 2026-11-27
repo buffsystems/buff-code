@@ -113,7 +113,7 @@ export function createWorkflowsController(deps: WorkflowsDeps) {
     remove: async (name: string) => {
       const yes = await deps.confirm({
         title: t("Delete workflow «{name}»?", { name }),
-        description: t("The workflow file will be deleted. Past runs and their sessions stay."),
+        description: t("The workflow file will be deleted. Past runs and their chats stay."),
       })
       if (yes) await act(deps.rpc.remove({ name }, options()), "The workflow was not deleted.")
     },

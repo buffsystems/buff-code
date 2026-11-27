@@ -113,7 +113,7 @@ function ModelField(props: {
   }, [catalog.models, choices])
   const missing = props.value && !known.some((option) => option.value === props.value)
   const options = [
-    { value: SESSION_MODEL, label: t("Session model") },
+    { value: SESSION_MODEL, label: t("Chat model") },
     ...(missing ? [{ value: props.value, label: props.value }] : []),
     ...known,
   ]

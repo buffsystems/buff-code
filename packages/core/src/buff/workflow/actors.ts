@@ -168,7 +168,7 @@ export function make(deps: {
       if (state.outcome === "failed" || state.outcome === "interrupted") {
         const words = state.error
           ? turnFailure(state.error, state.providerID ?? "", BuffLocale.t).text
-          : "The actor session was interrupted."
+          : "The actor was interrupted."
         deps.step({
           ...base,
           status: "failed",

@@ -2,6 +2,7 @@
 // ComposerAttachments: review comments, images, files sent by path, Buff's pasted-text chips and
 // uploads in flight, each removable.
 
+import { nearestBox } from "../../focus-box"
 import { Tooltip } from "@buff/ui/react"
 import { BuffComposerParts } from "@opencode/schema/buff-composer-parts"
 import type { BuffTextAttachmentPart, ContextItem, ImageAttachmentPart } from "@opencode/app/react-reuse/composer-schema"
@@ -79,7 +80,24 @@ function Item(props: { slot?: string; removeLabel: string; onRemove(): void; chi
   return (
     <div className="composer-attachment" data-slot={props.slot}>
       {props.children}
-      <button type="button" className="composer-attachment__remove" aria-label={props.removeLabel} onClick={props.onRemove}>
+      <button
+        type="button"
+        className="composer-attachment__remove"
+        aria-label={props.removeLabel}
+        onClick={(event) => {
+          // #972 (R2-30): the chip leaves with its button — the next chip's button takes focus,
+          // or the box after the last one.
+          const chip = event.currentTarget.closest(".composer-attachment")
+          const next = (chip?.nextElementSibling ?? chip?.previousElementSibling)?.querySelector<HTMLElement>(
+            ".composer-attachment__remove",
+          )
+          const box = nearestBox(event.currentTarget)
+          props.onRemove()
+          // A pointer press goes back to the box: Enter there must not remove another file.
+          const keyboard = event.detail === 0
+          requestAnimationFrame(() => (keyboard && next?.isConnected ? next : box)?.focus())
+        }}
+      >
         <X aria-hidden />
       </button>
     </div>

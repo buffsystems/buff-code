@@ -16,7 +16,7 @@ const link = (over: Partial<BuffShare.Link> = {}): BuffShare.Link => ({
   enabled: true,
   created: 100,
   published: true,
-  sessionTitle: "Сессия",
+  sessionTitle: "Чат",
   ...over,
 })
 
@@ -36,7 +36,7 @@ describe("public links page model", () => {
     )
     expect(rows.map((r) => r.id[0])).toEqual(["b", "a"])
     expect(rows[0]!.source).toBeNull()
-    expect(rows[1]!.source).toBe("Сессия")
+    expect(rows[1]!.source).toBe("Чат")
   })
 
   test("an expiry reads as a date; never reads as nothing", () => {

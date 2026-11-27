@@ -36,8 +36,8 @@ export const Rpc = define({
 export function warning(status: Status, t: BuffI18n.T): string | undefined {
   if (status.ready || !status.repository) return undefined
   if (status.reason === "old")
-    return t("Session undo and changes are off: they need git 2.35 or newer, this computer has {version}.", {
+    return t("Chat undo and changes are off: they need git 2.35 or newer, this computer has {version}.", {
       version: status.version ?? "?",
     })
-  return t("Session undo and changes are off: install git 2.35 or newer.")
+  return t("Chat undo and changes are off: install git 2.35 or newer.")
 }

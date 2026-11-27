@@ -10,5 +10,7 @@ export function sessionLabel(title: string): string
 export function sessionLabel(title: string | undefined): string | undefined
 export function sessionLabel(title: string | undefined): string | undefined {
   if (title === undefined) return undefined
-  return title === NEW_SESSION_TAB_TITLE ? t(title) : buffSessionLabel({ title }, t)
+  // A tab remembered before «session» became «chat» carries the old words (#972).
+  if (title === NEW_SESSION_TAB_TITLE || title === "New session") return t(NEW_SESSION_TAB_TITLE)
+  return buffSessionLabel({ title }, t)
 }

@@ -49,7 +49,7 @@ test.each([100, 44])("Ctrl-O is immediate, dismissible, and prunes cached deleti
     setup.mockInput.pressKey("o", { ctrl: true })
     await requested.promise
     await setup.renderOnce()
-    expect(setup.captureCharFrame()).toContain("Поиск сессий")
+    expect(setup.captureCharFrame()).toContain("Поиск чатов")
     expect(setup.captureCharFrame()).toContain("Обновляю")
     projects.resolve(
       json([
@@ -95,7 +95,7 @@ test.each([100, 44])("Ctrl-O is immediate, dismissible, and prunes cached deleti
     setup.mockInput.pressEscape()
     await setup.waitForFrame((frame) => !frame.includes("Fixture project"))
     setup.mockInput.pressKey("o", { ctrl: true })
-    await setup.waitForFrame((frame) => frame.includes("Не удалось обновить сессии"))
+    await setup.waitForFrame((frame) => frame.includes("Не удалось обновить чаты"))
     expect(setup.captureCharFrame()).not.toContain("Cached")
   } finally {
     response.resolve(json({ data: [], cursor: {} }))
@@ -172,7 +172,7 @@ test.each(["dismissed", "refreshing"])(
       setup.mockInput.pressKey("o", { ctrl: true })
       await setup.waitForFrame((frame) => frame.includes(cached.title) && !frame.includes("Обновляю"))
       setup.mockInput.pressEscape()
-      await setup.waitForFrame((frame) => !frame.includes("Поиск сессий"))
+      await setup.waitForFrame((frame) => !frame.includes("Поиск чатов"))
       if (phase === "refreshing") {
         setup.mockInput.pressKey("o", { ctrl: true })
         await setup.waitForFrame((frame) => frame.includes(cached.title) && frame.includes("Обновляю"))
@@ -187,7 +187,7 @@ test.each(["dismissed", "refreshing"])(
       if (phase === "dismissed") {
         setup.mockInput.pressKey("o", { ctrl: true })
         refresh.resolve(new Response("Unavailable", { status: 503 }))
-        await setup.waitForFrame((frame) => frame.includes("Не удалось обновить сессии"))
+        await setup.waitForFrame((frame) => frame.includes("Не удалось обновить чаты"))
       }
       if (phase === "refreshing") {
         await setup.waitForFrame((frame) =>
@@ -766,7 +766,7 @@ test("keeps assistant footer metrics current after prepend, same-length refresh,
       frame.includes("Prepended instructions") &&
       frame.includes("Original answer") &&
       frame.includes("20,0 ток/с") &&
-      !frame.includes("Загружаю историю сессии…"),
+      !frame.includes("Загружаю историю чата…"),
   )
   expect(prepended).toContain("Current input")
   expect(prepended).toContain("Original answer")
@@ -1484,7 +1484,7 @@ test.each([100, 44])(
         error: { type: "unknown", message: 'Plugin "broken-skills" failed during skill.transform.' },
       },
     })
-    await setup.waitForFrame((frame) => frame.includes("Сессия завершилась с ошибкой"))
+    await setup.waitForFrame((frame) => frame.includes("Ошибка в работе агента"))
     expect(setup.captureCharFrame()).toContain("broken-skills")
     expect(setup.captureCharFrame()).toContain("skill.transform")
     expect(setup.captureCharFrame()).toContain("Keep this draft")

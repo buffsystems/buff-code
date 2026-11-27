@@ -318,6 +318,53 @@ describe("Integration", () => {
     }),
   )
 
+  // #968: a sign-in labelled by its account — the same account signing in again refreshes its
+  // saved sign-in; another account gets its own.
+  it.effect("the same account signing in again refreshes its sign-in instead of doubling it", () =>
+    Effect.gen(function* () {
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      const integrationID = Integration.ID.make("buff-account")
+      const methodID = Integration.MethodID.make("link")
+      yield* integrations.transform((editor) =>
+        editor.method.update({
+          integrationID,
+          method: { id: methodID, type: "oauth", label: "Link" },
+          label: (credential) => String(credential.metadata?.login),
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: (code: string) =>
+                Effect.succeed(
+                  Credential.OAuth.make({
+                    type: "oauth",
+                    methodID,
+                    access: `access-${code}`,
+                    refresh: "refresh",
+                    expires: 1,
+                    metadata: { login: code.split("-")[0] },
+                  }),
+                ),
+            }),
+        }),
+      )
+      const signIn = Effect.fnUntraced(function* (code: string) {
+        const attempt = yield* integrations.oauth.connect({ integrationID, methodID })
+        yield* integrations.oauth.complete({ integrationID, attemptID: attempt.attemptID, code })
+      })
+
+      yield* signIn("ivan-1")
+      yield* signIn("ivan-2")
+      const once = yield* credentials.list(integrationID)
+      expect(once.map((credential) => credential.label)).toEqual(["ivan"])
+      expect((once[0]?.value as Credential.OAuth).access).toBe("access-ivan-2")
+      yield* signIn("anna-1")
+      expect((yield* credentials.list(integrationID)).map((credential) => credential.label)).toEqual(["ivan", "anna"])
+    }),
+  )
+
   it.effect("keeps code attempts open when the code is missing and closes them on cancel", () =>
     Effect.gen(function* () {
       const integrations = yield* Integration.Service

@@ -955,7 +955,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
                 },
                 runtimeController.signal,
               )
-              if (!created.sessionID) throw new Error(t("Failed to create session"))
+              if (!created.sessionID) throw new Error(t("Failed to create chat"))
               await footer.idle().catch(() => {})
               await state.stream?.then((item) => item.handle.close()).catch(() => {})
               state.stream = undefined
@@ -998,7 +998,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
               })
               footer.append({
                 kind: "system",
-                text: t("new session {id}", { id: state.sessionID }),
+                text: t("new chat {id}", { id: state.sessionID }),
                 phase: "final",
                 source: "system",
               })
@@ -1008,7 +1008,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
                 type: "stream.patch",
                 patch: {
                   phase: "idle",
-                  status: t("failed to start new session"),
+                  status: t("failed to start new chat"),
                 },
               })
               const commit = {

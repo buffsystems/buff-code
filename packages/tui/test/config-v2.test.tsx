@@ -84,14 +84,14 @@ test("shows the new session location default in settings", () => {
 
 test("shows the TPS default in session settings", () => {
   const setting = settings.find((setting) => setting.path.join(".") === "session.tps")
-  expect(setting?.category).toBe("Session")
+  expect(setting?.category).toBe("Chat")
   expect(setting?.default).toBe(true)
 })
 
 test("names tool grouping explicitly in settings", () => {
   expect(settings.find((setting) => setting.path.join(".") === "session.grouping")).toMatchObject({
     title: "Tool grouping",
-    category: "Session",
+    category: "Chat",
     default: "auto",
     values: ["none", "auto"],
   })

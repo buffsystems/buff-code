@@ -16,7 +16,7 @@ describe("machine notices", () => {
       type: "bc_permission",
     })
     expect(machineNotice("done", { id: "s", title: "", project: "" }, { id: "M", name: "laptop" }, 7)).toMatchObject({
-      body: "Сессия · laptop",
+      body: "Чат · laptop",
       link: "buff://M/session/s",
       type: "bc_turn_complete",
     })

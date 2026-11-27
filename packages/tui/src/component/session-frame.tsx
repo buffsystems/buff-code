@@ -168,7 +168,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
     commands: [
       {
         id: "pane.focus.left",
-        title: t("Focus session pane"),
+        title: t("Focus chat pane"),
         enabled: () => !fullscreen(),
         run: focusSession,
       },
@@ -187,7 +187,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
       {
         id: "session.sidebar.toggle",
         title: rightPane() === "sidebar" ? t("Hide sidebar") : t("Show sidebar"),
-        group: t("Session"),
+        group: t("Chat"),
         palette: true,
         run: () => {
           toggleSidebar()
@@ -199,7 +199,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             {
               id: "terminal.toggle",
               title: rightPane() === "terminal" ? t("Hide terminal pane") : t("Show terminal pane"),
-              group: t("Session"),
+              group: t("Chat"),
               palette: true as const,
               run: () => {
                 dialog.clear()
@@ -221,7 +221,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             {
               id: "terminal.select",
               title: t("Select terminal"),
-              group: t("Session"),
+              group: t("Chat"),
               palette: true as const,
               run: () => {
                 dialog.clear()
@@ -234,7 +234,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             {
               id: "terminal.close",
               title: t("Close terminal pane"),
-              group: t("Session"),
+              group: t("Chat"),
               palette: true as const,
               enabled: rightPane() === "terminal",
               run: () => {
@@ -246,7 +246,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             {
               id: "session.terminal",
               title: t("New terminal"),
-              group: t("Session"),
+              group: t("Chat"),
               palette: true as const,
               slash: { name: "terminal" },
               run: async () => {

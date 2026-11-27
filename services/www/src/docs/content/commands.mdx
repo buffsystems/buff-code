@@ -73,7 +73,7 @@ Markdown frontmatter and JSON entries accept the same fields, except that Markdo
 | `description` | No | Text shown in command lists and discovery. |
 | `agent` | No | Agent selected when the command runs. |
 | `model` | No | Model override in `provider/model` or `provider/model#variant` format. |
-| `subagent` | No | `true` runs in a background child session; `false` forces the current session. |
+| `subagent` | No | `true` runs in a background child chat; `false` forces the current chat. |
 | `subtask` | No | Deprecated alias for `subagent`. |
 
 For example, this JSON command sets every current optional field:
@@ -177,7 +177,7 @@ when it submits the expanded prompt.
 
 ## Execution
 
-Commands expand arguments and shell blocks before submitting a durable user prompt. They run in the current session by
+Commands expand arguments and shell blocks before submitting a durable user prompt. They run in the current chat by
 default.
 
 ```md title=".opencode/commands/plan.md"
@@ -188,13 +188,13 @@ agent: plan
 Plan $ARGUMENTS.
 ```
 
-Running `/plan migration` switches the current session to `plan` before submitting the prompt.
+Running `/plan migration` switches the current chat to `plan` before submitting the prompt.
 
 Model selection follows these rules:
 
 1. A command `model` overrides every other model.
 2. Otherwise, the selected command agent's configured model overrides the model active at invocation.
-3. Otherwise, the current session model remains active.
+3. Otherwise, the current chat model remains active.
 
 For example, this command selects both its agent and an explicit model:
 
@@ -209,7 +209,7 @@ Design $ARGUMENTS.
 
 ## Background
 
-Set `subagent: true` to run a command in a background child session.
+Set `subagent: true` to run a command in a background child chat.
 
 ```md title=".opencode/commands/audit.md"
 ---
@@ -227,7 +227,7 @@ when the child finishes.
 | Value | Behavior |
 | --- | --- |
 | `true` | Always use a child, even when the selected agent has `mode: primary`. |
-| `false` | Always use the current session, even when the selected agent has `mode: subagent`. |
+| `false` | Always use the current chat, even when the selected agent has `mode: subagent`. |
 | Omitted | Use a child only when the selected agent has `mode: subagent`. |
 
 The child uses the command model, then the selected agent's model, then the parent's model. Legacy `subtask` remains
@@ -238,7 +238,7 @@ subagent: false
 subtask: true
 ```
 
-This example runs in the current session because `subagent` takes precedence.
+This example runs in the current chat because `subagent` takes precedence.
 
 ## Loading
 

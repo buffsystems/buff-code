@@ -34,8 +34,17 @@ export const Input = Schema.Struct({
 })
 export type Input = typeof Input.Type
 
-export function draft(input: Input, directory: string, model: BuffAutomation.Draft["model"]): BuffAutomation.Draft {
-  return { ...input, directory, ...(model ? { model } : {}) }
+/** Черновик в проекте сессии с её моделью. Время по часам — в поясе того, кто попросил (`zone`,
+ *  #969: облачная машина живёт в UTC), если модель пояса не назвала; у интервала пояса нет. */
+export function draft(
+  input: Input,
+  directory: string,
+  model: BuffAutomation.Draft["model"],
+  zone?: string,
+): BuffAutomation.Draft {
+  const schedule =
+    zone && input.schedule.kind !== "interval" && !input.schedule.zone ? { ...input.schedule, zone } : input.schedule
+  return { ...input, schedule, directory, ...(model ? { model } : {}) }
 }
 
 /**
@@ -55,6 +64,7 @@ export function resources(value: BuffAutomation.Draft): string[] {
 
 export function reply(automation: BuffAutomation.Draft & { readonly next: number }, now: Date): string {
   const summary = BuffSchedule.summary(automation.schedule)
-  const next = BuffSchedule.nextLabel(new Date(automation.next), now)
-  return `Automation «${automation.title}» created: ${summary}. Next run — ${next}. It is visible on the «Automations» page.`
+  const zone = automation.schedule.kind === "interval" ? undefined : automation.schedule.zone
+  const next = BuffSchedule.nextLabel(new Date(automation.next), now, undefined, zone)
+  return `Automation «${automation.title}» created: ${summary}${zone ? `, ${zone} time` : ""}. Next run — ${next}. It is visible on the «Automations» page.`
 }

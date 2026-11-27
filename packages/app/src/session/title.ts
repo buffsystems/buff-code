@@ -13,6 +13,7 @@ export function sessionLabel(
 
 export function sessionTitle(title?: string) {
   if (!title) return title
-  const match = title.match(pattern)
-  return match?.[1] ?? title
+  // The stored fallback keeps its old words (it is data); a person is shown today's.
+  const stored = title.match(pattern)?.[1]
+  return stored ? (stored === "Child session" ? "Child chat" : "New chat") : title
 }

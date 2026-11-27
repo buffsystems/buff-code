@@ -1,0 +1,22 @@
+/* Subscription usage (#966): a window's bar — layout only, the look is @buff/ui's. */
+.buff-usage-meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.buff-usage-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--bar);
+}
+
+.buff-usage-meter[data-state="low"] > span {
+  background: var(--warning);
+}
+
+.buff-usage-meter[data-state="exhausted"] > span {
+  background: var(--destructive);
+}

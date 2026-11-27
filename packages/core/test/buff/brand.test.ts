@@ -17,8 +17,12 @@ describe("какие плагины ядра запускает Buff Code у р�
     ])
       expect(BuffBrand.kept({ id }, false)).toBe(true)
   })
-  test("облачные поиски — нет", () => {
-    for (const id of ["opencode.websearch.exa", "opencode.websearch.tinyfish"])
+  // #956: без провайдера поиска инструмент websearch падал на каждом вызове. Exa и Parallel ищут
+  // без ключа — они есть, запрос уходит к ним после согласия человека; поиски с ключом — нет.
+  test("облачные поиски без ключа — да, с ключом — нет", () => {
+    for (const id of ["opencode.websearch.exa", "opencode.websearch.parallel"])
+      expect(BuffBrand.kept({ id }, false)).toBe(true)
+    for (const id of ["opencode.websearch.firecrawl", "opencode.websearch.tavily", "opencode.websearch.tinyfish"])
       expect(BuffBrand.kept({ id }, false)).toBe(false)
   })
   // #445: два встроенных навыка апстрима — справка по OpenCode и отчёт об ошибке в его GitHub —
@@ -74,6 +78,7 @@ describe("какие плагины ядра запускает Buff Code как
   test("вход разработчика, контекст, настройки из интерфейса, навыки апстрима и облачные поиски — нет", () => {
     for (const id of [
       "buff.login",
+      "buff.account",
       "buff.context",
       "buff.mcp",
       "buff.skill",
@@ -95,6 +100,7 @@ describe("какие плагины ядра запускает Buff Code как
       // #623: встроенные навыки апстрима — справка по OpenCode и отчёт в его GitHub — и раннеру ни к чему.
       "opencode.skill",
       "opencode.websearch.exa",
+      "opencode.websearch.parallel",
       "opencode.websearch.tinyfish",
     ])
       expect(BuffBrand.kept({ id }, true)).toBe(false)

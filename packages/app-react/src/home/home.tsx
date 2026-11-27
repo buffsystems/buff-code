@@ -12,7 +12,7 @@ import { sessionLabel, sessionTitle } from "@opencode/app/react-reuse/session-ti
 import type { SessionInfo } from "@opencode/client/promise"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { serverKey, serverName, type Server, type ServerConnection } from "../core/servers"
+import { isLocalServer, serverKey, serverName, type Server, type ServerConnection } from "../core/servers"
 import { useDialog } from "../dialog/dialogs"
 import { useI18n } from "../i18n/provider"
 import { usePlatform } from "../platform/context"
@@ -26,6 +26,7 @@ import { useTabList, useTabs } from "../shell/tabs/provider"
 import { findSessionTab, tabServer } from "../shell/tabs/tabs"
 import { useSessionMarks } from "./marks"
 import { displayName, groupSessions, homeProjects, homeRecords, toggleHomeSelection, type HomeProject } from "./model"
+import { ProjectHome } from "./project-home"
 import { HomeProjects, HomeUtilityNav, type HomeProjectsProps } from "./projects"
 import { useHomeSearch } from "./search"
 import { HomeSessions, type HomeSessionActions, type OpenOptions } from "./sessions"
@@ -268,6 +269,28 @@ function ServerHome(props: { conn: ServerConnection; selection: ReturnType<typeo
             showProjectName={!selected}
             search={search}
             actions={actions}
+            {...(selected
+              ? {
+                  head: (
+                    <ProjectHome
+                      server={server}
+                      project={selected}
+                      onNewChat={() => openDraft(selected.worktree)}
+                      local={core.platform.platform === "desktop" && isLocalServer(props.conn)}
+                      onMemory={() =>
+                        settingsSurface.openProject({
+                          server: key,
+                          project: selected.worktree,
+                          tab: "extensions",
+                          subtab: "memory",
+                          nested: false,
+                        })
+                      }
+                      onSettings={() => settingsSurface.openProject({ server: key, project: selected.worktree, nested: false })}
+                    />
+                  ),
+                }
+              : {})}
           />
         </div>
       </div>

@@ -16,6 +16,7 @@ import { Hash } from "@opencode/util/hash"
 import { ProjectSchema } from "./project/schema.js"
 import { ProjectTable, upsertProject } from "./project/sql.js"
 import { WorktreeTable } from "./worktree/sql.js"
+import { SessionTable } from "./session/sql.js"
 
 export const ID = ProjectSchema.ID
 export type ID = ProjectSchema.ID
@@ -34,6 +35,12 @@ export type UpdateInput = ProjectSchema.UpdateInput
 
 export class NotFoundError extends Schema.TaggedError<NotFoundError>()("Project.NotFoundError", {
   projectID: ID,
+}) {}
+
+/** The project still has sessions: removing its row would take them with it. */
+export class InUseError extends Schema.TaggedError<InUseError>()("Project.InUseError", {
+  projectID: ID,
+  sessions: Schema.Number,
 }) {}
 
 export interface Resolved {
@@ -60,6 +67,12 @@ export const root = Effect.fn("Project.root")(function* (
 export interface Interface {
   readonly list: () => Effect.Effect<ReadonlyArray<Info>>
   readonly update: (input: UpdateInput) => Effect.Effect<Info, NotFoundError>
+  /**
+   * Buff (#969): forgets a project — its row and what hangs on it (worktrees, saved permissions).
+   * Sessions are the caller's to move or delete first: a project that still has any is refused.
+   * The folder is not touched.
+   */
+  readonly remove: (projectID: ID) => Effect.Effect<void, NotFoundError | InUseError>
   /** Resolves and persists the owning Project. */
   readonly resolve: (input: AbsolutePath, options?: { readonly discovery?: boolean }) => Effect.Effect<Resolved>
 }
@@ -233,6 +246,24 @@ const layer = Layer.effect(
       return project
     })
 
+    const remove = Effect.fn("Project.remove")(function* (projectID: ID) {
+      const known = yield* db
+        .select({ id: ProjectTable.id })
+        .from(ProjectTable)
+        .where(eq(ProjectTable.id, projectID))
+        .get()
+        .pipe(Effect.orDie)
+      if (!known) return yield* new NotFoundError({ projectID })
+      const sessions = yield* db
+        .select({ id: SessionTable.id })
+        .from(SessionTable)
+        .where(eq(SessionTable.project_id, projectID))
+        .all()
+        .pipe(Effect.orDie)
+      if (sessions.length) return yield* new InUseError({ projectID, sessions: sessions.length })
+      yield* db.delete(ProjectTable).where(eq(ProjectTable.id, projectID)).run().pipe(Effect.orDie)
+    })
+
     const cached = Effect.fnUntraced(function* (dir: string) {
       return yield* fs.readFileString(path.join(dir, "opencode")).pipe(
         Effect.map((value) => value.trim()),
@@ -361,7 +392,7 @@ const layer = Layer.effect(
       })
     })
 
-    return Service.of({ list, update, resolve })
+    return Service.of({ list, update, remove, resolve })
   }),
 )
 

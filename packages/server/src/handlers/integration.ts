@@ -151,11 +151,14 @@ export const IntegrationHandler = HttpApiBuilder.group(Api, "server.integration"
                     attemptID: error.attemptID,
                     message: `OAuth attempt not found: ${error.attemptID}`,
                   })
+                // Buff (#966): a refused code carries the integration's own reason, as a refused start does.
                 return new InvalidRequestError({
                   message:
                     error._tag === "Integration.CodeRequired"
                       ? "Authorization code is required"
-                      : "Authentication failed",
+                      : error.cause instanceof Error && error.cause.message.trim()
+                        ? error.cause.message
+                        : "Authentication failed",
                   kind:
                     error._tag === "Integration.CodeRequired"
                       ? "integration_code_required"

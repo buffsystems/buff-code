@@ -1,0 +1,1263 @@
+<style>
+  /* Only the layout is the plugin's own: every control is the app's component. */
+  /* The chart's title is the chat's own text: it wraps, is selectable, and is read aloud. */
+  #title { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--foreground); }
+  #sub { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+  #title + #sub { margin-top: 2px; }
+  #chart { width: 100%; margin-top: 8px; border-radius: var(--radius-sm); }
+  /* Before anything is drawn the page already stands at the chart's height: 352 px with the bar. */
+  /* The plugin's own properties carry its prefix: the app's tokens own the short names. */
+  :root { --chart-bar-h: 2rem; }
+  @media (pointer: coarse) { :root { --chart-bar-h: 2.75rem; } }
+  #wait { border-radius: var(--radius-lg); height: calc(352px - var(--chart-bar-h) - 0.25rem); }
+  #bar[data-idle] { visibility: hidden; }
+  #bar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.25rem; min-height: var(--chart-bar-h); }
+  #ask { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+  #data { margin-top: 0.5rem; }
+  #more { margin-top: 0.25rem; font-size: 12px; color: var(--muted-foreground); }
+  #data .ui-table-wrap { max-height: 280px; overflow: auto; }
+  #data th { position: sticky; top: 0; z-index: 1; background-color: var(--muted); }
+  #data th:first-child, #data td:first-child { position: sticky; left: 0; background-color: var(--ui-table-bg); }
+  #data th:first-child { z-index: 2; background-color: var(--muted); }
+</style>
+<div id="title" hidden></div>
+<div id="sub" hidden></div>
+<div id="chart" role="application" tabindex="0" hidden></div>
+<div id="wait" class="ui-skeleton"></div>
+<div id="none" class="ui-empty ui-empty--inline" hidden></div>
+<div id="bar" data-idle>
+  <button id="toggle" type="button" class="ui-btn ui-btn--outline ui-btn--sm" aria-expanded="false" aria-controls="data"></button>
+  <button id="ask" type="button" class="ui-btn ui-btn--outline ui-btn--sm" hidden></button>
+</div>
+<div id="data" class="ui-table-frame ui-table-frame--framed" hidden></div>
+<div id="more" class="ui-hint" hidden></div>
+<div id="say" class="ui-sr-only" role="status" aria-live="polite"></div>
+<script>/*@echarts*/</script>
+<script>
+(function () {
+  var WORDS = {
+    ru: { data: 'Данные', hide: 'Скрыть данные', more: 'Подробнее: ', ask: 'Расскажи подробнее про «{name}» на графике «{title}».', askPlain: 'Расскажи подробнее про «{name}».', drawing: 'Рисую график…', picked: 'На графике «{title}» выбрано: {name}', category: 'Категория', value: 'Значение', name: 'Название', date: 'Дата', candle: ['Открытие', 'Закрытие', 'Минимум', 'Максимум'], box: ['Минимум', 'Q1', 'Медиана', 'Q3', 'Максимум'], from: 'Откуда', to: 'Куда', empty: 'Нет данных', other: 'Другое', first: 'Показаны первые {n} из {all} строк.', tasks: 'Задачи', task: 'Задача', from2: 'Начало', to2: 'Конец', group: 'Группа', done: 'Готово', region: 'Область', only: 'Только здесь', word: 'Слово', keys: 'Стрелки — по точкам, Enter — выбрать.', below: 'Числа — в таблице под графиком.' },
+    en: { data: 'Data', hide: 'Hide data', more: 'More: ', ask: 'Tell me more about “{name}” in the chart “{title}”.', askPlain: 'Tell me more about “{name}”.', drawing: 'Drawing the chart…', picked: 'In the chart “{title}” the user picked: {name}', category: 'Category', value: 'Value', name: 'Name', date: 'Date', candle: ['Open', 'Close', 'Low', 'High'], box: ['Min', 'Q1', 'Median', 'Q3', 'Max'], from: 'From', to: 'To', empty: 'No data', other: 'Other', first: 'The first {n} of {all} rows are shown.', tasks: 'Tasks', task: 'Task', from2: 'Start', to2: 'End', group: 'Group', done: 'Done', region: 'Region', only: 'Here only', word: 'Word', keys: 'Arrow keys move through the points, Enter picks one.', below: 'The numbers are in the table under the chart.' },
+  }
+  var HEIGHT = 320
+  var NARROW = 480
+  var el = { title: document.getElementById('title'), sub: document.getElementById('sub'), chart: document.getElementById('chart'), wait: document.getElementById('wait'), none: document.getElementById('none'), bar: document.getElementById('bar'), ask: document.getElementById('ask'), toggle: document.getElementById('toggle'), data: document.getElementById('data'), more: document.getElementById('more'), say: document.getElementById('say') }
+  var chart = null
+  var shown = null // what was last drawn: the prepared option and what goes with it
+  var picked = null
+  var cursor = -1
+  var state = buff.state || {}
+  // A person who asked for less motion gets a chart that simply appears.
+  // Under a finger the bar of buttons is taller: the plot gives it the difference, the page keeps its height.
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  function words() { return WORDS[(buff.host.locale || 'en').slice(0, 2)] || WORDS.en }
+  function fill(text, values) { return text.replace(/\{(\w+)\}/g, function (all, key) { return values[key] === undefined ? all : values[key] }) }
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() }
+  function list(value) { return value === undefined || value === null ? [] : Array.isArray(value) ? value : [value] }
+  function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value) }
+  function has(kinds, names) { return kinds.some(function (kind) { return names.indexOf(kind) >= 0 }) }
+  function number(value) {
+    if (typeof value !== 'number' || !isFinite(value)) return value
+    try { return new Intl.NumberFormat(buff.host.locale || 'en', { maximumFractionDigits: 2 }).format(value) } catch (error) { return String(value) }
+  }
+  // One way to write a share everywhere: «48 %» or "48%", as the person's language has it.
+  function percent(value) {
+    if (typeof value !== 'number' || !isFinite(value)) return value
+    try { return new Intl.NumberFormat(buff.host.locale || 'en', { style: 'percent', maximumFractionDigits: 1 }).format(value / 100) } catch (error) { return value + '%' }
+  }
+  // A day written as data («2026-01-31») reads as a date in a table.
+  function dated(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/.test(value)) return value
+    var date = new Date(value.length === 10 ? value + 'T00:00:00' : value)
+    if (isNaN(date.getTime())) return value
+    try { return new Intl.DateTimeFormat(buff.host.locale || 'en', value.length === 10 ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date) } catch (error) { return value }
+  }
+  // A moment on a time axis: a day as «5 янв.», the first of January with its year, an hour as a time.
+  function tick(value) {
+    var date = new Date(value)
+    if (isNaN(date.getTime())) return value
+    var tag = buff.host.locale || 'en'
+    try {
+      if (date.getHours() || date.getMinutes()) return new Intl.DateTimeFormat(tag, { hour: '2-digit', minute: '2-digit' }).format(date)
+      // A year begins: the year stands under the day, so this tick is no wider than the others.
+      if (date.getMonth() === 0 && date.getDate() === 1) return new Intl.DateTimeFormat(tag, { day: 'numeric', month: 'short' }).format(date) + '\n' + date.getFullYear()
+      return new Intl.DateTimeFormat(tag, { day: 'numeric', month: 'short' }).format(date)
+    } catch (error) { return String(value) }
+  }
+  // A moment in full, as a tooltip names it: the day with its year, and the time when it has one.
+  function moment(value) {
+    // A day written without a time is that day here, not midnight in Greenwich.
+    var date = new Date(typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value + 'T00:00:00' : value)
+    if (isNaN(date.getTime())) return String(value)
+    try { return new Intl.DateTimeFormat(buff.host.locale || 'en', date.getHours() || date.getMinutes() ? { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', year: 'numeric' }).format(date) } catch (error) { return String(value) }
+  }
+  // Axis ticks: short, in the person's language — «3,5 млрд», not «3,500,000,000».
+  function compact(value) {
+    if (typeof value !== 'number' || !isFinite(value)) return value
+    try { return new Intl.NumberFormat(buff.host.locale || 'en', { notation: 'compact', maximumFractionDigits: 1 }).format(value) } catch (error) { return String(value) }
+  }
+
+  // --- colour arithmetic: only ever on the app's own colours ---------------------------------
+  var probe = document.createElement('canvas').getContext('2d')
+  function channels(color) {
+    probe.fillStyle = 'black'; probe.fillStyle = color
+    var hex = probe.fillStyle
+    if (hex[0] === '#') return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+    var parts = hex.match(/[\d.]+/g) || [0, 0, 0]
+    return [Number(parts[0]), Number(parts[1]), Number(parts[2])]
+  }
+  function luminance(color) {
+    var c = channels(color).map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) })
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+  }
+  function contrast(a, b) { var x = luminance(a), y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
+  function mix(a, b, share) { var x = channels(a), y = channels(b); return 'rgb(' + [0, 1, 2].map(function (i) { return Math.round(x[i] * share + y[i] * (1 - share)) }).join(',') + ')' }
+  // Words on a fill: the page's ink or the page's paper, whichever reads better on it.
+  function ink(fillColor) {
+    var dark = css('--foreground'), light = css('--background')
+    if (luminance(dark) > luminance(light)) { var swap = dark; dark = light; light = swap }
+    return contrast(dark, fillColor) >= contrast(light, fillColor) ? dark : light
+  }
+  function roughWidth(text, size) { var total = 0; String(text).split('').forEach(function (c) { total += c.charCodeAt(0) < 128 ? size * 0.62 : size }); return total }
+  function textWidth(text, size, weight) {
+    probe.font = (weight || 400) + ' ' + (size || 12) + 'px ' + (css('--font-sans') || 'sans-serif')
+    return probe.measureText(String(text)).width
+  }
+
+  // --- the design system as a chart theme: every colour comes from the app's variables -------
+  function palette() { return [1, 2, 3, 4, 5, 6, 7, 8].map(function (slot) { return css('--chart-' + slot) }) }
+  function theme() {
+    var text = css('--color-text-primary'), soft = css('--color-text-secondary'), quiet = css('--color-text-tertiary')
+    var line = css('--chart-axis'), grid = css('--chart-grid'), surface = css('--color-background-primary'), raised = css('--color-background-secondary')
+    var series = palette()
+    var font = css('--font-sans')
+    var axis = {
+      axisLine: { lineStyle: { color: line } }, axisTick: { lineStyle: { color: line } },
+      axisLabel: { color: quiet, fontFamily: font, fontSize: 12, hideOverlap: true }, nameTextStyle: { color: quiet, fontFamily: font, fontSize: 12 },
+      splitLine: { lineStyle: { color: grid } }, splitArea: { show: false },
+    }
+    var label = { color: soft, fontFamily: font, fontSize: 12, textBorderWidth: 0 }
+    return {
+      color: series,
+      backgroundColor: 'transparent',
+      textStyle: { fontFamily: font, color: soft },
+      legend: { textStyle: { color: soft, fontFamily: font, fontSize: 12 }, inactiveColor: grid, pageTextStyle: { color: quiet }, pageIconColor: soft, pageIconInactiveColor: grid, itemWidth: 14, itemHeight: 10, itemGap: 14 },
+      tooltip: { backgroundColor: surface, borderColor: line, borderWidth: 1, padding: [6, 10], textStyle: { color: text, fontFamily: font, fontSize: 13 }, axisPointer: { lineStyle: { color: line }, crossStyle: { color: line }, shadowStyle: { color: raised, opacity: 0.6 }, label: { backgroundColor: soft, color: surface } }, extraCssText: 'box-shadow:none;border-radius:8px;' },
+      categoryAxis: Object.assign({}, axis, { splitLine: { show: false } }),
+      valueAxis: Object.assign({}, axis, { axisLine: { show: false }, axisTick: { show: false } }),
+      timeAxis: Object.assign({}, axis, { splitLine: { show: false } }),
+      logAxis: axis,
+      line: { lineStyle: { width: 2 }, symbolSize: 8, symbol: 'circle', itemStyle: { borderColor: surface, borderWidth: 2 }, label: label },
+      bar: { itemStyle: { borderRadius: [4, 4, 0, 0] }, label: label, barMaxWidth: 24 },
+      pie: { itemStyle: { borderColor: surface, borderWidth: 2 }, label: label, labelLine: { lineStyle: { color: line } } },
+      scatter: { symbolSize: 9, label: label },
+      radar: { axisName: { color: soft, fontFamily: font, fontSize: 12 }, splitLine: { lineStyle: { color: grid } }, splitArea: { show: false }, axisLine: { lineStyle: { color: grid } } },
+      funnel: { itemStyle: { borderColor: surface, borderWidth: 2 }, label: label, labelLine: { lineStyle: { color: line } } },
+      gauge: { axisLine: { lineStyle: { color: [[1, grid]] } }, axisLabel: { color: quiet }, title: { color: soft, offsetCenter: [0, '32%'] }, detail: { color: text, fontFamily: font }, progress: { itemStyle: { color: series[0] } } },
+      // Rising and falling: the palette's green and red, the same in every theme.
+      candlestick: { itemStyle: { color: series[2], color0: series[7], borderColor: series[2], borderColor0: series[7] } },
+      boxplot: { itemStyle: { color: raised, borderColor: series[0] } },
+      treemap: { itemStyle: { borderColor: surface, gapWidth: 2 }, label: { fontFamily: font, fontSize: 12, textBorderWidth: 0 }, upperLabel: { color: soft, fontFamily: font, textBorderWidth: 0, backgroundColor: 'transparent' }, breadcrumb: { itemStyle: { color: raised, textStyle: { color: soft } } } },
+      sunburst: { itemStyle: { borderColor: surface, borderWidth: 2 }, label: { fontFamily: font, fontSize: 12, textBorderWidth: 0 } },
+      sankey: { lineStyle: { color: 'gradient', opacity: 0.35 }, itemStyle: { borderWidth: 0 }, label: label },
+      graph: { lineStyle: { color: soft, opacity: 0.6 }, label: label, itemStyle: { borderColor: surface, borderWidth: 1 } },
+      tree: { symbol: 'circle', lineStyle: { color: line }, label: label, itemStyle: { color: surface, borderColor: series[0], borderWidth: 1.5 } },
+      heatmap: { itemStyle: { borderColor: surface, borderWidth: 1 }, label: { fontFamily: font, fontSize: 12 } },
+      themeRiver: { label: label },
+      parallel: { lineStyle: { width: 1.5, opacity: 0.5 } },
+      parallelAxis: axis,
+      visualMap: { textStyle: { color: quiet, fontFamily: font, fontSize: 12 }, inRange: { color: ramp() } },
+      dataZoom: { borderColor: grid, textStyle: { color: quiet }, fillerColor: raised, handleStyle: { color: surface, borderColor: line }, moveHandleStyle: { color: line }, dataBackground: { lineStyle: { color: line }, areaStyle: { color: grid } }, selectedDataBackground: { lineStyle: { color: series[0] }, areaStyle: { color: series[0], opacity: 0.2 } } },
+      calendar: { itemStyle: { color: 'transparent', borderColor: grid }, splitLine: { lineStyle: { color: line } }, dayLabel: { color: quiet }, monthLabel: { color: soft }, yearLabel: { color: quiet } },
+      timeline: { lineStyle: { color: line }, label: { color: quiet }, itemStyle: { color: line }, controlStyle: { color: soft, borderColor: soft }, checkpointStyle: { color: series[0], borderColor: surface } },
+      markLine: { symbol: 'none', lineStyle: { color: soft }, label: { color: soft, position: 'insideEndTop' } },
+      markArea: { itemStyle: { color: raised, opacity: 0.6 }, label: { color: soft } },
+    }
+  }
+  // The scale of a heatmap: from a tint of the first series colour, still seen on the page, to the colour itself.
+  function ramp() { var first = css('--chart-1'), surface = css('--color-background-primary'); return [mix(first, surface, 0.18), first] }
+  // Month and weekday names in the person's language, from the browser itself.
+  function locale() {
+    var tag = buff.host.locale || 'en'
+    try {
+      var name = function (options, date) { return new Intl.DateTimeFormat(tag, options).format(date) }
+      var months = [], days = []
+      for (var m = 0; m < 12; m++) months.push(new Date(Date.UTC(2021, m, 15)))
+      for (var d = 0; d < 7; d++) days.push(new Date(Date.UTC(2021, 7, 1 + d))) // 1 Aug 2021 is a Sunday
+      var utc = function (options) { return Object.assign({ timeZone: 'UTC' }, options) }
+      return { time: {
+        month: months.map(function (date) { return name(utc({ month: 'long' }), date) }),
+        monthAbbr: months.map(function (date) { return name(utc({ month: 'short' }), date).replace('.', '') }),
+        dayOfWeek: days.map(function (date) { return name(utc({ weekday: 'long' }), date) }),
+        dayOfWeekAbbr: days.map(function (date) { return name(utc({ weekday: 'short' }), date) }),
+      } }
+    } catch (error) { return undefined }
+  }
+
+  // --- the block: an option as JSON; the look is the app's, not the block's --------------------
+  // A block still being written stops mid-way: close what is open and try what there is.
+  function repaired(text) {
+    var stack = [], quoted = false, escaped = false
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i]
+      if (quoted) { if (escaped) escaped = false; else if (c === '\\') escaped = true; else if (c === '"') quoted = false; continue }
+      if (c === '"') quoted = true
+      else if (c === '{' || c === '[') stack.push(c === '{' ? '}' : ']')
+      else if (c === '}' || c === ']') stack.pop()
+    }
+    var cut = text.replace(/[,:\s]+$/, '')
+    return (quoted ? cut + '"' : cut) + stack.reverse().join('')
+  }
+  function parse(block) {
+    try { return JSON.parse(block.text) } catch (error) {
+      if (block.complete) throw new Error('The chart block is not valid JSON: ' + error.message)
+      try { return JSON.parse(repaired(block.text)) } catch (ignored) { return null }
+    }
+  }
+  function types(option) { return list(option.series).map(function (series) { return series && series.type }).filter(Boolean) }
+  function emptyData(option) {
+    var series = list(option.series)
+    var dataset = list(option.dataset)[0]
+    if (dataset && Array.isArray(dataset.source) && dataset.source.length > 1) return false
+    return series.every(function (item) { return !item || ((!Array.isArray(item.data) || !item.data.length) && !list(item.links).length) })
+  }
+  // Categories that are a run: numbers, dates, months, weekdays, or marks of a few characters.
+  function isRun(labels) {
+    var known = {}
+    var names = locale()
+    if (names) names.time.month.concat(names.time.monthAbbr, names.time.dayOfWeek, names.time.dayOfWeekAbbr).forEach(function (name) { known[String(name).toLowerCase()] = true })
+    'january february march april may june july august september october november december jan feb mar apr jun jul aug sep oct nov dec monday tuesday wednesday thursday friday saturday sunday mon tue wed thu fri sat sun'.split(' ').forEach(function (name) { known[name] = true })
+    return labels.every(function (label) { var text = label.trim().toLowerCase(); return text.length <= 4 || /^[\d\s.,:\/\-–—]+$/.test(text) || /^\d/.test(text) || known[text.replace('.', '')] })
+  }
+  function point(value) { return isObject(value) ? value : { value: value } }
+  function valueOf(value) { var v = isObject(value) ? value.value : value; return Array.isArray(v) ? v[v.length - 1] : v }
+
+  function prepared(given, width) {
+    var option = JSON.parse(JSON.stringify(given))
+    var meta = isObject(option.buff) ? option.buff : {}
+    delete option.buff
+    // Colours and fonts belong to the theme: a block cannot repaint the app.
+    delete option.color; delete option.backgroundColor; delete option.textStyle; delete option.darkMode
+    if (still) option.animation = false
+    var narrow = width < NARROW
+    var colors = palette(), surface = css('--color-background-primary')
+    var kinds = types(option)
+    var series = list(option.series).filter(isObject)
+    var cartesian = has(kinds, ['line', 'bar', 'scatter', 'effectScatter', 'candlestick', 'boxplot', 'heatmap', 'pictorialBar', 'custom']) && (option.xAxis || option.yAxis) && !option.polar && !option.calendar
+    var xs = list(option.xAxis).filter(isObject), ys = list(option.yAxis).filter(isObject)
+    // Bars of named things whose names do not fit under them lie down: a name is read whole
+    // beside its bar. A run — days, months, numbers — keeps reading left to right.
+    if (cartesian && xs.length === 1 && ys.length === 1 && xs[0].type === 'category' && Array.isArray(xs[0].data) && xs[0].data.length && xs[0].data.length <= 24 && !option.dataZoom && series.length && series.every(function (item) { return item.type === 'bar' && Array.isArray(item.data) })) {
+      var labels0 = xs[0].data.map(function (name) { return String(isObject(name) ? name.value : name) })
+      var band0 = (width - 48) / labels0.length
+      var widest = labels0.reduce(function (max, name) { return Math.max(max, textWidth(name, 12)) }, 0)
+      if (!isRun(labels0) && widest > band0 - 4) {
+        var lying = xs[0], standing = ys[0]
+        if (lying.inverse === undefined) lying.inverse = true
+        option.xAxis = standing; option.yAxis = lying
+        xs = [standing]; ys = [lying]
+        // What stood over a bar now stands at its end.
+        var turned = { top: 'right', bottom: 'left', insideTop: 'insideRight', insideBottom: 'insideLeft' }
+        series.forEach(function (item) { if (isObject(item.label) && turned[item.label.position]) item.label.position = turned[item.label.position] })
+      }
+    }
+    // More slices than can be told apart: the smallest go into one «Other».
+    series.forEach(function (item) {
+      if (item.type !== 'pie' || !Array.isArray(item.data) || item.data.length <= 8 || item.roseType) return
+      var sorted = item.data.map(point).sort(function (a, b) { return (Number(valueOf(b)) || 0) - (Number(valueOf(a)) || 0) })
+      var rest = sorted.slice(7).reduce(function (sum, entry) { return sum + (Number(valueOf(entry)) || 0) }, 0)
+      item.data = sorted.slice(0, 7).concat([{ name: words().other, value: Math.round(rest * 100) / 100 }])
+    })
+    // Things compared across parallel axes are series of their own: each has its colour and its line in the legend.
+    if (!option.legend || isObject(option.legend)) {
+      var split = []
+      list(option.series).forEach(function (item) {
+        if (!isObject(item) || item.type !== 'parallel' || !list(item.data).length || !list(item.data).every(function (entry) { return isObject(entry) && entry.name !== undefined && Array.isArray(entry.value) })) return split.push(item)
+        item.data.forEach(function (entry) { var one = JSON.parse(JSON.stringify(item)); one.name = String(entry.name); one.data = [entry.value]; split.push(one) })
+      })
+      if (split.length !== list(option.series).length) { option.series = split; series = split.filter(isObject); kinds = types(option) }
+    }
+    var horizontal = ys.some(function (axis) { return axis.type === 'category' })
+    var top = 0, bottom = 0, laid = 0
+
+    // The title stands over the chart as text of the page; the plot starts at its own top.
+    var title = list(option.title).filter(isObject)[0]
+    var heading = { text: title && title.text ? String(title.text) : '', sub: title && title.subtext ? String(title.subtext) : '' }
+    delete option.title
+
+    // Shares are named in the legend where there is no room for labels round the pie.
+    var shares = series.filter(function (item) { return item.type === 'pie' || item.type === 'funnel' })
+    var radars = series.filter(function (item) { return item.type === 'radar' })
+    var names = []
+    series.forEach(function (item) {
+      if (item.type === 'pie' || item.type === 'funnel' || item.type === 'radar') list(item.data).forEach(function (entry) { if (isObject(entry) && entry.name !== undefined) names.push(String(entry.name)) })
+      else if (item.type === 'graph' && Array.isArray(item.categories)) item.categories.forEach(function (category) { if (isObject(category) && category.name) names.push(String(category.name)) })
+      else if (item.type === 'themeRiver') list(item.data).forEach(function (entry) { if (Array.isArray(entry) && entry[2] !== undefined && names.indexOf(String(entry[2])) < 0) names.push(String(entry[2])) })
+      else if (item.type === 'parallel' && item.name) names.push(String(item.name))
+      else if (item.name && has([item.type], ['custom']) && (item.silent !== true || item.coordinateSystem === 'none')) names.push(String(item.name))
+      else if (item.name && item.silent !== true && has([item.type], ['line', 'bar', 'scatter', 'effectScatter', 'candlestick', 'boxplot', 'pictorialBar'])) names.push(String(item.name))
+    })
+    // Series fed from a dataset are named by its header.
+    var dataset0 = list(option.dataset).filter(isObject)[0]
+    if (!names.length && dataset0 && series.length > 1) {
+      var header = Array.isArray(dataset0.dimensions) ? dataset0.dimensions : Array.isArray(dataset0.source) && Array.isArray(dataset0.source[0]) ? dataset0.source[0] : isObject(list(dataset0.source)[0]) ? Object.keys(dataset0.source[0]) : []
+      header.slice(1, 1 + series.length).forEach(function (name) { names.push(String(isObject(name) ? name.name : name)) })
+    }
+    // Shares named beside their marks need no second list of the same names.
+    var marked = shares.length > 0 && shares.length === series.length && (!narrow || shares.every(function (item) { return item.type === 'funnel' })) && shares.every(function (item) { return !(isObject(item.label) && item.label.show === false) })
+    var legend = list(option.legend).filter(isObject)[0]
+    var wanted = legend ? legend.show !== false : names.length > 1 && !marked
+    if (wanted && !legend) option.legend = legend = {}
+    var legendHeight = 0
+    if (wanted) {
+      var totals = shares.map(function (item) { return list(item.data).reduce(function (sum, entry) { return sum + (Number(valueOf(entry)) || 0) }, 0) })
+      var share = function (name) {
+        for (var s = 0; s < shares.length; s++) {
+          var found = list(shares[s].data).filter(function (entry) { return isObject(entry) && String(entry.name) === name })[0]
+          if (found && shares[s].type === 'pie' && totals[s]) return ' · ' + percent(Math.round((Number(valueOf(found)) / totals[s]) * 1000) / 10)
+          if (found) return ' · ' + number(valueOf(found))
+        }
+        return ''
+      }
+      var labelled = narrow && shares.length > 0
+      // A long name gives way, never its share: the name is cut with «…», the figure stays.
+      var fitted = function (name) {
+        var tail = labelled ? share(name) : '', room = width - 34 - textWidth(tail, 12)
+        if (textWidth(name, 12) <= room) return name + tail
+        var cut = String(name)
+        while (cut.length > 1 && textWidth(cut + '…', 12) > room) cut = cut.slice(0, -1)
+        return cut + '…' + tail
+      }
+      if (legend.formatter === undefined) legend.formatter = fitted
+      // Every series is named: the legend wraps into rows and the plot gives it the room.
+      var rows = 1, used = 0
+      names.forEach(function (name) {
+        var size = Math.min(width, 14 + 6 + textWidth(name + (labelled ? share(name) : ''), 12) + 14)
+        if (used && used + size > width) { rows++; used = 0 }
+        used += size
+      })
+      // Every series is in sight: the legend takes the rows it needs and the frame grows with it.
+      if (legend.type === undefined) legend.type = 'plain'
+      if (legend.left === undefined && legend.right === undefined) legend.left = 0
+      if (legend.bottom === undefined && legend.top === undefined) legend.bottom = 0
+      if (legend.width === undefined) legend.width = legend.type === 'scroll' ? width - 72 : width
+      // The helper series of a waterfall is not a thing to name.
+      if (legend.data === undefined && !has(kinds, ['pie', 'funnel', 'radar', 'graph', 'themeRiver', 'boxplot'])) legend.data = names
+      if (state.legend && legend.selected === undefined) legend.selected = state.legend
+      legendHeight = (legend.type === 'scroll' ? 1 : rows) * 26 + 4
+      bottom += legendHeight + 6
+      // A box is drawn as an outline: so is its mark in the legend.
+      if (legend.data === undefined && has(kinds, ['boxplot'])) legend.data = names.map(function (name) {
+        var boxed = series.filter(function (item) { return item.name === name && item.type === 'boxplot' }).length > 0
+        return boxed ? { name: name, itemStyle: { color: css('--color-background-secondary'), borderColor: colors[0], borderWidth: 1 } } : { name: name }
+      })
+    }
+
+    if (option.tooltip === undefined) option.tooltip = {}
+    list(option.tooltip).forEach(function (tooltip) {
+      if (tooltip.trigger === undefined) tooltip.trigger = cartesian && kinds.every(function (kind) { return kind === 'line' || kind === 'bar' || kind === 'candlestick' }) ? 'axis' : 'item'
+      if (tooltip.confine === undefined) tooltip.confine = true
+      if (tooltip.formatter === undefined && (has(kinds, ['boxplot', 'candlestick', 'custom']) || (has(kinds, ['scatter', 'effectScatter']) && !xs.concat(ys).some(function (axis) { return axis.type === 'category' || axis.type === 'time' })))) tooltip.formatter = tip
+      if (tooltip.valueFormatter === undefined && tooltip.formatter === undefined) tooltip.valueFormatter = number
+      if (tooltip.trigger === 'axis' && tooltip.axisPointer === undefined) tooltip.axisPointer = { type: kinds.indexOf('bar') >= 0 ? 'shadow' : 'line' }
+    })
+
+    // Many thin lines: colour alone no longer tells them apart, so each also has its own mark,
+    // and past the palette — its own stroke. Five marks against eight colours never repeat a pair.
+    var lines = series.filter(function (item) { return item.type === 'line' })
+    if (lines.length > 4) {
+      var marks = ['circle', 'rect', 'triangle', 'diamond', 'roundRect'], strokes = ['solid', 'dashed', 'dotted']
+      lines.forEach(function (item, index) {
+        if (item.symbol === undefined) item.symbol = marks[index % marks.length]
+        if (item.symbolSize === undefined) item.symbolSize = 8
+        if (item.showSymbol === undefined) item.showSymbol = true
+        if (index >= colors.length) { if (!isObject(item.lineStyle)) item.lineStyle = {}; if (item.lineStyle.type === undefined) item.lineStyle.type = strokes[Math.floor(index / colors.length) % strokes.length] }
+      })
+    }
+    // A single point is a mark, not a speck.
+    lines.forEach(function (item) { if (list(item.data).length === 1) { item.showSymbol = true; if (item.symbolSize === undefined) item.symbolSize = 10; if (item.itemStyle === undefined) item.itemStyle = { borderWidth: 0 } } })
+    // A cell is named by everything it stands for: its row and its column, or its day.
+    series.forEach(function (item) {
+      if (item.type !== 'heatmap' || isObject(item.tooltip)) return
+      var columns = xs[0] && Array.isArray(xs[0].data) ? xs[0].data : null, rowsOf = ys[0] && Array.isArray(ys[0].data) ? ys[0].data : null
+      item.tooltip = { formatter: function (params) {
+        var v = isObject(params.data) && params.data.value !== undefined ? params.data.value : params.value
+        if (!Array.isArray(v)) return ''
+        var head = item.coordinateSystem === 'calendar' ? dated(String(v[0])) : [rowsOf ? rowsOf[v[1]] : v[1], columns ? columns[v[0]] : v[0]].join(' · ')
+        var safe = function (text) { return String(text).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] }) }
+        return safe(head) + '<br>' + params.marker + ' ' + safe(item.name || '') + ' <b>' + safe(number(v[v.length - 1])) + '</b>'
+      } }
+    })
+    // A node of a tree is named by its path the way the table names it: «Компания › Продукт».
+    series.forEach(function (item) {
+      if (item.type !== 'tree' || isObject(item.tooltip)) return
+      item.tooltip = { formatter: function (params) {
+        var safe = function (text) { return String(text).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] }) }
+        var path = list(params.treeAncestors).map(function (node) { return node.name }).filter(Boolean)
+        if (!path.length) path = [params.name]
+        return safe(path.join(' › ')) + (params.value === undefined || params.value === null || params.value === '' || (typeof params.value === 'number' && isNaN(params.value)) ? '' : ' <b>' + safe(typeof params.value === 'number' ? number(params.value) : params.value) + '</b>')
+      } }
+    })
+    // A zoom slider stands over the legend, never on it.
+    var slider = false
+    list(option.dataZoom).filter(isObject).forEach(function (zoom) {
+      if (zoom.type === 'inside') return
+      slider = true
+      if (zoom.height === undefined) zoom.height = 24
+      if (zoom.bottom === undefined && zoom.top === undefined) zoom.bottom = bottom + 6
+    })
+    if (slider) bottom += 24 + 16
+    // A colour scale says its ends and stands clear of the axis.
+    var scale = false
+    list(option.visualMap).filter(isObject).forEach(function (map) {
+      if (map.show === false) return
+      if (map.calculable === undefined) map.calculable = false
+      if (map.itemWidth === undefined) map.itemWidth = 12
+      if (map.itemHeight === undefined) map.itemHeight = 120
+      if (map.text === undefined && map.type !== 'piecewise' && map.max !== undefined) map.text = [number(map.max), number(map.min === undefined ? 0 : map.min)]
+      if (map.orient !== 'horizontal' || map.top !== undefined) return
+      scale = true
+      if (map.left === undefined && map.right === undefined) map.left = 'center'
+      map.bottom = bottom
+    })
+    if (scale) bottom += 12 + 22 + 8
+
+    if (cartesian) {
+      var stacks = {}
+      series.forEach(function (item) { if (item.type === 'bar' && item.stack !== undefined) (stacks[item.stack] = stacks[item.stack] || []).push(item) })
+      series.forEach(function (item) {
+        if (item.type === 'line' && item.areaStyle !== undefined && isObject(item.areaStyle) && item.areaStyle.opacity === undefined) item.areaStyle.opacity = item.stack !== undefined ? 0.3 : 0.12
+        if (item.type !== 'bar' || !Array.isArray(item.data)) return
+        var style = isObject(item.itemStyle) ? item.itemStyle : (item.itemStyle = {})
+        if (style.color === 'transparent' || style.borderRadius !== undefined) return
+        var stack = item.stack !== undefined ? stacks[item.stack] : null
+        if (stack) {
+          // Stacked segments are cut by a hairline of the page; a stack is rounded where it ends —
+          // its last segment above the baseline, and its last below.
+          style.borderColor = surface; style.borderWidth = 1
+          item.data = item.data.map(function (value, index) {
+            var own = Number(valueOf(value))
+            if (!own) return value
+            var later = stack.slice(stack.indexOf(item) + 1).some(function (other) { var v = Number(valueOf(list(other.data)[index])); return v && (v > 0) === (own > 0) && !(isObject(other.itemStyle) && other.itemStyle.color === 'transparent') })
+            var entry = point(value)
+            if (entry.itemStyle === undefined) entry.itemStyle = {}
+            if (entry.itemStyle.borderRadius === undefined) entry.itemStyle.borderRadius = later ? 0 : own > 0 ? (horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]) : (horizontal ? [4, 0, 0, 4] : [0, 0, 4, 4])
+            return entry
+          })
+          return
+        }
+        if (horizontal) style.borderRadius = [0, 4, 4, 0]
+        // A bar is rounded at its far end: a negative one — below the baseline.
+        if (item.data.some(function (value) { return Number(valueOf(value)) < 0 })) item.data = item.data.map(function (value) {
+          if (!(Number(valueOf(value)) < 0)) return value
+          var entry = point(value)
+          if (entry.itemStyle === undefined) entry.itemStyle = { borderRadius: horizontal ? [4, 0, 0, 4] : [0, 0, 4, 4] }
+          return entry
+        })
+      })
+      var axisTop = 0, axisBottom = 0, axisLeft = 0, rowsLaid = 0, rowHeight = 26
+      var categories = function (axis) { return Array.isArray(axis.data) ? axis.data.length : 0 }
+      ys.forEach(function (axis) {
+        if (axis.name && axis.nameLocation === undefined) {
+          // The unit stands over the axis, read from its left edge — never cut by the frame.
+          if (axis.nameTextStyle === undefined) axis.nameTextStyle = {}
+          if (axis.nameTextStyle.align === undefined) axis.nameTextStyle.align = axis.position === 'right' || ys.indexOf(axis) > 0 ? 'right' : 'left'
+          if (axis.nameTruncate === undefined) axis.nameTruncate = { maxWidth: Math.round(width / 2) - 8 }
+          if (axis.nameGap === undefined) axis.nameGap = 10
+          axisTop = 18
+        }
+        if (axis.type === 'category') {
+          // Bars laid down are read from the top, in the order they were given.
+          if (axis.inverse === undefined && series.some(function (item) { return item.type === 'bar' || item.type === 'heatmap' })) axis.inverse = true
+          if (axis.axisLabel === undefined) axis.axisLabel = {}
+          // Every bar is named, whole: a long name breaks into a second line rather than being cut.
+          if (axis.axisLabel.width === undefined && Array.isArray(axis.data)) {
+            // The names get a column of their own, as wide as the longest of them needs — up to
+            // under half the chart; a longer name breaks into a second line.
+            var longest = axis.data.reduce(function (max, name) { return Math.max(max, textWidth(isObject(name) ? name.value : name, 12)) }, 0)
+            var column = Math.ceil(Math.min(longest, width * 0.4))
+            // The chart library decides where to wrap by a rough table of character widths (every
+            // non-Latin letter counts as a full square), wider than the text is drawn. Its limit
+            // is given in that measure, the column itself — by the true width.
+            // The smallest ratio among the names: no name is then drawn wider than the column.
+            var ratio = axis.data.reduce(function (min, name) {
+              var text = isObject(name) ? name.value : name, real = textWidth(text, 12)
+              return real ? Math.min(min, roughWidth(text, 12) / real) : min
+            }, 3)
+            axis.axisLabel.width = Math.floor((column + (longest > column ? 0 : 6)) * Math.max(1, ratio))
+            // A single word that fits the column is never broken in two.
+            axis.data.forEach(function (name) {
+              String(isObject(name) ? name.value : name).split(/\s+/).forEach(function (word) {
+                if (textWidth(word, 12) <= column) axis.axisLabel.width = Math.max(axis.axisLabel.width, Math.ceil(roughWidth(word, 12)) + 2)
+              })
+            })
+            axis.axisLabel.overflow = 'break'
+            if (axis.axisLabel.lineHeight === undefined) axis.axisLabel.lineHeight = 14
+            axisLeft = column + 10
+            rowHeight = longest > column ? 34 : 26
+          }
+          if (axis.axisLabel.interval === undefined) axis.axisLabel.interval = 0
+          rowsLaid = Math.max(rowsLaid, categories(axis))
+        } else if (axis.type === undefined || axis.type === 'value' || axis.type === 'log') {
+          if (axis.axisLabel === undefined) axis.axisLabel = {}
+          if (axis.axisLabel.formatter === undefined) axis.axisLabel.formatter = compact
+          // Two scales share one set of lines: the second axis follows the first one's ticks.
+          if (ys.length > 1) { if (axis.alignTicks === undefined) axis.alignTicks = true; if (ys.indexOf(axis) > 0 && axis.splitLine === undefined) axis.splitLine = { show: false } }
+        }
+      })
+      laid = rowsLaid * rowHeight
+      // «{value} %» written as a pattern is a share: it is written the person's way, like every other.
+      xs.concat(ys).forEach(function (axis) {
+        if (isObject(axis.axisLabel) && typeof axis.axisLabel.formatter === 'string' && /^\{value\}\s*%$/.test(axis.axisLabel.formatter)) axis.axisLabel.formatter = percent
+      })
+      xs.forEach(function (axis) {
+        if (axis.type === 'time') {
+          if (axis.axisLabel === undefined) axis.axisLabel = {}
+          // Days are named as days: «5 янв», and a year only where a year begins.
+          if (axis.axisLabel.formatter === undefined) { axis.axisLabel.formatter = tick; axisBottom = Math.max(axisBottom, 14) }
+          // The tooltip names the moment the way the axis and the table do.
+          if (axis.axisPointer === undefined) axis.axisPointer = { label: { formatter: function (params) { return moment(params.value) } } }
+          // The first and the last tick stay inside the plot: neither is cut by the frame's edge.
+          if (axis.axisLabel.alignMinLabel === undefined) axis.axisLabel.alignMinLabel = 'left'
+          if (axis.axisLabel.alignMaxLabel === undefined) axis.axisLabel.alignMaxLabel = 'right'
+          // As many ticks as have room for a date each, the first one always: none drop out at random.
+          if (axis.splitNumber === undefined) axis.splitNumber = Math.max(2, Math.floor((width - 60) / 96))
+          if (axis.axisLabel.showMinLabel === undefined) axis.axisLabel.showMinLabel = true
+          var stamps = []
+          series.forEach(function (item) { list(item.data).forEach(function (entry) { var v = isObject(entry) ? entry.value : entry; if (Array.isArray(v)) stamps.push(String(v[0])) }) })
+          if (axis.minInterval === undefined && stamps.length && stamps.every(function (stamp) { return /^\d{4}-\d{2}-\d{2}(T00:00(:00(\.0+)?)?)?$/.test(stamp) })) axis.minInterval = 86400000
+        }
+        if (axis.name) {
+          // The unit of a horizontal axis stands under its middle, with room of its own.
+          if (axis.nameLocation === undefined) axis.nameLocation = 'middle'
+          if (axis.nameGap === undefined) axis.nameGap = axis.type === 'time' ? 42 : 28
+          if (axis.nameLocation === 'middle') axisBottom = axis.type === 'time' ? 34 : 20
+        }
+        if (axis.axisLabel === undefined) axis.axisLabel = {}
+        if (axis.type === 'category' && categories(axis)) {
+          var band = Math.floor((width - 48) / categories(axis))
+          if (axis.axisLabel.width === undefined && band >= 28) { axis.axisLabel.width = band - 4; axis.axisLabel.overflow = 'truncate' }
+          if (axis.axisLabel.interval === undefined && band >= 28) axis.axisLabel.interval = 0
+        } else if (axis.type === 'value' || axis.type === 'log') {
+          if (axis.axisLabel.formatter === undefined) axis.axisLabel.formatter = compact
+          // Few ticks where the plot is narrow: each number must stand clear of the next.
+          if (axis.splitNumber === undefined && (narrow || horizontal)) axis.splitNumber = width - (horizontal ? width * 0.4 : 0) < 220 ? 2 : 3
+          // Points are read against the horizontal lines; a box of both is noise.
+          if (has(kinds, ['scatter', 'effectScatter']) && axis.splitLine === undefined) axis.splitLine = { show: false }
+          if (has(kinds, ['scatter', 'effectScatter']) && axis.boundaryGap === undefined) axis.boundaryGap = [axis.scale === true ? '3%' : 0, '5%']
+        }
+      })
+      // Room over the highest point; under the lowest only where the scale does not start at zero.
+      if (has(kinds, ['scatter', 'effectScatter'])) ys.forEach(function (axis) { if ((axis.type === undefined || axis.type === 'value') && axis.boundaryGap === undefined) axis.boundaryGap = [axis.scale === true ? '3%' : 0, '6%'] })
+      var grids = option.grid === undefined ? [(option.grid = {})] : list(option.grid)
+      grids.forEach(function (grid, index) {
+        // Where the names have their own column the plot starts right after it.
+        if (grid.containLabel === undefined && grid.outerBounds === undefined) grid.containLabel = !axisLeft
+        if (axisLeft && grid.outerBoundsMode === undefined) grid.outerBoundsMode = 'none'
+        if (grid.left === undefined) grid.left = axisLeft
+        if (axisLeft && grid.bottom === undefined && index === grids.length - 1) grid.bottom = bottom + axisBottom + 24
+        // A value axis ends in a number that must not be cut by the frame.
+        if (grid.right === undefined && xs.some(function (axis) { return axis.type === 'time' })) grid.right = 24
+        if (grid.right === undefined) grid.right = horizontal && series.some(function (item) { return isObject(item.label) && item.label.show }) ? 44 : horizontal || has(kinds, ['scatter', 'effectScatter']) ? 24 : 12
+        if (grid.top === undefined && index === 0) grid.top = top + axisTop + 8 + (!horizontal && series.some(function (item) { return isObject(item.label) && item.label.show && item.label.position === 'top' }) ? 12 : 0)
+        if (grid.bottom === undefined && index === grids.length - 1) grid.bottom = bottom + axisBottom + 4
+      })
+    }
+
+    // Room an author left for a title inside the canvas is not needed: the title stands over it.
+    if (heading.text) series.forEach(function (item) { if (typeof item.top === 'number' && item.top <= 48 && has([item.type], ['treemap', 'funnel', 'sankey', 'pie', 'sunburst', 'tree'])) delete item.top })
+    // Words inside a fill take the ink that reads on that fill.
+    series.forEach(function (item) {
+      if (item.type === 'pie') {
+        if (narrow) { if (item.label === undefined) item.label = {}; item.label.show = false; if (item.labelLine === undefined) item.labelLine = { show: false } }
+        else {
+          // Beside each slice: its name and its share — a part of a whole is read with its size.
+          if (item.label === undefined) item.label = {}
+          if (item.label.formatter === undefined) item.label.formatter = function (params) { return params.name + ' · ' + percent(Math.round(params.percent * 10) / 10) }
+          if (item.label.width === undefined) { item.label.width = Math.max(80, Math.round((width - Math.min(width, HEIGHT) * 0.62) / 2) - 24); item.label.overflow = 'break'; item.label.lineHeight = 15 }
+        }
+        // The pie lives in the box over the legend: its centre and radius are that box's.
+        if (item.top === undefined) item.top = 0
+        if (item.bottom === undefined) item.bottom = bottom
+      }
+      if (item.type === 'funnel') {
+        var inside = isObject(item.label) && /inside|inner/.test(String(item.label.position || ''))
+        if (item.label === undefined) item.label = {}
+        if (item.label.position === undefined) item.label.position = 'outside'
+        // A label goes inside a stage only where it fits there; a narrow stage is named beside it.
+        if (inside) {
+          var most = list(item.data).reduce(function (max, value) { return Math.max(max, Number(valueOf(value)) || 0) }, 0) || 1
+          var room = width * 0.8
+          item.data = list(item.data).map(function (value, index) {
+            var entry = point(value)
+            if (entry.label !== undefined) return entry
+            var shownText = String(entry.name === undefined ? '' : entry.name) + ': ' + number(valueOf(entry))
+            // A stage narrows to the next one: the label must fit at its middle, not at its top.
+            var after = list(item.data)[index + 1]
+            var middle = ((Number(valueOf(entry)) || 0) + (after === undefined ? 0 : Number(valueOf(after)) || 0)) / 2
+            var fits = textWidth(shownText, 12) + 16 < room * (middle / most)
+            entry.label = fits ? { color: ink(colors[index % colors.length]) } : { position: 'outside', color: css('--color-text-secondary') }
+            return entry
+          })
+        }
+        if (item.top === undefined) item.top = top + 4
+        if (item.bottom === undefined) item.bottom = bottom + 4
+      }
+      if (item.type === 'radar') return
+      if (item.type === 'parallel') { if (!isObject(item.lineStyle)) item.lineStyle = { width: 2, opacity: 0.9 }; return }
+      if (item.type === 'graph' && item.layout === undefined) item.layout = 'circular'
+      if (item.type === 'graph' && item.layout === 'circular') { ['left', 'right'].forEach(function (side) { if (item[side] === undefined) item[side] = '15%' }); if (item.top === undefined) item.top = 24; if (item.bottom === undefined) item.bottom = bottom + 24 }
+      if (item.type === 'gauge') return
+      if (item.type === 'treemap' || item.type === 'sunburst') {
+        var paint = function (nodes, color) {
+          list(nodes).forEach(function (node, index) {
+            if (!isObject(node)) return
+            var own = color || colors[index % colors.length]
+            if (node.itemStyle === undefined) node.itemStyle = {}
+            if (node.itemStyle.color === undefined) node.itemStyle.color = own
+            if (node.label === undefined) node.label = {}
+            if (node.label.color === undefined) node.label.color = ink(node.itemStyle.color)
+            paint(node.children, node.itemStyle.color)
+          })
+        }
+        paint(item.data, null)
+        if (item.type === 'treemap') {
+          // A name that does not fit its cell is cut with «…»; a sliver of a cell is left unnamed.
+          if (!isObject(item.label)) item.label = {}
+          if (item.label.overflow === undefined) { item.label.overflow = 'truncate'; item.label.ellipsis = '…' }
+          if (item.visibleMin === undefined) item.visibleMin = 300
+          // A leaf among groups gets a group of its own name: it stands level with its neighbours.
+          var grouped = list(item.data).some(function (node) { return isObject(node) && Array.isArray(node.children) && node.children.length })
+          if (grouped) item.data = list(item.data).map(function (node) { return isObject(node) && !(Array.isArray(node.children) && node.children.length) ? { name: node.name, itemStyle: node.itemStyle, children: [node] } : node })
+        }
+        if (item.type === 'treemap' && item.left === undefined) item.left = 0
+        if (item.type === 'treemap' && item.right === undefined) item.right = 0
+        if (item.type === 'treemap' && item.top === undefined) item.top = top
+        if (item.type === 'treemap' && item.bottom === undefined) item.bottom = bottom + 2
+      }
+      if (item.type === 'sankey' || (item.type === 'graph' && !Array.isArray(item.categories))) {
+        // Each node takes a slot of the palette as it is — never a colour in between two.
+        item.data = list(item.data).map(function (value, index) {
+          var entry = point(value)
+          if (item.type === 'graph' && entry.category !== undefined) return entry
+          if (entry.itemStyle === undefined) entry.itemStyle = {}
+          if (entry.itemStyle.color === undefined) entry.itemStyle.color = item.type === 'graph' ? colors[0] : colors[index % colors.length]
+          return entry
+        })
+        if (item.type === 'sankey') {
+          if (item.top === undefined) item.top = top + 4
+          if (item.bottom === undefined) item.bottom = bottom + 8
+          // Room on the right for the names of the last column — as much as they take, no more.
+          var sources = {}
+          list(item.links).forEach(function (link) { if (isObject(link)) sources[link.source] = true })
+          var ends = list(item.data).filter(function (node) { return isObject(node) && !sources[node.name] })
+          var need = ends.reduce(function (max, node) { return Math.max(max, textWidth(node.name, 12)) }, 0)
+          if (item.orient !== 'vertical' && (item.right === undefined || typeof item.right === 'number')) item.right = Math.ceil(need) + 14
+        }
+      }
+      if (item.type === 'heatmap' && Array.isArray(item.data)) {
+        var map = list(option.visualMap).filter(isObject)[0]
+        if (map && map.max !== undefined && !(isObject(map.inRange) && map.inRange.color)) {
+          var ends = ramp(), low = map.min === undefined ? 0 : Number(map.min), high = Number(map.max)
+          item.data = item.data.map(function (value) {
+            var entry = point(value)
+            var at = high > low ? Math.max(0, Math.min(1, (Number(valueOf(entry)) - low) / (high - low))) : 1
+            if (entry.label === undefined) entry.label = { color: ink(mix(ends[1], ends[0], at)) }
+            return entry
+          })
+        }
+      }
+    })
+    list(option.singleAxis).filter(isObject).forEach(function (axis) {
+      if (axis.type !== 'time') return
+      if (axis.axisLabel === undefined) axis.axisLabel = {}
+      if (axis.axisLabel.formatter === undefined) axis.axisLabel.formatter = tick
+      if (axis.axisPointer === undefined) axis.axisPointer = { label: { formatter: function (params) { return moment(params.value) } } }
+      if (axis.axisLabel.alignMinLabel === undefined) axis.axisLabel.alignMinLabel = 'left'
+      if (axis.axisLabel.alignMaxLabel === undefined) axis.axisLabel.alignMaxLabel = 'right'
+      if (axis.splitNumber === undefined) axis.splitNumber = Math.max(2, Math.floor((width - 40) / 96))
+      if (axis.axisLabel.showMinLabel === undefined) axis.axisLabel.showMinLabel = true
+      if (axis.axisLabel.hideOverlap === undefined) axis.axisLabel.hideOverlap = true
+      if (axis.minInterval === undefined) axis.minInterval = 86400000
+      if (axis.bottom === undefined || (typeof axis.bottom === 'number' && axis.bottom < bottom + 28)) axis.bottom = bottom + 28
+    })
+    // The legend stands under the parallel axes, clear of their lowest ticks.
+    list(option.parallel).filter(isObject).forEach(function (box) { if (box.bottom === undefined || (typeof box.bottom === 'number' && box.bottom < bottom + 20)) box.bottom = bottom + 20 })
+    list(option.parallelAxis).filter(isObject).forEach(function (axis) {
+      if (axis.axisLabel === undefined) axis.axisLabel = {}
+      if (axis.type !== 'category' && axis.axisLabel.formatter === undefined) axis.axisLabel.formatter = compact
+      if (axis.axisLabel.inside === undefined) axis.axisLabel.inside = false
+      // Every axis is drawn as an axis: a line and its ticks, whatever it measures.
+      if (axis.axisLine === undefined) axis.axisLine = { show: true, lineStyle: { color: css('--chart-axis') } }
+      if (axis.axisTick === undefined) axis.axisTick = { show: true, lineStyle: { color: css('--chart-axis') } }
+      // A tick's number stands on a patch of the page: the lines pass behind it, not through it.
+      if (axis.axisLabel.backgroundColor === undefined) { axis.axisLabel.backgroundColor = surface; axis.axisLabel.padding = [1, 3] }
+    })
+    list(option.calendar).filter(isObject).forEach(function (calendar) {
+      // The week starts on Monday where the person's language says so; days and months are named in it.
+      var names = locale()
+      if (calendar.yearLabel === undefined) calendar.yearLabel = { show: false }
+      if (calendar.dayLabel === undefined) calendar.dayLabel = {}
+      if (calendar.dayLabel.firstDay === undefined) calendar.dayLabel.firstDay = /^en-US|^en$/.test(buff.host.locale || 'en') ? 0 : 1
+      if (names && calendar.dayLabel.nameMap === undefined) calendar.dayLabel.nameMap = names.time.dayOfWeekAbbr
+      if (calendar.monthLabel === undefined) calendar.monthLabel = {}
+      if (names && calendar.monthLabel.nameMap === undefined) calendar.monthLabel.nameMap = names.time.monthAbbr
+      if (calendar.bottom === undefined && calendar.height === undefined && calendar.cellSize === undefined) calendar.bottom = bottom + 4
+      // The scale stands right under the calendar, not at the far bottom of the frame.
+      var cell = Array.isArray(calendar.cellSize) ? calendar.cellSize[1] : calendar.cellSize
+      if (typeof cell === 'number' && typeof (calendar.top === undefined ? 60 : calendar.top) === 'number') list(option.visualMap).filter(isObject).forEach(function (map) { if (map.orient === 'horizontal' && map.top === undefined) { delete map.bottom; map.top = (calendar.top === undefined ? 60 : calendar.top) + cell * 7 + 18; if (typeof calendar.left === 'number') map.left = calendar.left } })
+    })
+    if (radars.length) {
+      list(option.radar).filter(isObject).forEach(function (radar) {
+        if (radar.radius === undefined) radar.radius = '72%'
+        if (radar.center === undefined) radar.center = ['50%', Math.round(((narrow ? HEIGHT - 32 : 360) + Math.max(0, legendHeight - 30) - bottom) / 2 + 6)]
+      })
+    }
+    // Values written on the marks give way to each other rather than pile up; the tooltip and the table have them all.
+    series.forEach(function (item) {
+      if (!isObject(item.label) || !item.label.show || !has([item.type], ['bar', 'line', 'scatter'])) return
+      if (item.labelLayout === undefined) item.labelLayout = { hideOverlap: true }
+      if (item.label.formatter === undefined) item.label.formatter = function (params) { var v = isObject(params.data) && params.data.value !== undefined ? params.data.value : params.value; return Array.isArray(v) ? number(v[v.length - 1]) : number(v) }
+    })
+    series.forEach(function (item) {
+      if (item.type === 'gauge' && isObject(item.detail) && typeof item.detail.formatter === 'string' && /^\{value\}\s*%$/.test(item.detail.formatter)) item.detail.formatter = percent
+    })
+    // Labels written as a pattern speak the person's numbers: «1 000», not «1000».
+    series.forEach(function (item) {
+      if (!isObject(item.label) || typeof item.label.formatter !== 'string' || !/\{[cd]\}/.test(item.label.formatter)) return
+      var pattern = item.label.formatter
+      item.label.formatter = function (params) {
+        var v = isObject(params.data) && params.data.value !== undefined ? params.data.value : params.value
+        return pattern.replace(/\{a\}/g, params.seriesName || '').replace(/\{b\}/g, params.name || '').replace(/\{c\}/g, Array.isArray(v) ? v.map(number).join(', ') : number(v)).replace(/\{d\}\s*%/g, params.percent === undefined ? '' : percent(params.percent)).replace(/\{d\}/g, params.percent === undefined ? '' : number(params.percent))
+      }
+    })
+    // What a screen reader hears is the title and where the numbers are — in the person's language.
+    option.aria = { enabled: false }
+    var height = Number(meta.height)
+    if (!isFinite(height) || !height) height = (has(kinds, ['sankey', 'tree', 'treemap', 'graph', 'sunburst', 'parallel', 'themeRiver']) ? 360 : HEIGHT - 32 - (coarse ? 12 : 0)) + Math.max(0, legendHeight - 30)
+    if (laid && !(isFinite(Number(meta.height)) && Number(meta.height))) height = Math.max(height, laid + bottom + 44)
+    // A radar or a polar plot is a circle: on a wide screen it gets the height to be one.
+    if (!narrow && (radars.length || option.polar) && !(isFinite(Number(meta.height)) && Number(meta.height))) height = Math.max(height, 360 + Math.max(0, legendHeight - 30))
+    return { option: option, height: Math.max(160, Math.min(680, Math.round(height))), title: heading.text, sub: heading.sub, ask: typeof meta.ask === 'string' ? meta.ask : '', quiet: meta.ask === false, kinds: kinds }
+  }
+
+  // --- the data as a table: a chart is never the only way to read the numbers ------------------
+  function rows(option) {
+    var w = words()
+    var dataset = list(option.dataset)[0]
+    if (dataset && Array.isArray(dataset.source) && dataset.source.length) {
+      var source = dataset.source
+      if (Array.isArray(source[0])) return { head: source[0].map(String), body: source.slice(1) }
+      var keys = Object.keys(source[0])
+      return { head: keys, body: source.map(function (item) { return keys.map(function (key) { return item[key] }) }) }
+    }
+    var series = list(option.series).filter(function (item) { return isObject(item) && item.silent !== true && (Array.isArray(item.data) || Array.isArray(item.links)) })
+    if (!series.length) return null
+    var flows = series.filter(function (item) { return Array.isArray(item.links) && item.links.length })
+    if (flows.length) return { head: [w.from, w.to, w.value], body: flows[0].links.map(function (link) { return [link.source, link.target, link.value] }) }
+    // A grid of cells: its rows down the side, its columns across.
+    var cells = series.filter(function (item) { return item.type === 'heatmap' && item.coordinateSystem !== 'calendar' })[0]
+    var across0 = list(option.xAxis).filter(isObject)[0], down0 = list(option.yAxis).filter(isObject)[0]
+    if (cells && across0 && down0 && Array.isArray(across0.data) && Array.isArray(down0.data)) {
+      var grid = down0.data.map(function (name) { return [isObject(name) ? name.value : name].concat(across0.data.map(function () { return '' })) })
+      list(cells.data).forEach(function (entry) { var v = isObject(entry) ? entry.value : entry; if (Array.isArray(v) && grid[v[1]]) grid[v[1]][Number(v[0]) + 1] = v[2] })
+      return { head: [''].concat(across0.data.map(function (name) { return String(isObject(name) ? name.value : name) })), body: grid }
+    }
+    var axis = list(option.xAxis).concat(list(option.yAxis)).filter(function (item) { return isObject(item) && Array.isArray(item.data) })[0]
+    // A placeholder of a waterfall («-») is no value: its cell stays empty.
+    var value = function (entry) { var v = isObject(entry) ? entry.value : entry; return v === '-' ? '' : v }
+    // A candle and a box are several figures: a column for each, named.
+    var parts = { candlestick: w.candle, boxplot: w.box }
+    if (axis) {
+      var labels = axis.data.map(function (category) { return String(isObject(category) ? category.value : category) })
+      // A category is given by its place or by its name.
+      var rowOf = function (key) { return typeof key === 'number' ? (key % 1 === 0 && key >= 0 && key < labels.length ? key : -1) : labels.indexOf(String(key)) }
+      var head = [w.category], columns = []
+      series.forEach(function (item, index) {
+        var name = item.name || w.value + (series.length > 1 ? ' ' + (index + 1) : '')
+        var figures = parts[item.type]
+        // A figure's column carries its series' name only when two series have such columns.
+        var several = series.filter(function (other) { return parts[other.type] }).length > 1
+        if (figures) figures.forEach(function (figure, at) { head.push(several ? name + ', ' + figure : figure); columns.push(function (row) { var v = value(item.data[row]); return Array.isArray(v) ? v[at] : at ? '' : v }) })
+        else if (item.data.length && item.data.every(function (entry) { var v = value(entry); return Array.isArray(v) && v.length === 2 && rowOf(v[0]) >= 0 })) {
+          // Points given as «which category, what value»: each stands in its category's row.
+          head.push(name); columns.push(function (row) { return item.data.map(value).filter(function (v) { return rowOf(v[0]) === row }).map(function (v) { return typeof v[1] === 'number' ? number(v[1]) : v[1] }).join(' · ') })
+        }
+        else { head.push(name); columns.push(function (row) { var v = value(item.data[row]); return Array.isArray(v) ? v.join(' · ') : v }) }
+      })
+      return { head: head, body: axis.data.map(function (category, row) { return [isObject(category) ? category.value : category].concat(columns.map(function (column) { return column(row) })) }) }
+    }
+    // Series over time: a row per moment, a column per series.
+    var timed = list(option.xAxis).filter(isObject)[0]
+    if (timed && timed.type === 'time' && series.every(function (item) { return item.data.every(function (entry) { return Array.isArray(value(entry)) }) })) {
+      var moments = [], at = {}
+      series.forEach(function (item, column) {
+        item.data.forEach(function (entry) {
+          var pair = value(entry), key = String(pair[0])
+          if (!at[key]) { at[key] = [pair[0]].concat(series.map(function () { return '' })); moments.push(key) }
+          at[key][column + 1] = pair[1]
+        })
+      })
+      return { head: [w.date].concat(series.map(function (item, index) { return item.name || w.value + (series.length > 1 ? ' ' + (index + 1) : '') })), body: moments.map(function (key) { return at[key] }) }
+    }
+    // Things on parallel axes: a row per thing, a column per axis.
+    var axes = list(option.parallelAxis).filter(isObject)
+    var across = series.filter(function (item) { return item.type === 'parallel' })
+    if (axes.length && across.length) {
+      var lines = []
+      across.forEach(function (item) { list(item.data).forEach(function (entry) { var v = isObject(entry) ? entry.value : entry; lines.push([isObject(entry) && entry.name !== undefined ? entry.name : item.name || ''].concat(list(v))) }) })
+      return { head: [w.name].concat(axes.map(function (axis, index) { return axis.name || String(index + 1) })), body: lines }
+    }
+    // A value for every day: the day and the value.
+    var daily = series.filter(function (item) { return item.coordinateSystem === 'calendar' })[0]
+    if (daily) return { head: [w.date, daily.name || w.value], body: list(daily.data).map(function (entry) { var v = isObject(entry) ? entry.value : entry; return list(v).slice(0, 2) }) }
+    // Points in two value axes: a column per axis, named as the axis is.
+    var xName = (list(option.xAxis).filter(isObject)[0] || {}).name, yName = (list(option.yAxis).filter(isObject)[0] || {}).name
+    var pairs = series.filter(function (item) { return item.data.length && Array.isArray(value(item.data[0])) })
+    if (pairs.length && (xName || yName)) {
+      var body = []
+      pairs.forEach(function (item) { item.data.forEach(function (entry) { var v = value(entry); body.push((pairs.length > 1 ? [item.name || ''] : []).concat(v)) }) })
+      var width = body.reduce(function (max, row) { return Math.max(max, row.length) }, 0) - (pairs.length > 1 ? 1 : 0)
+      var head = (pairs.length > 1 ? [w.name] : []).concat([xName || 'X', yName || 'Y'])
+      for (var extra = 2; extra < width; extra++) head.push(String(extra + 1))
+      return { head: head, body: body }
+    }
+    var flat = []
+    var walk = function (nodes, path) {
+      list(nodes).forEach(function (node) {
+        if (!isObject(node)) return
+        var name = path ? path + ' › ' + node.name : String(node.name)
+        // A leaf wrapped in a group of its own name is one row, named once.
+        var only = Array.isArray(node.children) && node.children.length === 1 && isObject(node.children[0]) && node.children[0].name === node.name && !(Array.isArray(node.children[0].children) && node.children[0].children.length)
+        if (only) flat.push([name, node.children[0].value])
+        else if (Array.isArray(node.children) && node.children.length) walk(node.children, name)
+        else flat.push([name, node.value])
+      })
+    }
+    series.forEach(function (item) {
+      if (item.type === 'treemap' || item.type === 'sunburst' || item.type === 'tree') return walk(item.data, '')
+      list(item.data).forEach(function (entry) {
+        var v = value(entry)
+        if (isObject(entry) && entry.name !== undefined) flat.push([entry.name, Array.isArray(v) ? v.join(' · ') : v])
+        else flat.push([item.name || '', Array.isArray(v) ? v.join(' · ') : v])
+      })
+    })
+    return flat.length ? { head: [w.name, w.value], body: flat } : null
+  }
+  function table(option) {
+    var w = words()
+    var content = shown && shown.table ? shown.table : rows(option)
+    el.data.textContent = ''
+    if (!content || !content.body.length) return false
+    var wrap = document.createElement('div'); wrap.className = 'ui-table-wrap'
+    var t = document.createElement('table'), head = t.createTHead().insertRow(), body = t.createTBody()
+    t.className = 'ui-table ui-table--compact'
+    // A column of numbers is headed from the right, as its figures stand.
+    var numeric = content.head.map(function (name, column) { return content.body.some(function (cells) { return typeof list(cells)[column] === 'number' }) })
+    content.head.forEach(function (name, column) { var th = document.createElement('th'); th.scope = 'col'; th.textContent = name; if (numeric[column]) th.className = 'ui-table__num'; head.appendChild(th) })
+    content.body.slice(0, 500).forEach(function (cells) {
+      var row = body.insertRow()
+      list(cells).forEach(function (cell) {
+        var td = row.insertCell()
+        if (typeof cell === 'number') td.className = 'ui-table__num'
+        td.textContent = cell === undefined || cell === null ? '' : typeof cell === 'number' ? number(cell) : String(dated(cell))
+      })
+    })
+    wrap.appendChild(t)
+    el.data.appendChild(wrap)
+    // A long table says that it is not all of it.
+    el.more.textContent = content.body.length > 500 ? fill(w.first, { n: number(500), all: number(content.body.length) }) : ''
+    // More columns than fit: the design system's fade says there is more to the right.
+    var fade = document.createElement('div'); fade.className = 'ui-table-frame__fade'; fade.setAttribute('aria-hidden', 'true'); fade.hidden = true
+    el.data.appendChild(fade)
+    var cue = function () { fade.hidden = wrap.scrollWidth - wrap.clientWidth - wrap.scrollLeft < 8 }
+    wrap.addEventListener('scroll', cue)
+    el.data.cue = cue
+    return true
+  }
+
+  // --- forms beyond an ECharts option: a block gives plain data, the view draws the form --------
+  // «buff.form» names one: a Gantt of tasks, a Venn of sets, a cloud of words. Each makes a plain
+  // option (so the theme, the title and the legend are laid as for any chart), then adds what
+  // JSON cannot carry — how an item is drawn — and its own table and words.
+  var FORMS = {
+    gantt: {
+      option: function (source) {
+        var tasks = list(source.tasks).filter(function (task) { return isObject(task) && task.name !== undefined && task.start !== undefined })
+        var groups = []
+        tasks.forEach(function (task) { var group = task.group === undefined ? '' : String(task.group); if (groups.indexOf(group) < 0) groups.push(group) })
+        var w = words()
+        return {
+          title: source.title, tooltip: { trigger: 'item' },
+          xAxis: { type: 'time' },
+          yAxis: { type: 'category', inverse: true, data: tasks.map(function (task) { return String(task.name) }) },
+          series: groups.map(function (group) {
+            return { type: 'custom', name: group || w.tasks, encode: { x: [1, 2], y: 0 }, data: tasks.map(function (task, index) { return [index, task.start, task.end === undefined ? task.start : task.end, typeof task.done === 'number' ? task.done : '', task.group === undefined ? '' : String(task.group)] }).filter(function (row) { return row[4] === group }) }
+          }),
+          buff: { height: isObject(source.buff) && source.buff.height ? source.buff.height : Math.max(200, Math.min(640, 70 + tasks.length * 30 + (groups.length > 1 ? 30 : 0))), ask: isObject(source.buff) ? source.buff.ask : undefined },
+        }
+      },
+      finish: function (made, source) {
+        var surface = css('--color-background-primary')
+        var names = list(made.option.yAxis)[0].data
+        list(made.option.series).forEach(function (item) {
+          item.renderItem = function (params, api) {
+            var row = api.value(0), from = api.coord([api.value(1), row]), to = api.coord([api.value(2), row])
+            var tall = Math.min(18, api.size([0, 1])[1] * 0.62), color = api.visual('color'), done = api.value(3)
+            var box = { x: params.coordSys.x, y: params.coordSys.y, width: params.coordSys.width, height: params.coordSys.height }
+            // A task of one day is a milestone: a diamond on its date.
+            if (to[0] - from[0] < 1) return { type: 'path', shape: { pathData: 'M0,-7L7,0L0,7L-7,0Z' }, x: from[0], y: from[1], style: { fill: color } }
+            var whole = echarts.graphic.clipRectByRect({ x: from[0], y: from[1] - tall / 2, width: to[0] - from[0], height: tall }, box)
+            if (!whole) return null
+            var parts = [{ type: 'rect', shape: { x: whole.x, y: whole.y, width: whole.width, height: whole.height, r: 4 }, style: { fill: typeof done === 'number' ? mix(color, surface, 0.38) : color } }]
+            // What is done fills the task from its start.
+            if (typeof done === 'number' && done > 0) {
+              var filled = echarts.graphic.clipRectByRect({ x: from[0], y: from[1] - tall / 2, width: (to[0] - from[0]) * Math.min(100, done) / 100, height: tall }, box)
+              if (filled) parts.push({ type: 'rect', shape: { x: filled.x, y: filled.y, width: filled.width, height: filled.height, r: done >= 100 ? 4 : [4, 0, 0, 4] }, style: { fill: color } })
+            }
+            return { type: 'group', children: parts }
+          }
+        })
+        var w = words(), span = function (v) { return String(v[1]) === String(v[2]) ? moment(v[1]) : moment(v[1]) + ' – ' + moment(v[2]) }
+        made.say = function (at) {
+          var v = isObject(at.entry) ? at.entry.value : at.entry
+          var name = String(names[v[0]])
+          var fields = [['', span(v)]].concat(typeof v[3] === 'number' ? [[w.done, percent(v[3])]] : [])
+          return { name: name, series: at.seriesName === w.tasks ? '' : at.seriesName, fields: fields }
+        }
+        var tasks = list(source.tasks).filter(function (task) { return isObject(task) && task.name !== undefined && task.start !== undefined })
+        var grouped = tasks.some(function (task) { return task.group !== undefined }), progress = tasks.some(function (task) { return typeof task.done === 'number' })
+        made.table = { head: [w.task, w.from2, w.to2].concat(grouped ? [w.group] : [], progress ? [w.done] : []), body: tasks.map(function (task) { return [task.name, task.start, task.end === undefined ? task.start : task.end].concat(grouped ? [task.group === undefined ? '' : task.group] : [], progress ? [typeof task.done === 'number' ? percent(task.done) : ''] : []) }) }
+      },
+    },
+    venn: {
+      regions: function (source) {
+        var sets = list(source.sets).filter(function (set) { return isObject(set) && set.name !== undefined }).slice(0, 3)
+        var names = sets.map(function (set) { return String(set.name) })
+        var key = function (members) { return members.map(function (name) { return names.indexOf(String(name)) }).sort().join('') }
+        var given = {}
+        sets.forEach(function (set, index) { given[String(index)] = Number(set.value) || 0 })
+        list(source.overlaps).forEach(function (overlap) { if (isObject(overlap) && Array.isArray(overlap.sets)) given[key(overlap.sets)] = Number(overlap.value) || 0 })
+        var all = given['012'] || 0
+        // What lies in a region alone: a set less its overlaps, an overlap of two less the overlap of all three.
+        var alone = {}
+        Object.keys(given).forEach(function (region) {
+          if (region.length === 3) alone[region] = given[region]
+          else if (region.length === 2) alone[region] = Math.max(0, given[region] - all)
+          else {
+            var pairs = Object.keys(given).filter(function (other) { return other.length === 2 && other.indexOf(region) >= 0 })
+            alone[region] = Math.max(0, given[region] - pairs.reduce(function (sum, other) { return sum + given[other] }, 0) + (pairs.length > 1 ? all : 0))
+          }
+        })
+        return { sets: sets, names: names, given: given, alone: alone }
+      },
+      option: function (source) {
+        var read = FORMS.venn.regions(source)
+        return {
+          title: source.title, tooltip: { trigger: 'item' },
+          series: read.sets.map(function (set, index) { return { type: 'custom', name: read.names[index], coordinateSystem: 'none', silent: true, data: [[index]] } })
+            .concat(read.sets.length ? [{ type: 'custom', coordinateSystem: 'none', data: Object.keys(read.alone).sort(function (a, b) { return a.length - b.length || a.localeCompare(b) }).map(function (region) { return { name: region.split('').map(function (i) { return read.names[Number(i)] }).join(' ∩ '), value: [read.alone[region], read.given[region], region] } }) }] : []),
+          buff: { height: isObject(source.buff) && source.buff.height ? source.buff.height : 300, ask: isObject(source.buff) ? source.buff.ask : undefined },
+        }
+      },
+      finish: function (made, source) {
+        var read = FORMS.venn.regions(source), count = read.sets.length
+        var text = css('--color-text-primary'), font = css('--font-sans')
+        var legend = list(made.option.legend).filter(isObject)[0]
+        var under = legend && legend.show !== false ? 44 : 8
+        var place = function (api) {
+          var width = api.getWidth(), height = api.getHeight() - under
+          var radius = Math.min(height * (count === 3 ? 0.3 : 0.4), width * (count === 3 ? 0.24 : 0.26)), cx = width / 2, cy = height / 2
+          var centres = count === 1 ? [[cx, cy]] : count === 2 ? [[cx - radius * 0.6, cy], [cx + radius * 0.6, cy]] : [[cx - radius * 0.62, cy - radius * 0.36], [cx + radius * 0.62, cy - radius * 0.36], [cx, cy + radius * 0.7]]
+          return { radius: radius, centres: centres, cx: cx, cy: count === 3 ? cy + radius * 0.02 : cy }
+        }
+        var series = list(made.option.series)
+        series.forEach(function (item, index) {
+          if (index < count) {
+            item.renderItem = function (params, api) {
+              var at = place(api), color = api.visual('color')
+              return { type: 'circle', shape: { cx: at.centres[index][0], cy: at.centres[index][1], r: at.radius }, style: { fill: color, opacity: 0.22, stroke: color, lineWidth: 1.5 }, silent: true, z2: 1 }
+            }
+            return
+          }
+          item.renderItem = function (params, api) {
+            // The region is read from the item itself: a key of digits must stay a string.
+            var at = place(api), region = String(item.data[params.dataIndex].value[2]), members = region.split('').map(Number)
+            // A region's number stands at the middle of the centres of its sets, pushed out of the others.
+            var x = 0, y = 0
+            members.forEach(function (i) { x += at.centres[i][0]; y += at.centres[i][1] })
+            x /= members.length; y /= members.length
+            if (members.length < count && count > 1) { var dx = x - at.cx, dy = y - at.cy, far = Math.sqrt(dx * dx + dy * dy) || 1, push = at.radius * (members.length === 1 ? 0.42 : 0.16); x += dx / far * push; y += dy / far * push }
+            return { type: 'text', x: x, y: y, z2: 5, style: { text: number(api.value(0)), fill: text, fontFamily: font, fontSize: 14, fontWeight: 600, align: 'center', verticalAlign: 'middle' } }
+          }
+          item.tooltip = { formatter: function (params) { var v = params.data.value; return String(params.name).replace(/[&<>]/g, '') + ' <b>' + number(v[1]) + '</b>' + (v[0] !== v[1] ? '<br>' + words().only + ' <b>' + number(v[0]) + '</b>' : '') } }
+        })
+        var w = words()
+        made.say = function (at) { var v = at.entry.value; return { name: String(at.entry.name), series: '', fields: [['', number(v[1])]].concat(v[0] !== v[1] ? [[w.only, number(v[0])]] : []) } }
+        made.table = { head: [w.region, w.value, w.only], body: Object.keys(read.given).sort(function (a, b) { return a.length - b.length || a.localeCompare(b) }).map(function (region) { return [region.split('').map(function (i) { return read.names[Number(i)] }).join(' ∩ '), read.given[region], read.alone[region]] }) }
+      },
+    },
+    wordcloud: {
+      words: function (source) { return list(source.words).filter(function (word) { return isObject(word) && word.name !== undefined && typeof word.value === 'number' }).sort(function (a, b) { return b.value - a.value }).slice(0, 80) },
+      option: function (source) {
+        var found = FORMS.wordcloud.words(source)
+        return {
+          title: source.title, tooltip: { trigger: 'item' }, legend: { show: false },
+          series: found.length ? [{ type: 'custom', name: (isObject(source.buff) && source.buff.measure) || words().value, coordinateSystem: 'none', data: found.map(function (word) { return { name: String(word.name), value: word.value } }) }] : [],
+          buff: { height: isObject(source.buff) && source.buff.height ? source.buff.height : 280, ask: isObject(source.buff) ? source.buff.ask : undefined },
+        }
+      },
+      finish: function (made, source) {
+        var found = FORMS.wordcloud.words(source), item = list(made.option.series)[0]
+        if (!item) return
+        var text = css('--color-text-primary'), accent = css('--chart-1'), font = css('--font-sans')
+        var most = found.length ? found[0].value : 1, least = found.length ? found[found.length - 1].value : 0
+        var laid = null, laidFor = ''
+        // Words go round a spiral from the middle, the weightiest first; one that finds no room is left to the table.
+        var lay = function (width, height) {
+          var big = Math.max(20, Math.min(44, width / 9)), small = 13, boxes = [], out = []
+          found.forEach(function (word, index) {
+            var share = most === least ? 1 : Math.sqrt((word.value - least) / (most - least))
+            var size = Math.round(small + (big - small) * share), wide = textWidth(word.name, size, 600) + 10, tall = size * 1.25
+            var spot = null
+            for (var turn = 0; turn < 900 && !spot; turn++) {
+              var angle = turn * 0.35, reach = 2.2 * angle
+              var x = width / 2 + reach * Math.cos(angle) * 1.6 - wide / 2, y = height / 2 + reach * Math.sin(angle) - tall / 2
+              if (x < 6 || y < 6 || x + wide > width - 6 || y + tall > height - 6) continue
+              if (boxes.every(function (box) { return x + wide < box.x || box.x + box.w < x || y + tall < box.y || box.y + box.h < y })) spot = { x: x, y: y, w: wide, h: tall }
+            }
+            if (spot) boxes.push(spot)
+            out[index] = spot ? { x: spot.x + wide / 2, y: spot.y + tall / 2, size: size } : null
+          })
+          return out
+        }
+        item.renderItem = function (params, api) {
+          var size = api.getWidth() + 'x' + api.getHeight()
+          if (laidFor !== size) { laid = lay(api.getWidth(), api.getHeight()); laidFor = size }
+          var at = laid[params.dataIndex]
+          if (!at) return null
+          // The few weightiest words carry the series colour; size says the rest.
+          return { type: 'text', x: at.x, y: at.y, style: { text: found[params.dataIndex].name, fill: params.dataIndex < 3 ? accent : text, fontFamily: font, fontSize: at.size, fontWeight: 600, align: 'center', verticalAlign: 'middle' }, emphasis: { style: { fill: accent } } }
+        }
+        made.table = { head: [words().word, item.name], body: found.map(function (word) { return [word.name, word.value] }) }
+      },
+    },
+  }
+  function formOf(source) { return isObject(source) && isObject(source.buff) && typeof source.buff.form === 'string' && FORMS.hasOwnProperty(source.buff.form) ? FORMS[source.buff.form] : null }
+
+  // --- drawing ---------------------------------------------------------------------------------
+  function pick(params) {
+    var w = words()
+    var name = params.name || (params.data && params.data.name) || params.seriesName
+    if (!name || shown.quiet) return
+    picked = { name: String(name), series: params.seriesName || '' }
+    el.ask.textContent = w.more + picked.name
+    el.ask.hidden = false
+    el.say.textContent = fill(w.picked, { title: shown.title || '—', name: picked.name }) + '. ' + el.ask.textContent
+    buff.updateContext(fill(w.picked, { title: shown.title || '—', name: picked.name + (picked.series && picked.series !== picked.name ? ' (' + picked.series + ')' : '') })).catch(function () {})
+  }
+  // Every point that can be reached: by series, then by its place in the series.
+  // Every point the chart holds, read from the chart itself: data given in the series or in a dataset alike.
+  function points() {
+    var all = []
+    list(shown.option.series).forEach(function (item, seriesIndex) {
+      if (!isObject(item) || item.silent === true) return
+      var data = null, model = null
+      try { model = chart.getModel().getSeriesByIndex(seriesIndex); data = model && model.getData() } catch (error) { data = null }
+      if (!data) return
+      for (var dataIndex = 0; dataIndex < data.count(); dataIndex++) {
+        var held = '', value
+        try { held = data.getName(dataIndex) || '' } catch (error) { held = '' }
+        if (!Array.isArray(item.data)) {
+          // A row of a dataset: its value is the one measured along the value axis.
+          try { var base = model.getBaseAxis && model.getBaseAxis(); value = data.get(data.mapDimension(base && base.dim === 'y' ? 'x' : 'y'), dataIndex) } catch (error) { value = undefined }
+        }
+        var raw = Array.isArray(item.data) ? data.getRawDataItem(dataIndex) : null
+        var bare = isObject(raw) ? raw.value : raw
+        // «-» stands for "no value here" (the gap of a waterfall); the unnamed root of a hierarchy is not a point either.
+        if (bare === '-' || (Array.isArray(item.data) && has([item.type], ['sunburst', 'treemap', 'tree']) && !held)) continue
+        var called = item.name || (model.name && !/^series\u0000/.test(model.name) ? String(model.name) : '')
+        var gap = bare === null || bare === undefined || bare === ''
+        // A node of a flow carries what passes through it.
+        if (item.type === 'sankey' && isObject(raw) && raw.value === undefined) { try { var through = model.getGraph().getNodeByIndex(dataIndex).getLayout().value; if (typeof through === 'number') raw = { name: raw.name, value: through } } catch (error) { /* named only */ } }
+        all.push({ seriesIndex: seriesIndex, dataIndex: dataIndex, seriesName: called, gap: gap && has([item.type], ['line', 'bar']), type: item.type, calendar: item.coordinateSystem === 'calendar', entry: Array.isArray(item.data) ? raw : { name: held, value: value }, held: held })
+      }
+    })
+    return all
+  }
+  // What a point is called and what it measures — the same words the tooltip shows.
+  function told(at) {
+    var w = words()
+    if (shown.say) { var own = shown.say(at), plain = own.fields.map(function (field) { return field[0] ? field[0] + ' ' + field[1] : field[1] }).join(', '); own.text = [own.name, own.series].filter(Boolean).join(', ') + (plain ? ': ' + plain : ''); return own }
+    var categories = function (key) { var axis = list(shown.option[key]).filter(function (item) { return isObject(item) && Array.isArray(item.data) })[0]; return axis ? axis.data.map(function (name) { return isObject(name) ? name.value : name }) : null }
+    var across = categories('xAxis'), down = categories('yAxis'), around = categories('angleAxis') || categories('radiusAxis') || categories('singleAxis')
+    var at2 = function (names, key) { return typeof key === 'number' && names && names[key] !== undefined ? names[key] : key }
+    var named = function (key, index) { return String((list(shown.option[key]).filter(isObject)[index || 0] || {}).name || '') }
+    var v = isObject(at.entry) ? at.entry.value : at.entry
+    var name = isObject(at.entry) && at.entry.name !== undefined ? String(at.entry.name) : ''
+    var series = at.seriesName, labels = null
+    if (at.type === 'themeRiver' && Array.isArray(v)) { name = String(dated(String(v[0]))); series = String(v[2] === undefined ? '' : v[2]); v = v[1] }
+    // A box and a candle are their own numbers, each with its name; the chart's running index before them is not one.
+    else if (at.type === 'boxplot' && Array.isArray(v)) { v = v.slice(-5); labels = w.box }
+    else if (at.type === 'candlestick' && Array.isArray(v)) { v = v.slice(-4); labels = w.candle }
+    else if (at.type === 'radar' && Array.isArray(v)) labels = list((list(shown.option.radar).filter(isObject)[0] || {}).indicator).map(function (item) { return isObject(item) ? String(item.name || '') : '' })
+    else if (at.type === 'parallel') { name = at.seriesName; if (Array.isArray(v)) labels = list(shown.option.parallelAxis).map(function (axis) { return isObject(axis) ? String(axis.name || '') : '' }) }
+    else if (at.type === 'heatmap' && Array.isArray(v)) {
+      name = at.calendar ? String(dated(String(v[0]))) : [at2(down, v[1]), at2(across, v[0])].join(' · ')
+      v = v[v.length - 1]
+    } else if (Array.isArray(v) && v.length === 2 && (across || down) && !name) {
+      // A pair on a category axis: the category names the point, the other number is its value.
+      if (across) { name = String(dated(at2(across, v[0]))); v = v[1] } else { name = String(dated(at2(down, v[1]))); v = v[0] }
+    } else if (Array.isArray(v) && v.length === 2 && typeof v[0] === 'string' && !name) { name = String(dated(v[0])); v = v[1] }
+    // A point between two measured axes is both of its numbers, each named by its axis.
+    else if (Array.isArray(v) && v.length >= 2 && has([at.type], ['scatter', 'effectScatter']) && (named('xAxis') || named('yAxis'))) labels = [named('xAxis'), named('yAxis')]
+    if (!name) name = at.held || String(at2(across || down || around, at.dataIndex) === at.dataIndex ? '' : at2(across || down || around, at.dataIndex))
+    var one = function (x) { return typeof x === 'number' ? number(x) : String(x) }
+    var missing = v === undefined || v === null || v === '' || (typeof v === 'number' && isNaN(v))
+    var fields = missing ? [] : Array.isArray(v) ? v.map(function (x, index) { return [labels && labels[index] ? labels[index] : '', one(x)] }) : [['', one(v)]]
+    // A gap is said as a gap; a thing with no number of its own (a node of a graph) is just named.
+    var value = missing ? (at.gap ? w.empty.toLowerCase() : '') : fields.map(function (field) { return field[0] ? field[0] + ' ' + field[1] : field[1] }).join(', ')
+    return { name: name, series: series && series !== name ? series : '', fields: fields, text: [name, series && series !== name ? series : ''].filter(Boolean).join(', ') + (value ? ': ' + value : '') }
+  }
+  // The tooltip of a point that is several numbers: every number with its name, in the person's language.
+  function tip(params) {
+    var safe = function (text) { return String(text).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] }) }
+    var many = Array.isArray(params) ? params : [params], head = ''
+    var body = many.map(function (p) {
+      var item = list(shown.option.series)[p.seriesIndex] || {}
+      var said = told({ seriesIndex: p.seriesIndex, dataIndex: p.dataIndex, seriesName: item.name || '', type: p.seriesType, calendar: item.coordinateSystem === 'calendar', entry: p.data, held: p.name || '' })
+      head = head || said.name
+      var lines = said.fields.filter(function (field) { return field[0] }).map(function (field) { return safe(field[0]) + ' <b>' + safe(field[1]) + '</b>' })
+      var plain = said.fields.filter(function (field) { return !field[0] }).map(function (field) { return field[1] }).join(', ')
+      return (p.marker || '') + ' ' + safe(said.series || (many.length > 1 ? item.name || '' : '')) + (plain ? ' <b>' + safe(plain) + '</b>' : '') + (lines.length ? '<br>' + lines.join('<br>') : '')
+    })
+    return (head ? safe(head) + '<br>' : '') + body.join('<br>')
+  }
+  function step(by) {
+    if (!chart || !shown) return
+    var all = points()
+    if (!all.length) return
+    if (cursor >= 0 && all[cursor]) chart.dispatchAction({ type: 'downplay', seriesIndex: all[cursor].seriesIndex, dataIndex: all[cursor].dataIndex })
+    cursor = (cursor + by + all.length) % all.length
+    // What the arrow reached is said aloud first: the mark and the tooltip on the canvas are for the eyes only.
+    el.say.textContent = told(all[cursor]).text
+    try {
+      chart.dispatchAction({ type: 'highlight', seriesIndex: all[cursor].seriesIndex, dataIndex: all[cursor].dataIndex })
+      chart.dispatchAction({ type: 'showTip', seriesIndex: all[cursor].seriesIndex, dataIndex: all[cursor].dataIndex })
+    } catch (error) { /* a chart type without a mark to light up still has its words */ }
+  }
+  el.chart.addEventListener('keydown', function (event) {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { step(1); event.preventDefault() }
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') { step(-1); event.preventDefault() }
+    else if ((event.key === 'Enter' || event.key === ' ') && cursor >= 0 && shown) {
+      var at = points()[cursor]
+      if (!at) return
+      pick({ name: told(at).name, seriesName: at.seriesName, data: at.entry })
+      event.preventDefault()
+    } else if (event.key === 'Escape' && chart) chart.dispatchAction({ type: 'hideTip' })
+  })
+  function start() {
+    chart = echarts.init(el.chart, theme(), { renderer: 'canvas', locale: locale() })
+    chart.on('click', pick)
+    chart.on('legendselectchanged', function (event) { state.legend = event.selected; buff.setState(state) })
+  }
+  function paint() {
+    var w = words()
+    el.title.textContent = shown.title; el.title.hidden = !shown.title
+    el.sub.textContent = shown.sub; el.sub.hidden = !shown.sub
+    el.chart.style.height = shown.height + 'px'
+    chart.resize()
+    chart.setOption(shown.option, { notMerge: true, lazyUpdate: false })
+    // A cell of a treemap too narrow for two letters and «…» stays unnamed: its name is in the tooltip and the table.
+    var hidden = false
+    list(shown.option.series).forEach(function (item, index) {
+      if (!isObject(item) || item.type !== 'treemap') return
+      try {
+        chart.getModel().getSeriesByIndex(index).getData().tree.root.eachNode(function (node) {
+          if (node.children.length || node === this) return
+          // The drawn cell is found in the option by its path of names: the chart keeps a copy of its own.
+          var path = [], up = node
+          while (up && up.depth > 0) { path.unshift(up.name); up = up.parentNode }
+          var level = list(item.data), raw = null
+          path.forEach(function (name, depth) {
+            raw = level.filter(function (entry) { return isObject(entry) && String(entry.name) === String(name) })[0] || null
+            level = raw && depth < path.length - 1 ? list(raw.children) : []
+          })
+          var box = node.getLayout()
+          if (!box || !isObject(raw)) return
+          if (box.width < textWidth(String(node.name).slice(0, 2) + '…', 12) + 10 && String(node.name).length > 2) { raw.label = { show: false }; hidden = true }
+        })
+      } catch (error) { hidden = false }
+    })
+    if (hidden) chart.setOption(shown.option, { notMerge: true, lazyUpdate: false })
+    el.chart.setAttribute('aria-label', (shown.title ? shown.title + '. ' : '') + w.below + ' ' + w.keys)
+  }
+  var last = null
+  function draw(block) {
+    last = block
+    var source = parse(block), form = formOf(source)
+    var given = form ? form.option(source) : source
+    var w = words()
+    if (!given || !list(given.series).length) {
+      if (block.complete) throw new Error(form ? 'The chart block has no data for its form.' : 'The chart block has no "series".')
+      // Nothing to draw yet: the app's skeleton stands where the chart will be.
+      if (!chart) { el.wait.setAttribute('aria-label', w.drawing); el.wait.hidden = false; el.chart.hidden = true }
+      return
+    }
+    el.wait.hidden = true
+    if (block.complete && emptyData(given)) {
+      // A chart of nothing is said in words, at the text's size.
+      el.chart.hidden = true; el.bar.hidden = true; el.data.hidden = true; el.wait.hidden = true
+      var named = list(given.title).filter(isObject)[0]
+      el.title.hidden = true; el.sub.hidden = true
+      el.none.textContent = (named && named.text ? named.text + ': ' : '') + w.empty.toLowerCase()
+      el.none.hidden = false
+      return
+    }
+    el.none.hidden = true
+    el.chart.hidden = false
+    shown = prepared(given, Math.max(240, el.chart.clientWidth || document.documentElement.clientWidth))
+    if (form) form.finish(shown, source)
+    if (!chart) start()
+    // While the answer is still being written the chart grows without starting over.
+    paint()
+    if (block.complete) {
+      var tabled = table(shown.option)
+      el.bar.hidden = !tabled
+      if (tabled) el.bar.removeAttribute('data-idle')
+      el.toggle.textContent = el.data.hidden ? w.data : w.hide
+    }
+  }
+  // The width decides the layout (legend rows, labels): a new width is a new layout.
+  var width = 0
+  if (window.ResizeObserver) new ResizeObserver(function () {
+    var now = el.chart.clientWidth
+    if (!chart || !last || !now || Math.abs(now - width) < 2) return
+    width = now
+    draw(last)
+  }).observe(el.chart)
+  el.toggle.onclick = function () {
+    el.data.hidden = !el.data.hidden
+    el.toggle.textContent = el.data.hidden ? words().data : words().hide
+    el.toggle.setAttribute('aria-expanded', String(!el.data.hidden))
+    el.more.hidden = el.data.hidden || !el.more.textContent
+    if (!el.data.hidden && el.data.cue) el.data.cue()
+  }
+  el.ask.onclick = function () {
+    if (!picked || !shown) return
+    var w = words()
+    var text = fill(shown.ask || (shown.title ? w.ask : w.askPlain), { name: picked.name, series: picked.series, title: shown.title })
+    buff.sendMessage(text).then(function () { el.ask.hidden = true }, function () {})
+  }
+  buff.onHost(function () {
+    if (!chart || !last) return
+    // A new theme or language: the same chart in the app's new colours and words.
+    chart.dispose()
+    chart = null
+    draw(last)
+  })
+  buff.onBlock(draw)
+})()
+</script>

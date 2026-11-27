@@ -7,6 +7,7 @@ import { ToolFailure } from "@opencode/ai"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { define } from "@opencode/plugin/effect/plugin"
+import { BuffChatConnections } from "@opencode/schema/buff-chat-connections"
 import { BuffConnection } from "@opencode/schema/buff-connection"
 import { BuffMcp } from "@opencode/schema/buff-mcp"
 import { BuffSetup } from "@opencode/schema/buff-setup"
@@ -19,6 +20,7 @@ import { Permission } from "../permission.js"
 import { Session } from "../session.js"
 import { QuestionTool } from "../tool/plugin/question.js"
 import { BuffConnectionScript } from "./connection-script.js"
+import { BuffAccountPkce } from "./account/pkce.js"
 import { BuffConnectionText } from "./connection-text.js"
 import { BuffLocale } from "./locale.js"
 import { BuffProjectDir } from "./project-dir.js"
@@ -53,6 +55,39 @@ export const descriptions = {
   instructions: instructionsText,
 } as const
 
+/** Connection tools any chat may call (#969): signing in, testing, listing, describing. */
+const ANY_MODE: ReadonlySet<string> = new Set([
+  BuffConnection.TOOLS.auth,
+  BuffConnection.TOOLS.test,
+  BuffConnection.TOOLS.list,
+  BuffConnection.TOOLS.instructions,
+])
+export const anyMode = (tool: string) => ANY_MODE.has(tool)
+
+/**
+ * What keeps a connection tool from a connection outside Setup (R22-01): there the tools reach only
+ * what the chat itself could. A trial call would bypass the tool path — the chat's «off», the origin
+ * rules, the asks — so it stays Setup's; a project's (or project-personal) connection is not the
+ * person's to start from a chat; one switched off (by the person or as over the operator's limit)
+ * or turned off in this chat is not reached. Undefined — allowed.
+ */
+export function outsideSetupProblem(o: {
+  readonly scope: BuffMcp.Entry["scope"]
+  readonly status: string
+  readonly off: boolean
+  readonly trial: boolean
+}): string | undefined {
+  if (o.trial)
+    return "A trial call is only for Self-setup mode. Here call this tool without `tool`, then call the connection's own tool."
+  if (o.scope !== "user" && o.scope !== "builtin")
+    return "This connection belongs to the project: it is tested and signed in to only in Self-setup mode. Tell the user."
+  if (o.status === "disabled")
+    return "This connection is turned off — by the user, or as one over the limit of connections. It cannot be tested or signed in to until the user turns it on; tell them."
+  if (o.off)
+    return "The user turned this connection off in this chat. Do not test it, sign in to it or reach the same service another way; tell the user — only they can turn it back on."
+  return undefined
+}
+
 const fail = (message: string) => Effect.fail(new ToolFailure({ message }))
 /** Значение как JSON: у настроек сервера из схемы — экземпляр класса, метаданным разрешения он не годится. */
 export const plain = <A>(value: A): A => JSON.parse(JSON.stringify(value)) as A
@@ -71,7 +106,7 @@ export const ScriptInput = Schema.Struct({
 })
 export const TestInput = Schema.Struct({
   name: Name,
-  tool: Schema.String.annotate({ description: "A harmless tool to call once; empty to only reconnect and list" }),
+  tool: Schema.String.annotate({ description: "Empty outside Self-setup mode. In Self-setup mode: a harmless tool to call once, or empty to only reconnect and list" }),
   args: Schema.Record(Schema.String, Schema.Unknown).annotate({ description: "Arguments of the trial call" }),
 })
 export const TargetInput = Schema.Struct({ name: Name })
@@ -125,6 +160,16 @@ export const Plugin = define<
     const personal = yield* BuffProjectDir.personalFor(ctx.location.project)
     const project = path.basename(ctx.location.project.directory)
     type Context = { sessionID: string; agent: string; messageID: string; id: string }
+    /** Кто входит сейчас (R14-01): клиент последнего запроса человека в главном чате (помощника
+     *  ведёт агент главного), без запросов — метка рождения чата. */
+    const signingFrom = (sessionID: string): Effect.Effect<unknown, unknown> =>
+      Effect.gen(function* () {
+        let session = yield* sessions.get(sessionID as never)
+        for (let hops = 0; session.parentID && hops < 16; hops++) session = yield* sessions.get(session.parentID)
+        const [latest] = yield* sessions.messages({ sessionID: session.id, type: "user", order: "desc", limit: 1 })
+        const metadata = latest && "metadata" in latest ? (latest.metadata as Record<string, unknown> | undefined) : undefined
+        return BuffConnection.signingClient(latest ? (metadata ?? {}) : undefined, session.metadata?.["origin"])
+      })
 
     yield* ctx.permission.hook("evaluate", (event) =>
       Effect.sync(() => {
@@ -132,9 +177,43 @@ export const Plugin = define<
       }),
     )
 
-    const setupOnly = (context: Context) =>
-      context.agent === BuffSetup.AGENT ? Effect.void : fail("Connection tools are only for Setup mode.")
+    // Changing a connection is Setup's; signing in to, testing, listing and describing one work in
+    // any chat (#969): on the cloud the person adds connections in «Подключения» and signs in from
+    // a normal chat — and on a computer a configured server is signed in to from where it is needed.
+    const setupOnly = (name: string, context: Context) =>
+      anyMode(name) || context.agent === BuffSetup.AGENT
+        ? Effect.void
+        : fail("Saving, scripting and removing connections are only for Self-setup mode. Tell the user.")
     const rpcFailure = (error: { readonly message: string }) => new ToolFailure({ message: error.message })
+    const chatConnections = ctx.rpc(BuffChatConnections.Rpc)
+    /** Turned off in this chat or the chat it helps (R13-07): the chat's own switch. */
+    const offHere = (sessionID: string, name: string) =>
+      Effect.gen(function* () {
+        let id: string | undefined = sessionID
+        for (let hops = 0; id && hops < 16; hops++) {
+          const off = yield* chatConnections.get({ sessionID: id }).pipe(Effect.orElseSucceed(() => ({ off: [] as readonly string[] })))
+          if (off.off.includes(name)) return true
+          const session: { parentID?: string } | undefined = yield* sessions
+            .get(id as never)
+            .pipe(Effect.orElseSucceed(() => undefined))
+          id = session?.parentID
+        }
+        return false
+      })
+    /** Outside Setup, the guard of R22-01 over the named connection; in Setup — nothing. */
+    const reachable = (name: string, context: Context, trial: boolean) =>
+      Effect.gen(function* () {
+        if (context.agent === BuffSetup.AGENT) return
+        const entry = yield* entryOf(name)
+        const status = (yield* mcp.servers()).find((item) => item.name === name)?.status.status ?? "pending"
+        const problem = outsideSetupProblem({
+          scope: entry.scope,
+          status,
+          off: yield* offHere(context.sessionID, name),
+          trial,
+        })
+        if (problem) return yield* fail(problem)
+      })
     const found = (name: string) =>
       servers.list().pipe(
         Effect.mapError(rpcFailure),
@@ -194,7 +273,7 @@ export const Plugin = define<
             input,
             output: Text,
             execute: (value, context) =>
-              setupOnly(context).pipe(
+              setupOnly(name, context).pipe(
                 // Тип входа инструмента выводится из схемы иначе, чем `Schema.Type`, но это одно и то же значение.
                 Effect.andThen(run(value as Schema.Schema.Type<I>, context)),
                 Effect.map((text) => ({ output: { text }, content: text, metadata: {} })),
@@ -203,11 +282,13 @@ export const Plugin = define<
         )
         .pipe(Effect.orDie)
 
-    yield* add(BuffConnection.TOOLS.list, listText, Schema.Struct({}), () =>
+    yield* add(BuffConnection.TOOLS.list, listText, Schema.Struct({}), (_, context) =>
       Effect.gen(function* () {
         const entries = yield* servers.list().pipe(Effect.mapError(rpcFailure))
         const tools = yield* mcp.tools()
-        return BuffConnectionText.list(entries, tools)
+        const off = new Set<string>()
+        for (const entry of entries) if (yield* offHere(context.sessionID, entry.name)) off.add(entry.name)
+        return BuffConnectionText.list(entries, tools, off)
       }),
     )
 
@@ -229,9 +310,10 @@ export const Plugin = define<
       }),
     )
 
-    yield* add(BuffConnection.TOOLS.test, testText, TestInput, (input) =>
+    yield* add(BuffConnection.TOOLS.test, testText, TestInput, (input, context) =>
       Effect.gen(function* () {
         yield* entryOf(input.name)
+        yield* reachable(input.name, context, input.tool.trim() !== "")
         // Всегда заново: правленый скрипт или настройки подхватываются только перезапуском.
         yield* mcp.disconnect(input.name).pipe(Effect.ignore)
         yield* mcp.connect(input.name).pipe(Effect.mapError((error) => new ToolFailure({ message: error.message })))
@@ -296,22 +378,24 @@ export const Plugin = define<
       Effect.gen(function* () {
         const server = (yield* mcp.servers()).find((item) => item.name === input.name)
         if (!server) return yield* fail(`No connection named «${input.name}». Call connection_list.`)
+        yield* reachable(input.name, context, false)
         if (!server.integrationID)
           return yield* fail("This connection does not sign in through the service: it is local, or takes a key.")
         const integration = yield* integrations.get(server.integrationID)
         const method = integration?.methods.find((item) => item.type === "oauth")
         if (!method || method.type !== "oauth") return yield* fail("This connection has no sign-in method.")
         // С телефона (#780) браузер не дойдёт до loopback машины: сервис вернёт в приложение Buff,
-        // и оно само ответит на форму кодом. С компьютера код не нужен, но поле на всякий случай есть.
-        const phone = yield* sessions.get(context.sessionID as never).pipe(
-          Effect.map((session) => session.metadata?.["origin"] === "phone"),
-          Effect.orElseSucceed(() => false),
+        // и оно само ответит на форму кодом. Из веб-клиента (#969) — на его страницу /oauth, и она
+        // так же ответит. С компьютера код не нужен, но поле на всякий случай есть.
+        const back = yield* signingFrom(context.sessionID).pipe(
+          Effect.map((client) => BuffConnection.returnTo(client, BuffAccountPkce.webOrigin(process.env))),
+          Effect.orElseSucceed(() => undefined),
         )
         const attempt = yield* integrations.oauth
           .connect({
             integrationID: server.integrationID,
             methodID: method.id,
-            ...(phone ? { answer: { redirect_uri: BuffConnection.APP_LINK } } : {}),
+            ...(back ? { answer: { redirect_uri: back } } : {}),
           })
           .pipe(Effect.mapError((error) => new ToolFailure({ message: error.message })))
         const handoff = BuffConnection.oauthState(attempt.url)
@@ -329,7 +413,7 @@ export const Plugin = define<
               {
                 key: "code",
                 type: "string" as const,
-                required: attempt.mode === "code" || phone,
+                required: attempt.mode === "code" || back !== undefined,
                 title: BuffLocale.t("Code the service showed you"),
                 description: BuffLocale.t(
                   "Comes by itself when you return to the app; or paste the address of the page you ended up on",

@@ -14,7 +14,7 @@ test("the palette keybind opens a filterable list; Enter runs the selected comma
   function Screen() {
     useCommandRegistration("screen", () => [
       { id: "settings.open", title: "Open settings", onSelect: () => ran.push("settings") },
-      { id: "session.new", title: "New session", onSelect: () => ran.push("new") },
+      { id: "session.new", title: "New chat", onSelect: () => ran.push("new") },
     ])
     return null
   }
@@ -35,14 +35,14 @@ test("the palette keybind opens a filterable list; Enter runs the selected comma
   expect(input).not.toBeNull()
   expect([...document.querySelectorAll('[role="option"]')].map((item) => item.textContent)).toEqual([
     "Open settings",
-    "New session",
+    "New chat",
   ])
   act(() => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set
     setter?.call(input, "new")
     input?.dispatchEvent(new Event("input", { bubbles: true }))
   })
-  expect(document.querySelector('[role="option"][aria-selected="true"]')?.textContent).toBe("New session")
+  expect(document.querySelector('[role="option"][aria-selected="true"]')?.textContent).toBe("New chat")
   act(() => {
     input?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
   })

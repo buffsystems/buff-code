@@ -82,7 +82,7 @@ export function runOptions(detail: BuffWorkflowRpc.Detail, now: number): Option[
     ...(BuffWorkflow.resumable(run)
       ? [action("resume", t("Resume"), t("from the same place: finished steps are not repeated"))]
       : []),
-    ...(run.session ? [action("session", t("Open session"), t("the run result arrives there"))] : []),
+    ...(run.session ? [action("session", t("Open chat"), t("the run result arrives there"))] : []),
     ...(run.supersededBy
       ? []
       : [action("fix", t("Fix in chat"), t("write what to change — the agent will amend the run"))]),
@@ -102,7 +102,7 @@ export function runOptions(detail: BuffWorkflowRpc.Detail, now: number): Option[
           category: t("Steps waiting for permission"),
           value: "session",
           title: t("{actor} is waiting for your permission", { actor: step.actor }),
-          description: t("Enter — open the workflow session and answer"),
+          description: t("Enter — open the workflow chat and answer"),
         }))
     : []
   const phases = BuffWorkflow.phases(run.phases, detail.steps).flatMap((phase, index) =>

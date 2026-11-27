@@ -15,7 +15,7 @@ export const Side = Schema.Struct({ id: Schema.String, n: Schema.Number, at: Sch
 export type Side = typeof Side.Type
 
 export function title(n: number, t: BuffI18n.T = BuffI18n.english): string {
-  return t("Side conversation {n}", { n })
+  return t("Side chat {n}", { n })
 }
 
 export function next(sides: readonly Side[]): number {

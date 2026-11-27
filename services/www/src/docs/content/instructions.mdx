@@ -58,7 +58,7 @@ my-project/                         ← current workspace
 
 Nested files are loaded nearest-first and deduplicated while their instruction entry remains in model-visible history. Reading the same area again does not normally inject them again. If compaction or a revert removes that entry, a later read can load the file again.
 
-Edits to a nested file are not detected automatically after it loads. Start a new session when updated text must apply immediately.
+Edits to a nested file are not detected automatically after it loads. Start a new chat when updated text must apply immediately.
 
 ## Ordering
 
@@ -73,11 +73,11 @@ The selected agent or provider system prompt is sent first. OpenCode then assemb
 6. Session-specific instruction entries supplied through the API
 ```
 
-These sources are combined rather than used as overrides. Nested `AGENTS.md` files discovered later are added to session history in discovery order.
+These sources are combined rather than used as overrides. Nested `AGENTS.md` files discovered later are added to chat history in discovery order.
 
 ## Updates
 
-Edit a global or upward-discovered `AGENTS.md` while a session is running to update its guidance.
+Edit a global or upward-discovered `AGENTS.md` while a chat is running to update its guidance.
 
 ```bash
 $ printf '\n- Run the integration suite before committing.\n' >> AGENTS.md
@@ -91,10 +91,10 @@ AGENTS.md changes
 → next prompt
 ```
 
-- Removing every ambient `AGENTS.md` tells the session that the previous ambient instructions no longer apply.
+- Removing every ambient `AGENTS.md` tells the chat that the previous ambient instructions no longer apply.
 - A temporary read failure preserves the last known instructions instead of treating them as deleted.
-- Moving a session retains its instruction state, so guidance at the destination is introduced as an update.
-- Committing a session revert clears its instruction state and reloads instructions before the next prompt.
+- Moving a chat retains its instruction state, so guidance at the destination is introduced as an update.
+- Committing a chat revert clears its instruction state and reloads instructions before the next prompt.
 
 Instruction values remain privileged. Clients can see which sources changed, but not their contents.
 

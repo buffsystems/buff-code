@@ -90,7 +90,7 @@ export function SettingsShares() {
         open
         danger
         title={t("Delete the link?")}
-        message={t("The page will say the dialog was removed by its owner.")}
+        message={t("The page will say the chat was removed by its owner.")}
         confirmLabel={t("Delete")}
         cancelLabel={t("Cancel")}
         onCancel={close}
@@ -122,7 +122,7 @@ export function SettingsShares() {
       <SettingsHeader
         title={t("Public links")}
         description={t(
-          "Links of this machine's Buff Code live at {gateway}; a page reads the dialog from this machine when it opens — while Buff Code runs.",
+          "Links of this machine's Buff Code live at {gateway}; a page reads the chat from this machine when it opens — while Buff Code runs.",
           {
             gateway: status?.gateway ?? "buff.systems",
           },
@@ -163,7 +163,7 @@ export function SettingsShares() {
             <EmptyState>
               <span className="text-[13px] font-medium">{t("No public links yet.")}</span>
               <span className="text-[12px] text-muted-foreground">
-                {t("Share a session from its menu or a message's actions.")}
+                {t("Share a chat from its menu or a message's actions.")}
               </span>
             </EmptyState>
           ) : (
@@ -209,8 +209,8 @@ function LinkCard(props: {
   }
   const expiry = expiryLabel(row.expiresAt, props.locale)
   const meta = [
-    row.source === null ? t("Deleted session") : row.source,
-    row.kind === "messages" ? t("Messages: {count}", { count: row.messages }) : t("Whole dialog"),
+    row.source === null ? t("Deleted chat") : row.source,
+    row.kind === "messages" ? t("Messages: {count}", { count: row.messages }) : t("Whole chat"),
     row.hasPass ? t("With password") : t("No password"),
     expiry ? t("Expires {when}", { when: expiry }) : t("Never expires"),
     ...(row.tools ? [t("With tool calls")] : []),
@@ -304,7 +304,7 @@ function EditLinkDialog(props: { row: LinkRow; onCancel: () => void; onSave: (pa
             <Switch checked={tools} onCheckedChange={setTools} />
           </label>
           <label className="flex items-center justify-between gap-3 text-[13px]">
-            <span>{t("Follow the session live")}</span>
+            <span>{t("Follow the chat live")}</span>
             <Switch checked={live} onCheckedChange={setLive} />
           </label>
         </div>

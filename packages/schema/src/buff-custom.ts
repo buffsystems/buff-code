@@ -158,11 +158,11 @@ export interface Kind {
 const MODEL: Field = {
   key: "model",
   label: "Model",
-  hint: "Empty — the session's model.",
+  hint: "Empty — the chat's model.",
   placeholder: "buff/buff",
   model: true,
 }
-const MODEL_PROBLEM = "The model is written as provider/model, for example buff/buff. Empty — the session's model."
+const MODEL_PROBLEM = "The model is written as provider/model, for example buff/buff. Empty — the chat's model."
 
 export const kinds: Record<KindName, Kind> = {
   command: {
@@ -185,7 +185,7 @@ export const kinds: Record<KindName, Kind> = {
       {
         key: "agent",
         label: "Agent",
-        hint: "Who runs the command. Empty — the session's current agent.",
+        hint: "Who runs the command. Empty — the chat's current agent.",
         placeholder: "build",
       },
       MODEL,
@@ -193,7 +193,7 @@ export const kinds: Record<KindName, Kind> = {
         key: "subagent",
         label: "Where to run",
         options: [
-          { value: "", label: "In the current session" },
+          { value: "", label: "In the current chat" },
           { value: "true", label: "As a separate subagent" },
         ],
       },

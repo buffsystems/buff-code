@@ -122,6 +122,13 @@ export const tick = Effect.fnUntraced(function* (deps: Deps) {
   }
 })
 
+/** Ближайший срок среди автоматизаций не на паузе (мс); нет таких — null. Облачная машина спит без
+ *  дела, и служба будит её к этому сроку (#969). */
+export function nextWake(automations: readonly BuffAutomation.Automation[]): number | null {
+  const times = automations.filter((automation) => !automation.paused).map((automation) => automation.next)
+  return times.length ? Math.min(...times) : null
+}
+
 export const runNow = Effect.fnUntraced(function* (deps: Deps, id: string) {
   const automation = yield* deps.store.get(id)
   if (!automation) return { problem: NOT_FOUND }

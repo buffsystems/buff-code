@@ -29,7 +29,7 @@ export function DialogExportResult(props: { path: string; onClose?: () => void }
     <box paddingLeft={2} paddingRight={2} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-          {t("Session exported")}
+          {t("Chat exported")}
         </text>
         <text fg={theme.text.muted} onMouseUp={close}>
           esc

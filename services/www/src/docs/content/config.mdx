@@ -110,7 +110,7 @@ See the [models guide](/models) for model selection and local models.
 
 ### Agent
 
-Choose the primary agent used when a session does not select one explicitly.
+Choose the primary agent used when a chat does not select one explicitly.
 
 ```jsonc
 {
@@ -138,7 +138,7 @@ Project-level values are ignored.
 
 ### Sharing
 
-Set the session sharing policy. OpenCode accepts this field, but session sharing
+Set the chat sharing policy. OpenCode accepts this field, but chat sharing
 is not supported yet.
 
 ```jsonc
@@ -346,7 +346,7 @@ budgeting and overflow recovery.
 
 ### Warming
 
-Keep recently active model sessions warm with periodic transient requests.
+Keep recently active chats warm with periodic transient requests.
 Warming is disabled by default; set it to `true` to use the four-minute idle
 interval and 30-minute active window.
 

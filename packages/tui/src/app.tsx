@@ -728,8 +728,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "session.list",
-        title: t("Switch session"),
-        category: t("Session"),
+        title: t("Switch chat"),
+        category: t("Chat"),
         suggested: data.session.list().length > 0,
         slash: { name: "sessions", aliases: ["resume", "continue"] },
         run: () => {
@@ -738,9 +738,9 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "session.new",
-        title: t("New session"),
+        title: t("New chat"),
         suggested: route.data.type === "session",
-        category: t("Session"),
+        category: t("Chat"),
         slash: { name: "new", aliases: ["clear"] },
         run: () => {
           const model = local.model.current()
@@ -765,8 +765,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "open.menu",
-        title: t("Open session or project"),
-        category: t("Session"),
+        title: t("Open chat or project"),
+        category: t("Chat"),
         slash: { name: "open", aliases: ["projects"] },
         run: () => {
           if (dialog.key === DialogOpenKey) return
@@ -778,8 +778,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       ...Array.from({ length: 9 }, (_, i) => ({
         name: `session.quick_switch.${i + 1}`,
-        title: t("Switch to session in quick slot {slot}", { slot: i + 1 }),
-        category: t("Session"),
+        title: t("Switch to chat in quick slot {slot}", { slot: i + 1 }),
+        category: t("Chat"),
         palette: undefined,
         enabled: () => !sessionTabs.enabled(),
         run: () => local.session.quickSwitch(i + 1),
@@ -787,7 +787,7 @@ function App(props: { pair?: DialogPairCredentials }) {
       {
         name: "session.tab.next",
         title: t("Next tab"),
-        category: t("Session"),
+        category: t("Chat"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycle(1),
@@ -795,7 +795,7 @@ function App(props: { pair?: DialogPairCredentials }) {
       {
         name: "session.tab.previous",
         title: t("Previous tab"),
-        category: t("Session"),
+        category: t("Chat"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycle(-1),
@@ -803,7 +803,7 @@ function App(props: { pair?: DialogPairCredentials }) {
       {
         name: "session.tab.next_unread",
         title: t("Next unread tab"),
-        category: t("Session"),
+        category: t("Chat"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycleUnread(1),
@@ -811,7 +811,7 @@ function App(props: { pair?: DialogPairCredentials }) {
       {
         name: "session.tab.previous_unread",
         title: t("Previous unread tab"),
-        category: t("Session"),
+        category: t("Chat"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycleUnread(-1),
@@ -819,21 +819,21 @@ function App(props: { pair?: DialogPairCredentials }) {
       {
         name: "session.tab.close",
         title: t("Close tab"),
-        category: t("Session"),
+        category: t("Chat"),
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.close(),
       },
       {
         name: "session.tab.reopen",
         title: t("Reopen closed tab"),
-        category: t("Session"),
+        category: t("Chat"),
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.reopen(),
       },
       ...Array.from({ length: 10 }, (_, i) => ({
         name: `session.tab.select.${i + 1}`,
         title: t("Switch to tab {tab}", { tab: i + 1 }),
-        category: t("Session"),
+        category: t("Chat"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.selectIndex(i),
@@ -1320,7 +1320,7 @@ function App(props: { pair?: DialogPairCredentials }) {
       route.navigate({ type: "home" })
       toast.show({
         variant: "info",
-        message: title ? t("Session “{title}” was deleted", { title }) : t("The current session was deleted"),
+        message: title ? t("Chat “{title}” was deleted", { title }) : t("The current chat was deleted"),
       })
     }
   })

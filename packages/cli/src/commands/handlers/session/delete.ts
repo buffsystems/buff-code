@@ -19,7 +19,7 @@ const handler = Effect.fn("cli.session.delete")(function* (
     try: (signal) => client.session.remove({ sessionID: input.sessionID }, { signal }),
     catch: (cause) => cause,
   })
-  process.stdout.write(`Session ${input.sessionID} deleted${EOL}`)
+  process.stdout.write(`Chat ${input.sessionID} deleted${EOL}`)
 })
 
 export default Runtime.handler(Commands.commands.session.commands.delete, (input) =>

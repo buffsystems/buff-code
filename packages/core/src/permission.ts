@@ -101,6 +101,12 @@ export function evaluate(action: string, resource: string, ...rulesets: Permissi
   )
 }
 
+/**
+ * Правила задаёт только конфигурация (#959): там, где Buff Code работает в чужой песочнице
+ * (облачная машина), клиент выбирает режим сессии, но ослабить или ужесточить правила не может.
+ */
+const managed = () => process.env.BUFF_MANAGED_PERMISSIONS === "1"
+
 export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
   return rulesets.flat()
 }
@@ -164,7 +170,7 @@ const layer = Layer.effect(
       const session = yield* sessions.get(sessionID)
       if (!session) return yield* new SessionErrors.NotFoundError({ sessionID })
       const agent = yield* agents.resolve(agentID ?? session.agent)
-      return merge(agent?.permissions ?? missingAgentPermissions, session.permissions ?? [])
+      return merge(agent?.permissions ?? missingAgentPermissions, managed() ? [] : (session.permissions ?? []))
     })
 
     function denied(input: Pick<Request, "action" | "resources">, rules: Permission.Ruleset) {

@@ -92,7 +92,7 @@ function Commands(props: { context: Context }) {
 
   const share = async (preselect?: string[]) => {
     const id = session()
-    if (!id) return say(t("Open a session to share it."), "info")
+    if (!id) return say(t("Open a chat to share it."), "info")
     if (!(await ready())) return
     await context.data.session.message.sync(id).catch(() => undefined)
     const input = await shareFlow(
@@ -115,12 +115,12 @@ function Commands(props: { context: Context }) {
 
   const unshare = async () => {
     const id = session()
-    if (!id) return say(t("Open a session to share it."), "info")
+    if (!id) return say(t("Open a chat to share it."), "info")
     if (!(await ready())) return
     const links = (await rpc.list(undefined, at())).filter((l) => l.session === id)
-    if (!links.length) return say(t("This session has no public links."), "info")
+    if (!links.length) return say(t("This chat has no public links."), "info")
     const picked = await ui.select<string>({
-      title: t("Unshare session"),
+      title: t("Unshare chat"),
       options: links.map((l) => ({ title: l.title, value: l.id, description: l.link })),
     })
     if (!picked) return
@@ -140,7 +140,7 @@ function Commands(props: { context: Context }) {
         title: `${l.enabled ? "●" : "○"} ${l.title}`,
         value: l.id,
         description: [
-          l.sessionTitle ?? t("Deleted session"),
+          l.sessionTitle ?? t("Deleted chat"),
           l.hasPass ? t("With password") : t("No password"),
           l.expiresAt === null ? labels.none : t("Expires {when}", { when: new Date(l.expiresAt).toLocaleString() }),
           ...(l.published ? [] : [t("Not yet published")]),
@@ -158,7 +158,7 @@ function Commands(props: { context: Context }) {
         {
           title: t("Delete"),
           value: "remove",
-          description: t("The page will say the dialog was removed by its owner."),
+          description: t("The page will say the chat was removed by its owner."),
         },
       ],
     })
@@ -177,7 +177,7 @@ function Commands(props: { context: Context }) {
     if (action === "remove") {
       const yes = await context.ui.dialog.confirm({
         title: t("Delete the link?"),
-        message: t("The page will say the dialog was removed by its owner."),
+        message: t("The page will say the chat was removed by its owner."),
       })
       context.ui.dialog.clear()
       if (yes)
@@ -192,16 +192,16 @@ function Commands(props: { context: Context }) {
     commands: [
       {
         id: "session.share",
-        title: t("Share session"),
-        group: t("Session"),
+        title: t("Share chat"),
+        group: t("Chat"),
         palette: true as const,
         slash: { name: "share" },
         run: () => void share().catch(failed("The link was not created.")),
       },
       {
         id: "session.unshare",
-        title: t("Unshare session"),
-        group: t("Session"),
+        title: t("Unshare chat"),
+        group: t("Chat"),
         palette: true as const,
         slash: { name: "unshare" },
         run: () => void unshare().catch(failed("The link was not deleted.")),

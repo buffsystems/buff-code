@@ -9,7 +9,7 @@ export const sessions = {
   Earlier: "Раньше",
   Pinned: "Закреплённые",
   // Recents (#922)
-  "Active sessions": "Активные",
+  "Active chats": "Активные",
   Recent: "Недавние",
   // состояние сессии
   "Waiting for permission": "Ждёт разрешения",
@@ -28,7 +28,7 @@ export const sessions = {
   Purple: "Фиолетовый",
   Gray: "Серый",
   // колонка
-  Sessions: "Сессии",
+  Chats: "Чаты",
   "Could not rename.": "Не удалось переименовать.",
   "Could not save.": "Не удалось сохранить.",
   "{field}: the field cannot be empty.": "{field}: поле не может быть пустым.",
@@ -40,7 +40,7 @@ export const sessions = {
   "Restore from archive": "Вернуть из архива",
   Unpin: "Открепить",
   Pin: "Закрепить",
-  "Rename session": "Переименовать сессию",
+  "Rename chat": "Переименовать чат",
   Rename: "Переименовать",
   "To group «{name}»": "В группу «{name}»",
   "To a new group…": "В новую группу…",
@@ -48,17 +48,28 @@ export const sessions = {
   Archive: "В архив",
   Group: "Группа",
   "Edit group": "Изменить группу",
-  "Delete group — sessions stay": "Удалить группу — сессии останутся",
-  "All sessions": "Все сессии",
+  "Delete group — chats stay": "Удалить группу — чаты останутся",
+  "All chats": "Все чаты",
   "Search by title": "Поиск по названию",
-  "Empty — add a session from its menu.": "Пусто — добавьте сессию из её меню.",
+  "Empty — add a chat from its menu.": "Пусто — добавьте чат из его меню.",
   "Nothing found by title.": "По названию ничего не найдено.",
-  "No sessions yet.": "Сессий пока нет.",
+  "No chats yet.": "Чатов пока нет.",
   "In conversations": "В переписке",
   "Archive · {count}": "Архив · {count}",
   // #765: раздел режима «Настройка».
-  Setup: "Настройка",
-  "New setup": "Новая настройка",
+  "Self-setup": "Самонастройка",
+  "New self-setup": "Новая самонастройка",
+  "Self-setup: a new chat where the agent connects itself to what you need":
+    "Самонастройка: новый чат, где агент сам подключается к тому, что вам нужно",
+  "Self-setup: the agent connects itself to a service, an account or a folder you need.":
+    "Самонастройка: агент сам подключается к нужному вам сервису, аккаунту или папке.",
   "Nothing connected yet — press + and ask to connect something.":
     "Пока ничего не подключено — нажмите + и попросите что-нибудь подключить.",
+  // #972 (PR-03): the project's home on the window's Home.
+  "New chat in the project": "Новый чат в проекте",
+  "Instructions and memory": "Инструкции и память",
+  "Project settings": "Настройки проекта",
+  "Open the folder": "Открыть папку",
+  "The file did not open": "Файл не открылся",
+  "The folder did not open": "Папка не открылась",
 } as const

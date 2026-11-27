@@ -27,6 +27,8 @@ export const Entry = Schema.Struct({
   /** Запись как в файле: подстановки `{env:…}` не раскрыты, секреты не попадают в форму. */
   config: Schema.optional(Mcp.ServerConfig),
   status: Mcp.Status,
+  /** Сервер пользователя — каким по счёту его добавили (R16-02); записанный иначе — без места. */
+  added: Schema.optional(Schema.Number),
 })
 export type Entry = typeof Entry.Type
 
@@ -274,4 +276,42 @@ export function command(line: string): string[] {
 
 export function commandLine(parts: readonly string[]): string {
   return parts.map((part) => (/\s/.test(part) ? `"${part}"` : part)).join(" ")
+}
+
+/**
+ * Порядок, в котором человек добавлял подключения (#969, R16-02): предел оператора на облачной
+ * машине оставляет первые добавленные. Хранится рядом с конфигурацией пользователя; сервер,
+ * записанный в файл иначе (оболочкой агента), идёт после записанных, по имени.
+ */
+export const ORDER_FILE = "mcp-order.json"
+
+/** Сервер добавлен; при переименовании (`previous`) он остаётся на своём месте. */
+export function orderAdded(order: readonly string[], name: string, previous?: string): string[] {
+  if (previous && previous !== name && order.includes(previous))
+    return order.filter((item) => item !== name).map((item) => (item === previous ? name : item))
+  return order.includes(name) ? [...order] : [...order, name]
+}
+
+export function orderRemoved(order: readonly string[], name: string): string[] {
+  return order.filter((item) => item !== name)
+}
+
+/** Записанный порядок из текста файла; что угодно иное — пустой. */
+export function parseOrder(text: string | undefined): string[] {
+  if (!text) return []
+  try {
+    const parsed: unknown = JSON.parse(text)
+    const order = parsed && typeof parsed === "object" ? (parsed as { order?: unknown }).order : undefined
+    return Array.isArray(order) ? order.filter((item): item is string => typeof item === "string") : []
+  } catch {
+    return []
+  }
+}
+
+/** Серверы по месту: записанные — в порядке добавления, остальные после них — по имени. */
+export function ranked(names: readonly string[], order: readonly string[]): string[] {
+  const present = new Set(names)
+  const recorded = order.filter((name, index) => present.has(name) && order.indexOf(name) === index)
+  const rest = names.filter((name) => !recorded.includes(name)).toSorted()
+  return [...recorded, ...rest]
 }

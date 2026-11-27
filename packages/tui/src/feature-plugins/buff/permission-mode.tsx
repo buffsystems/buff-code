@@ -25,7 +25,7 @@ function Commands(props: { context: Context }) {
     const session = sessionOf(context)
     if (!session)
       return context.ui.toast.show({
-        message: t("The mode is set in a session: send a message first."),
+        message: t("The mode is set in a chat: send a message first."),
         variant: "warning",
       })
     const plan = String(session.agent ?? "") === PLAN

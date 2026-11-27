@@ -28,7 +28,7 @@ export const projectTabs = ["general", "workspaces", "extensions"] as const
 export type SettingsRootTab = (typeof rootTabs)[number]
 export type SettingsServerTab = (typeof serverTabs)[number]
 export type SettingsProjectTab = (typeof projectTabs)[number]
-export type SettingsSubtab = "mcps" | "plugins" | "skills" | "commands" | "agents" | "hooks" | "memory" | "lsps"
+export type SettingsSubtab = "mcps" | "plugins" | "skills" | "visuals" | "commands" | "agents" | "hooks" | "memory" | "lsps"
 
 export type SettingsView = (
   | { type: "root"; tab: SettingsRootTab }
@@ -118,13 +118,21 @@ export function createSettingsSurface(input: { show: () => void; goBack: () => v
     openServer(server: string, tab: SettingsServerTab = "general") {
       setView({ type: "server", server, tab })
     },
-    openProject(input: { server: string; project: string; tab?: SettingsProjectTab; nested: boolean }) {
+    openProject(input: {
+      server: string
+      project: string
+      tab?: SettingsProjectTab
+      /** A page inside the tab, opened in the same step (one entry in the history). */
+      subtab?: SettingsSubtab
+      nested: boolean
+    }) {
       setView({
         type: "project",
         server: input.server,
         project: input.project,
         parent: input.nested ? "server" : "root",
         tab: input.tab ?? "general",
+        ...(input.subtab ? { subtab: input.subtab } : {}),
       })
     },
     select(tab: string) {

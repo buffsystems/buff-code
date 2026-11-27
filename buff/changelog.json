@@ -1,5 +1,137 @@
 [
   {
+    "tag": "0.28.0",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Графики прямо в чате",
+            "description": "Агент рисует ответ: столбцы, линии, воронки, диаграммы Ганта и Венна, облака слов и десятки других видов — в цветах и теме приложения. Включаются и выключаются в настройках."
+          },
+          {
+            "title": "Buff Code расширяет себя сам",
+            "description": "В режиме «Самонастройка» попросите сделать нужный наглядный блок: агент напишет его, проверит на живом примере и подключит после вашего разрешения."
+          },
+          {
+            "title": "Вход учётной записью Buff",
+            "description": "Без своей модели и организации: войдите учётной записью Buff, и Buff Code работает на моделях личной подписки; расход и остаток лимитов видны в окне."
+          },
+          {
+            "title": "Простой вид и дом проекта",
+            "description": "Выберите вид чата: простой — как в браузерной версии, или привычный с подробной лентой. У каждого проекта на главной — свой экран с чатами, файлами и папкой."
+          },
+          {
+            "title": "Подключение на один чат",
+            "description": "Сервер MCP можно выключить только в этом чате. Веб-поиск работает сразу, без ключей; на macOS приложение подписано и проверено Apple."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "Charts right in the chat",
+            "description": "The agent draws its answer: bars, lines, funnels, Gantt and Venn charts, word clouds and dozens of other kinds — in the app's colours and theme. Switch them on and off in the settings."
+          },
+          {
+            "title": "Buff Code extends itself",
+            "description": "In Self-setup mode ask for the visual you need: the agent writes it, tests it on a live example and adds it once you allow it."
+          },
+          {
+            "title": "Sign in with a Buff account",
+            "description": "No model or organisation of your own needed: sign in with a Buff account and Buff Code runs on the personal subscription's models; usage and remaining limits show in the window."
+          },
+          {
+            "title": "Simple layout and a project's home",
+            "description": "Pick the chat layout: simple — as in the browser version, or classic with the detailed timeline. Each project has its own screen on Home with its chats, files and folder."
+          },
+          {
+            "title": "A connection for one chat",
+            "description": "An MCP server can be turned off in just this chat. Web search works at once, without keys; on macOS the app is signed and notarized by Apple."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "tag": "0.27.3",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Подключения проекта остаются в проекте",
+            "description": "Сервер MCP или навык, настроенный в чате внутри проекта, работает только в этом проекте и хранится у вас, а не в репозитории. Настроенное в чате на главной — для всех проектов. Перенести: настройки проекта → «Расширения» или /mcp-move в консоли."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "A project's connections stay in the project",
+            "description": "An MCP server or a skill set up in a chat inside a project works only in that project and is kept on your side, not in the repository. What you set up in a chat on the home screen is for all projects. To move one: project settings → «Extensions», or /mcp-move in the console."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "tag": "0.27.2",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Файлы от агента — карточками",
+            "description": "Файл, который агент передаёт вам, в окне виден карточкой, у картинки — превью. Передача файла без подписи больше не зависает."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "Files from the agent as cards",
+            "description": "A file the agent hands over to you shows in the window as a card, a picture with a preview. Handing over a file without a note no longer hangs."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "tag": "0.27.0",
+    "highlights": [
+      {
+        "source": "desktop",
+        "lang": "ru",
+        "items": [
+          {
+            "title": "Вход по подписке Qwen",
+            "description": "Подписку Qwen Plus или Pro можно подключить входом в аккаунт Qwen, без ключа API."
+          }
+        ]
+      },
+      {
+        "source": "desktop",
+        "lang": "en",
+        "items": [
+          {
+            "title": "Sign in with a Qwen subscription",
+            "description": "A Qwen Plus or Pro subscription connects by signing in to your Qwen account, without an API key."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "tag": "0.26.0",
     "highlights": [
       {

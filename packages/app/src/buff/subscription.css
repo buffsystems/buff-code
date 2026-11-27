@@ -1,0 +1,22 @@
+/* Расход подписки (#966): полоса окна; остальное — классы «Баланса и расхода». */
+.buff-usage-meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--border-weak-base);
+}
+
+.buff-usage-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--icon-base);
+}
+
+.buff-usage-meter[data-state="low"] > span {
+  background: var(--icon-warning-base);
+}
+
+.buff-usage-meter[data-state="exhausted"] > span {
+  background: var(--icon-critical-base);
+}

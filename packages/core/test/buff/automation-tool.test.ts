@@ -36,6 +36,33 @@ describe("the create-automation tool", () => {
   })
 })
 
+// Живая проверка #969: машина облака живёт в UTC, а человек назвал время по своим часам.
+describe("the time zone of an automation the model creates", () => {
+  test("the asker's zone is put on a clock-time schedule; an interval has none; a zone named stays", () => {
+    expect(BuffAutomationTool.draft(input, "/p", undefined, "Europe/Berlin").schedule).toEqual({
+      kind: "daily",
+      at: "09:00",
+      zone: "Europe/Berlin",
+    })
+    const interval = { ...input, schedule: { kind: "interval", every: 2, unit: "hours" } } as const
+    expect(BuffAutomationTool.draft(interval, "/p", undefined, "Europe/Berlin").schedule).toEqual(interval.schedule)
+    const named = { ...input, schedule: { kind: "daily", at: "09:00", zone: "Asia/Tokyo" } } as const
+    expect(BuffAutomationTool.draft(named, "/p", undefined, "Europe/Berlin").schedule).toEqual(named.schedule)
+    expect(BuffAutomationTool.draft(input, "/p", undefined, undefined).schedule).toEqual(input.schedule)
+  })
+  test("the model hears the next run by the person's clock", () => {
+    const automation = {
+      ...BuffAutomationTool.draft(input, "/p", undefined, "Europe/Berlin"),
+      next: new Date("2026-11-26T08:00:00Z").getTime(),
+    }
+    expect(BuffAutomationTool.reply(automation, new Date("2026-11-25T12:00:00Z"))).toContain("tomorrow at 09:00")
+    // #970 (live): «Daily at 09:00» of another zone read as the user's own clock — the zone is named.
+    expect(BuffAutomationTool.reply(automation, new Date("2026-11-25T12:00:00Z"))).toContain(
+      "Daily at 09:00, Europe/Berlin time. Next run",
+    )
+  })
+})
+
 describe("the person always confirms", () => {
   test("allowed by any rule — still asked; denied stays denied; other actions untouched", () => {
     expect(BuffAutomationTool.confirmed({ action: "buff_automation", effect: "allow" })).toBe("ask")

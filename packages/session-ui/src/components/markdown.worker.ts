@@ -39,9 +39,12 @@ const parser = createMarkdownParser(async (code, language) => {
   const name = language in bundledLanguages ? language : "text"
   if (!instance.getLoadedLanguages().includes(name))
     await instance.loadLanguage(bundledLanguages[name as BundledLanguage])
-  return instance
-    .codeToHtml(code, { lang: name as BundledLanguage, theme: "OpenCode", tabindex: false })
-    .replace("<code>", `<code class="language-${name}">`)
+  return (
+    instance
+      .codeToHtml(code, { lang: name as BundledLanguage, theme: "OpenCode", tabindex: false })
+      // Buff (#595): the language as the answer named it — a chat plugin's block is no known language.
+      .replace("<code>", `<code class="language-${name}" data-named="${language.replace(/[^\w-]/g, "")}">`)
+  )
 })
 
 self.onmessage = (event: MessageEvent<MarkdownWorkerRequest>) => {

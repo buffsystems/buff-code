@@ -12,7 +12,7 @@ describe("a run's outcome in words", () => {
     expect(BuffAutomation.runLabel({ status: "failed", error: "Средства закончились" }, ru, ruN)).toBe(
       "Сбой: Средства закончились",
     )
-    expect(BuffAutomation.runLabel({ status: "failed" }, ru, ruN)).toBe("Сбой: причина не пришла — откройте сессию")
+    expect(BuffAutomation.runLabel({ status: "failed" }, ru, ruN)).toBe("Сбой: причина не пришла — откройте чат")
     expect(BuffAutomation.runLabel({ status: "waiting" }, ru, ruN)).toBe("Ждёт разрешения")
     expect(BuffAutomation.runLabel({ status: "skipped", skipped: 3 }, ru, ruN)).toBe(
       "Пропущено: 3 запуска (машина была выключена)",

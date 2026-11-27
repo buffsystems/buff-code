@@ -15,6 +15,7 @@ import { BuffCustomSection } from "../../buff/settings/custom"
 import { BuffHookSection } from "../../buff/settings/hooks"
 import { BuffMcpSection } from "../../buff/settings/mcp"
 import { BuffMemorySection } from "../../buff/settings/memory"
+import { BuffChatPluginSection } from "../../buff/settings/chat-plugins"
 import { BuffSkillSection } from "../../buff/settings/skills"
 import { useI18n } from "../../i18n/provider"
 import { useConnection } from "../../react/core"
@@ -22,7 +23,7 @@ import { SettingsBody, SettingsHeader } from "../kit"
 import { useSettingsScope } from "../scope"
 import type { SettingsSubtab } from "../surface"
 
-const SERVER_TABS = ["mcps", "plugins", "skills", "commands", "agents", "hooks", "memory"] as const
+const SERVER_TABS = ["mcps", "plugins", "skills", "visuals", "commands", "agents", "hooks", "memory"] as const
 const PROJECT_TABS = [...SERVER_TABS, "lsps"] as const
 
 export function SettingsExtensions(props: {
@@ -39,6 +40,7 @@ export function SettingsExtensions(props: {
     mcps: i18n.t("settings.extensions.tab.mcps"),
     plugins: i18n.t("status.popover.tab.plugins"),
     skills: i18n.t("settings.extensions.tab.skills"),
+    visuals: t("Chat plugins"),
     commands: t("Commands"),
     agents: t("Subagents"),
     hooks: t("Hooks"),
@@ -54,6 +56,7 @@ export function SettingsExtensions(props: {
     if (current === "plugins")
       return <Plugins server={scope.server} directory={props.project ? directory : undefined} />
     if (current === "skills") return <BuffSkillSection server={scope.server} directory={directory} scopes={places} />
+    if (current === "visuals") return <BuffChatPluginSection server={scope.server} directory={directory} />
     if (current === "commands" || current === "agents")
       return (
         <BuffCustomSection

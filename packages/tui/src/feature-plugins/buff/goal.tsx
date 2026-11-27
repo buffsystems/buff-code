@@ -57,7 +57,7 @@ function Commands(props: { context: Context }) {
   }
   const act = (name: "pause" | "resume" | "clear", done: string) => () => {
     const id = session()
-    if (!id) return context.ui.toast.show({ message: t("Open a session with a goal."), variant: "info" })
+    if (!id) return context.ui.toast.show({ message: t("Open a chat with a goal."), variant: "info" })
     void rpc[name]({ session: id }, at()).then(
       () => context.ui.toast.show({ message: done, variant: "success" }),
       (cause: unknown) => context.ui.toast.show({ message: failureMessage(cause, t("Failed.")), variant: "error" }),

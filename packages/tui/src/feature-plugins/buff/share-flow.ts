@@ -48,7 +48,7 @@ export async function shareFlow(
   const scope = await ui.select<"all" | "some">({
     title: t("Public link"),
     options: [
-      { title: t("Whole dialog"), value: "all" },
+      { title: t("Whole chat"), value: "all" },
       { title: t("Selected messages"), value: "some", description: t("pick the messages to show") },
     ],
     current: input.preselect?.length ? "some" : "all",
@@ -80,7 +80,7 @@ export async function shareFlow(
   if (expiry === undefined) return undefined
   const tools = await yesNo(ui, t("Show AI tool calls and their results"), false, t)
   if (tools === undefined) return undefined
-  const live = await yesNo(ui, t("Follow the session live"), false, t)
+  const live = await yesNo(ui, t("Follow the chat live"), false, t)
   if (live === undefined) return undefined
   return {
     session: input.session,

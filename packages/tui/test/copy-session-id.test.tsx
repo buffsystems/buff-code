@@ -50,21 +50,21 @@ test.each(["success", "failure", "home"])("Copy session ID from Ctrl+P (%s)", as
     await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable)
     setup.mockInput.pressKey("p", { ctrl: true })
     await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof InputRenderable)
-    await setup.mockInput.typeText("Копировать ID сессии")
+    await setup.mockInput.typeText("Копировать ID чата")
     if (mode === "home") {
       await setup.waitForVisualIdle()
-      expect(setup.captureCharFrame()).not.toMatch(/Копировать ID сессии\s+Сессия/)
+      expect(setup.captureCharFrame()).not.toMatch(/Копировать ID чата\s+Чат/)
       expect(copy).not.toHaveBeenCalled()
       return
     }
-    await setup.waitForFrame((frame) => /Копировать ID сессии\s+Сессия/.test(frame))
+    await setup.waitForFrame((frame) => /Копировать ID чата\s+Чат/.test(frame))
     setup.mockInput.pressEnter()
     const frame = await setup.waitForFrame((frame) =>
-      frame.includes(mode === "success" ? "ID сессии скопирован в буфер обмена" : "Не удалось скопировать ID сессии"),
+      frame.includes(mode === "success" ? "ID чата скопирован в буфер обмена" : "Не удалось скопировать ID чата"),
     )
     expect(copy).toHaveBeenCalledTimes(1)
     expect(copy.mock.calls[0]?.[0]).toBe(sessionID)
-    expect(frame).not.toContain("Копировать ID сессии")
+    expect(frame).not.toContain("Копировать ID чата")
     await setup.waitFor(
       () =>
         setup.renderer.currentFocusedEditor instanceof TextareaRenderable &&

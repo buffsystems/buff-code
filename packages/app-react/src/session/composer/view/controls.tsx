@@ -40,6 +40,8 @@ export function AddMenu(props: {
   onCommands(): void
   onContext(): void
   onShell(): void
+  /** Buff (#972): «Подключения в этом чате» — absent where there is no chat yet. */
+  onConnections?(): void
 }) {
   const i18n = useI18n()
   const title = i18n.t("ui.promptInput.add")
@@ -68,6 +70,12 @@ export function AddMenu(props: {
         {item(i18n.t("ui.promptInput.commands"), "/", props.onCommands)}
         {item(i18n.t("ui.promptInput.context"), "@", props.onContext)}
         {item(i18n.t("ui.promptInput.shell"), "!", props.onShell)}
+        {props.onConnections && (
+          <>
+            <DropdownMenuSeparator />
+            {item(i18n.buff.t("Connections in this chat"), "", props.onConnections)}
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

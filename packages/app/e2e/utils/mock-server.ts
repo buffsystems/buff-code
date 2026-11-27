@@ -405,7 +405,7 @@ function mockHandlers(config: MockServerConfig, state: { cursors: Map<string, st
             {
               id: "ses_mock_created",
               projectID: (config.project as { id?: string }).id,
-              title: typeof payload.title === "string" ? payload.title : "New session",
+              title: typeof payload.title === "string" ? payload.title : "New chat",
               parentID: typeof payload.parentID === "string" ? payload.parentID : undefined,
             },
             config.directory,

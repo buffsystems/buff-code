@@ -89,7 +89,7 @@ export function RunView(props: {
                     data-action="buff-wf-open-session"
                     onClick={() => run.session && leave(() => props.onOpenSession(run.session ?? ""))}
                   >
-                    {t("Open session")}
+                    {t("Open chat")}
                   </Button>
                 )}
                 {!run.supersededBy && (
@@ -163,7 +163,7 @@ function Body(props: {
           {approvals.map((step) => (
             <Panel tone="info" key={step.id} className="buff-wf-question" data-approval={step.id}>
               <span>
-                {t("{actor} is waiting for your permission — answer in the workflow session.", { actor: step.actor })}
+                {t("{actor} is waiting for your permission — answer in the workflow chat.", { actor: step.actor })}
               </span>
               <div className="buff-wf-actions">
                 <Button
@@ -172,7 +172,7 @@ function Body(props: {
                   data-action="buff-wf-approve"
                   onClick={() => props.onOpenSession(session)}
                 >
-                  {t("Answer in the session")}
+                  {t("Answer in the chat")}
                 </Button>
               </div>
             </Panel>

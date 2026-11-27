@@ -176,3 +176,26 @@ describe("серверы Buff Code в списке (#470)", () => {
     expect(BuffMcp.messageMarkdown("имя: x\nПравило: y\n\n- a\n- b")).toBe("имя: x  \nПравило: y\n\n- a  \n- b")
   })
 })
+
+// R16-02 (#969): the operator's limit keeps the person's connections in the order they were added
+// — a server written by other means (the agent's shell) goes after them, a rename keeps its place.
+describe("the order connections were added in", () => {
+  test("added at the end, renamed in place, removed; a stored file of any shape reads safely", () => {
+    expect(BuffMcp.orderAdded([], "github")).toEqual(["github"])
+    expect(BuffMcp.orderAdded(["github"], "github")).toEqual(["github"])
+    expect(BuffMcp.orderAdded(["github", "notion"], "gh", "github")).toEqual(["gh", "notion"])
+    expect(BuffMcp.orderAdded(["notion"], "gh", "github")).toEqual(["notion", "gh"])
+    expect(BuffMcp.orderRemoved(["github", "notion"], "github")).toEqual(["notion"])
+    expect(BuffMcp.parseOrder('{"order":["a","b",3]}')).toEqual(["a", "b"])
+    expect(BuffMcp.parseOrder("not json")).toEqual([])
+    expect(BuffMcp.parseOrder(undefined)).toEqual([])
+  })
+  test("recorded servers first in their order, the rest after by name", () => {
+    expect(BuffMcp.ranked(["aaa", "github", "zeta", "notion"], ["notion", "github", "gone"])).toEqual([
+      "notion",
+      "github",
+      "aaa",
+      "zeta",
+    ])
+  })
+})

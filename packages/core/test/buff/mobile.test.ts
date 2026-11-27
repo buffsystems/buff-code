@@ -624,7 +624,9 @@ describe("api", () => {
     let query: Record<string, unknown> | undefined
     const api = mobileApi(async (method, route, options) => {
       if (route === "/api/session") {
-        query = options?.query as Record<string, unknown>
+        // The first list is the chat's own helpers; a running one's helpers are asked next (R24).
+        query ??= options?.query as Record<string, unknown>
+        if ((options?.query as { parentID?: string } | undefined)?.parentID !== "s") return { data: [] }
         return {
           data: [
             {
@@ -675,7 +677,7 @@ describe("api", () => {
       text: "смотри",
       metadata: { source: "phone" },
       files: [{ uri: "data:image/png;base64,ABCD==", name: "a.png" }],
-      delivery: "queue",
+      delivery: "steer",
     })
     // #676: the body is what the prompt endpoint takes — the schema decides, not this fake.
     expect(() =>
@@ -749,7 +751,7 @@ describe("api", () => {
     expect(BuffMobileText.isText("application/octet-stream", new TextEncoder().encode("plain"))).toBe(true)
   })
 
-  // #765: Setup mode from the phone — the RPC, the session's agent and setup mark, global forms and their owner.
+  // #765: Self-setup mode from the phone — the RPC, the session's agent and setup mark, global forms and their owner.
   test("setup mode: buff.setup is allowed, a setup session is marked, a global form keeps its owner and is answered to it", async () => {
     const seen: Array<{ method: string; path: string; body?: unknown }> = []
     const setupApi = mobileApi(async (method, route, options) => {
@@ -1155,7 +1157,7 @@ describe("a turn that failed on files (#757)", () => {
       body: {
         text: "без файлов",
         metadata: { source: "phone", omitMedia: ["image"], omitAs: "ignore" },
-        delivery: "queue",
+        delivery: "steer",
       },
     })
   })
@@ -1204,6 +1206,16 @@ describe("message queue from the phone (#811)", () => {
     await expect(
       api.run(record, "session.prompt", { session: "s1", text: "x", delivery: "later" }),
     ).rejects.toBeInstanceOf(RefusalError)
+  })
+
+  // #969: with nothing running, a prompt without a delivery goes now, as the window sends it. Queued,
+  // it waited behind input already waiting as a steer — the reminder of a «План» switch — which
+  // ran a turn of its own first while the person's message stood in the queue.
+  test("an idle session takes a prompt now when the phone names no delivery", async () => {
+    await api.run(record, "session.prompt", { session: "s2", text: "сразу" })
+    expect((calls.at(-1)?.body as { delivery: string }).delivery).toBe("steer")
+    await api.run(record, "session.prompt", { session: "s2", text: "в очередь", delivery: "queue" })
+    expect((calls.at(-1)?.body as { delivery: string }).delivery).toBe("queue")
   })
 
   test("the session state lists the user's queued messages only", async () => {

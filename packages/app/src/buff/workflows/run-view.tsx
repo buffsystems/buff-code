@@ -98,7 +98,7 @@ export function RunView(props: {
                             props.onOpenSession(session())
                           }}
                         >
-                          {t("Open session")}
+                          {t("Open chat")}
                         </Button>
                       )}
                     </Show>
@@ -179,7 +179,7 @@ function Body(props: {
               {(step) => (
                 <div class="buff-wf-question" data-approval={step.id}>
                   <span>
-                    {t("{actor} is waiting for your permission — answer in the workflow session.", {
+                    {t("{actor} is waiting for your permission — answer in the workflow chat.", {
                       actor: step.actor,
                     })}
                   </span>
@@ -190,7 +190,7 @@ function Body(props: {
                       data-action="buff-wf-approve"
                       onClick={() => props.onOpenSession(session())}
                     >
-                      {t("Answer in the session")}
+                      {t("Answer in the chat")}
                     </Button>
                   </div>
                 </div>

@@ -38,7 +38,7 @@ Choose a model.
 $ opencode run --model anthropic/claude-sonnet-4-5 "Refactor parseToken"
 ```
 
-Continue the last session.
+Continue the last chat.
 
 ```bash
 $ opencode run --continue "Now handle the expired case"
@@ -76,7 +76,7 @@ Starts the minimal interactive interface instead of the full-screen TUI.
 $ opencode mini
 ```
 
-Continue the last session.
+Continue the last chat.
 
 ```bash
 $ opencode mini --continue
@@ -96,7 +96,7 @@ $ opencode mini --help
 
 ## session
 
-Manages sessions.
+Manages chats.
 
 ```bash
 $ opencode session list
@@ -108,13 +108,13 @@ Limit the list and print JSON.
 $ opencode session list --max-count 20 --format json
 ```
 
-Delete a session and its child sessions.
+Delete a chat and its child chats.
 
 ```bash
 $ opencode session delete ses_9c1b08
 ```
 
-Export session data as JSON.
+Export chat data as JSON.
 
 ```bash
 $ opencode session export ses_4f2a1c
@@ -126,7 +126,7 @@ Redact sensitive transcript and file data when exporting.
 $ opencode session export ses_4f2a1c --sanitize
 ```
 
-Import session data from a JSON file or URL.
+Import chat data from a JSON file or URL.
 
 ```bash
 $ opencode session import session.json
@@ -444,7 +444,7 @@ $ opencode service --help
 
 ## reload
 
-Reloads configuration without restarting the server. Running sessions continue with fresh services at the next step boundary.
+Reloads configuration without restarting the server. Running chats continue with fresh services at the next step boundary.
 
 ```bash
 $ opencode reload
@@ -562,7 +562,7 @@ Preview what would be removed.
 $ opencode uninstall --dry-run
 ```
 
-Keep configuration and session data.
+Keep configuration and chat data.
 
 ```bash
 $ opencode uninstall --keep-config --keep-data

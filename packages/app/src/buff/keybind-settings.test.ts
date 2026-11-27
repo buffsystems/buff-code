@@ -12,7 +12,7 @@ function setup(answer: boolean) {
   let resets = 0
   const language = { locale: () => "ru", t: (key: string) => key } as never
   const commands = [
-    { id: "session.new", title: "Новая сессия", keybind: "mod+n" },
+    { id: "session.new", title: "Новый чат", keybind: "mod+n" },
     { id: "file.open", title: "Открыть файл", keybind: "mod+p" },
   ]
   return createRoot((dispose) => {

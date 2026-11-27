@@ -187,13 +187,13 @@ test("vertical tabs show project details, resize, and navigate", async ({ page }
   await expect(
     sidebar.getByRole("button", { name: "Home", exact: true }).getByText("Home", { exact: true }),
   ).toBeVisible()
-  await expect(sidebar.getByRole("button", { name: "New session" })).toBeVisible()
+  await expect(sidebar.getByRole("button", { name: "New chat" })).toBeVisible()
   await expect(sidebar.locator('[data-slot="vertical-tabs-footer"]')).toHaveCount(0)
   await expect(sidebar.getByRole("button", { name: "Status", exact: true })).toHaveCount(0)
   await expect(page.locator('[data-slot="titlebar-v2"]')).toBeHidden()
   await expect
     .poll(async () => {
-      const button = await sidebar.getByRole("button", { name: "New session" }).boundingBox()
+      const button = await sidebar.getByRole("button", { name: "New chat" }).boundingBox()
       const tab = await tabA.boundingBox()
       return !!button && !!tab && button.y + button.height < tab.y
     })
@@ -272,7 +272,7 @@ for (const count of [0, 26]) {
         body: await sidebar.screenshot(),
         contentType: "image/png",
       })
-      for (const name of ["Home", "New session"]) {
+      for (const name of ["Home", "New chat"]) {
         const button = sidebar.getByRole("button", { name, exact: true })
         const label = button.getByText(name, { exact: true })
         await expect(label).toBeVisible()

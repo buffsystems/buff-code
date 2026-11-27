@@ -84,6 +84,20 @@ function reading(error: TurnError, t: BuffI18n.T): Pick<TurnFailure, "text" | "a
   return { text: shortQuote(error.message) }
 }
 
+/** Подписка личного аккаунта Buff (#966). */
+const ACCOUNT = "buff-account"
+
+/**
+ * Отказ подписки аккаунта Buff (#966). Сервер говорит отказы словами для человека (подписки нет,
+ * лимит исчерпан, запрос слишком большой) — они показываются как есть: без «ответ 402:» и без
+ * совета подключить провайдера. Слова рантайма о сети заменяются тем, что проверить.
+ */
+function accountReading(error: TurnError, t: BuffI18n.T): Pick<TurnFailure, "text" | "action"> {
+  if (error.type === "provider.transport")
+    return { text: t("No connection to Buff. Check the internet connection and try again.") }
+  return { text: error.message.trim() }
+}
+
 /**
  * Отказ своего провайдера (#562): с первых слов видно, чья это проблема — провайдера, Buff Code
  * или входа в Buff, — и что сделать. Слова провайдера не толкуются, а цитируются.
@@ -208,8 +222,15 @@ export function turnFailure(
   provider: string = providerID,
 ): TurnFailure {
   const files = filesOf(error, t)
-  if (files) return { text: filesReading(error, files, t), details: details(error, t), files }
-  const read = providerID === BUFF ? reading(error, t) : ownReading(error, provider, t)
+  // #966: запрос к подписке слишком велик — дело в размере, а не в том, читает ли модель такие файлы.
+  const tooLarge = providerID === ACCOUNT && error.status === 413
+  if (files && !tooLarge) return { text: filesReading(error, files, t), details: details(error, t), files }
+  const read =
+    providerID === BUFF
+      ? reading(error, t)
+      : providerID === ACCOUNT
+        ? accountReading(error, t)
+        : ownReading(error, provider, t)
   return {
     ...read,
     text: read.text.trim() || t("The model did not answer. Repeat the request."),

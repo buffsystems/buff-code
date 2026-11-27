@@ -58,7 +58,7 @@ export function DefaultModesSection() {
         <SelectRow
           action="settings-default-thinking"
           title={t(BuffVariant.TITLE)}
-          description={`${t("How long the model thinks before answering")}. ${t("For a new session, until it names its own")}.`}
+          description={`${t("How long the model thinks before answering")}. ${t("For a new chat, until it names its own")}.`}
           value={modes.thinking}
           options={BuffVariant.LEVELS.map((id) => ({
             value: id as string,
@@ -70,7 +70,7 @@ export function DefaultModesSection() {
         <SelectRow
           action="settings-default-context"
           title={t(BuffContextWindow.TITLE)}
-          description={`${t("How much of the dialogue the model keeps in mind before compaction")}. ${t("For a new session, until it names its own")}.`}
+          description={`${t("How much of the chat the model keeps in mind before compaction")}. ${t("For a new chat, until it names its own")}.`}
           value={custom ? BuffContextWindow.CUSTOM : String(modes.context)}
           options={contextOptions.map((option) => ({ value: option.id, label: option.label, description: option.hint }))}
           onChange={(id) => {

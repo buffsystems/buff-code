@@ -113,6 +113,28 @@ describe("Permission", () => {
     }),
   )
 
+  // #959: облачная машина — правила задаёт только её конфиг; правила сессии, которые прислал
+  // клиент (режим «спрашивать»), не действуют, и агент ни о чём не спрашивает.
+  it.effect("ignores the session's own rules when permissions are managed", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*", effect: "allow" }])
+      const { db } = yield* Database.Service
+      yield* db
+        .update(SessionTable)
+        .set({ permission: [{ action: "read", resource: "*", effect: "ask" }] })
+        .where(eq(SessionTable.id, Session.ID.make("ses_test")))
+        .run()
+        .pipe(Effect.orDie)
+      const service = yield* Permission.Service
+      process.env.BUFF_MANAGED_PERMISSIONS = "1"
+      try {
+        expect((yield* service.ask(assertion())).effect).toBe("allow")
+      } finally {
+        delete process.env.BUFF_MANAGED_PERMISSIONS
+      }
+    }),
+  )
+
   it.effect("evaluates against an explicit agent", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "read", resource: "*", effect: "allow" }])

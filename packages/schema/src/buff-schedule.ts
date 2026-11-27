@@ -4,18 +4,22 @@ import { BuffI18n } from "./buff-i18n.js"
 
 /**
  * Расписание автоматизации (#447) — без cron: пять видов, которые человек выбирает в редакторе
- * или называет модели. Время местное — машины, на которой работает служба Buff Code. Здесь же
+ * или называет модели. Время — по поясу `zone` (IANA, пояс человека: облачная машина живёт в UTC,
+ * #969), а без него — местное машины, на которой работает служба Buff Code. Здесь же
  * сводка словами, следующий запуск и что делать, если машина была выключена: один запуск «с
  * опозданием» за последний пропущенный срок, остальные сроки считаются пропущенными. Слова —
  * английские исходные строки: экран переводит подписи и передаёт переводчика в составные (#472).
  */
 
+/** Пояс человека (IANA), по которому читается `at`; без него — пояс машины. */
+type Zoned = { readonly zone?: string }
+
 export type Schedule =
   | { readonly kind: "interval"; readonly every: number; readonly unit: "minutes" | "hours" }
-  | { readonly kind: "daily"; readonly at: string }
-  | { readonly kind: "weekly"; readonly days: readonly number[]; readonly at: string }
-  | { readonly kind: "weeks"; readonly every: number; readonly days: readonly number[]; readonly at: string }
-  | { readonly kind: "monthly"; readonly day: number; readonly at: string }
+  | ({ readonly kind: "daily"; readonly at: string } & Zoned)
+  | ({ readonly kind: "weekly"; readonly days: readonly number[]; readonly at: string } & Zoned)
+  | ({ readonly kind: "weeks"; readonly every: number; readonly days: readonly number[]; readonly at: string } & Zoned)
+  | ({ readonly kind: "monthly"; readonly day: number; readonly at: string } & Zoned)
 
 export const KINDS: readonly { readonly value: Schedule["kind"]; readonly label: string }[] = [
   { value: "interval", label: "Every N minutes or hours" },
@@ -99,7 +103,19 @@ export function problem(schedule: Schedule, t: BuffI18n.T = BuffI18n.english): s
   if ((schedule.kind === "weekly" || schedule.kind === "weeks") && !schedule.days.some((day) => between(day, 0, 6)))
     return t("Choose at least one day of the week.")
   if (schedule.kind === "monthly" && !between(schedule.day, 1, 31)) return t("Day of the month — from 1 to 31.")
+  if (schedule.kind !== "interval" && schedule.zone !== undefined && !knownZone(schedule.zone))
+    return t("Unknown time zone: {zone}.", { zone: schedule.zone })
   return undefined
+}
+
+/** Пояс, который знает Intl. */
+export function knownZone(zone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone })
+    return zone.length > 0
+  } catch {
+    return false
+  }
 }
 
 const between = (value: number, low: number, high: number) => Number.isInteger(value) && value >= low && value <= high
@@ -107,33 +123,77 @@ const between = (value: number, low: number, high: number) => Number.isInteger(v
 const period = (schedule: { every: number; unit: "minutes" | "hours" }) =>
   schedule.every * (schedule.unit === "minutes" ? MINUTE : 60 * MINUTE)
 
-function atTime(day: Date, time: string): Date {
-  const [hours, minutes] = time.split(":").map(Number)
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes)
+/** Календарный день (без времени): год, месяц 0–11, число. */
+type Civil = { readonly y: number; readonly m: number; readonly d: number }
+
+const parts = new Map<string, Intl.DateTimeFormat>()
+/** Часы на стене в поясе `zone` в момент `at`; без пояса — часы машины. */
+function wall(at: Date, zone: string | undefined): Civil & { readonly h: number; readonly mi: number } {
+  if (!zone) return { y: at.getFullYear(), m: at.getMonth(), d: at.getDate(), h: at.getHours(), mi: at.getMinutes() }
+  let format = parts.get(zone)
+  if (!format) {
+    format = new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+    })
+    parts.set(zone, format)
+  }
+  const got = Object.fromEntries(format.formatToParts(at).map((part) => [part.type, Number(part.value)]))
+  return { y: got.year!, m: got.month! - 1, d: got.day!, h: got.hour!, mi: got.minute! }
 }
 
-const weekStart = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7))
-const lastDay = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+/** Насколько часы пояса впереди UTC в момент `ms`. */
+function offset(ms: number, zone: string): number {
+  const minute = Math.floor(ms / MINUTE) * MINUTE
+  const w = wall(new Date(minute), zone)
+  return Date.UTC(w.y, w.m, w.d, w.h, w.mi) - minute
+}
 
-function matches(schedule: Exclude<Schedule, { kind: "interval" }>, day: Date, anchor: Date): boolean {
+/** Момент, когда в поясе на стене `time` дня `day`. Время, которого нет (весенний перевод), — на
+ *  час позже; повторённое (осенний) — его второй раз: запуск один. */
+function atTime(day: Civil, time: string, zone: string | undefined): Date {
+  const [hours, minutes] = time.split(":").map(Number)
+  if (!zone) return new Date(day.y, day.m, day.d, hours, minutes)
+  const guess = Date.UTC(day.y, day.m, day.d, hours, minutes)
+  const first = guess - offset(guess, zone)
+  const second = offset(first, zone)
+  return new Date(second === guess - first ? first : guess - second)
+}
+
+const civilDays = (c: Civil) => Math.round(Date.UTC(c.y, c.m, c.d) / DAY_MS)
+const shift = (c: Civil, days: number): Civil => {
+  const date = new Date(Date.UTC(c.y, c.m, c.d + days))
+  return { y: date.getUTCFullYear(), m: date.getUTCMonth(), d: date.getUTCDate() }
+}
+const weekDay = (c: Civil) => new Date(Date.UTC(c.y, c.m, c.d)).getUTCDay()
+const weekStart = (c: Civil) => civilDays(c) - ((weekDay(c) + 6) % 7)
+const lastDay = (c: Civil) => new Date(Date.UTC(c.y, c.m + 1, 0)).getUTCDate()
+
+function matches(schedule: Exclude<Schedule, { kind: "interval" }>, day: Civil, anchor: Civil): boolean {
   switch (schedule.kind) {
     case "daily":
       return true
     case "weekly":
-      return schedule.days.includes(day.getDay())
+      return schedule.days.includes(weekDay(day))
     case "weeks": {
-      const weeks = Math.round((weekStart(day).getTime() - weekStart(anchor).getTime()) / (7 * DAY_MS))
-      return weeks % schedule.every === 0 && schedule.days.includes(day.getDay())
+      const weeks = (weekStart(day) - weekStart(anchor)) / 7
+      return weeks % schedule.every === 0 && schedule.days.includes(weekDay(day))
     }
     case "monthly":
-      return day.getDate() === Math.min(schedule.day, lastDay(day))
+      return day.d === Math.min(schedule.day, lastDay(day))
   }
 }
 
 /**
  * Первый срок позже `after`. `anchor` — когда автоматизацию создали: от него идут интервалы и
- * счёт недель «раз в N недель». Расписание должно быть без ошибок (`problem`).
+ * счёт недель «раз в N недель». Дни и время — в поясе расписания. Расписание должно быть без
+ * ошибок (`problem`).
  */
 export function next(schedule: Schedule, anchor: Date, after: Date): Date {
   const trouble = problem(schedule)
@@ -143,10 +203,12 @@ export function next(schedule: Schedule, anchor: Date, after: Date): Date {
     const count = Math.max(1, Math.floor((after.getTime() - anchor.getTime()) / step) + 1)
     return new Date(anchor.getTime() + count * step)
   }
+  const start = wall(after, schedule.zone)
+  const from = wall(anchor, schedule.zone)
   for (let offset = 0; ; offset++) {
-    const day = new Date(after.getFullYear(), after.getMonth(), after.getDate() + offset)
-    const candidate = atTime(day, schedule.at)
-    if (candidate > after && matches(schedule, day, anchor)) return candidate
+    const day = shift(start, offset)
+    const candidate = atTime(day, schedule.at, schedule.zone)
+    if (candidate > after && matches(schedule, day, from)) return candidate
   }
 }
 
@@ -180,22 +242,19 @@ export function due(schedule: Schedule, anchor: Date, pending: Date, now: Date):
 }
 
 const two = (value: number) => String(value).padStart(2, "0")
-const clock = (date: Date) => `${two(date.getHours())}:${two(date.getMinutes())}`
-const sameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 
-/** Когда следующий запуск — коротко: «через 12 мин», «завтра в 09:00», «пн 12.10 в 09:00». */
-export function nextLabel(at: Date, now: Date, t: BuffI18n.T = BuffI18n.english): string {
+/** Когда следующий запуск — коротко: «через 12 мин», «завтра в 09:00», «пн 12.10 в 09:00»; по
+ *  часам пояса `zone` (человека), без него — машины. */
+export function nextLabel(at: Date, now: Date, t: BuffI18n.T = BuffI18n.english, zone?: string): string {
   const minutes = Math.ceil((at.getTime() - now.getTime()) / MINUTE)
   if (minutes <= 0) return t("now")
   if (minutes < 60) return t("in {minutes} min", { minutes })
-  if (sameDay(at, now)) return t("today at {time}", { time: clock(at) })
-  if (sameDay(at, new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)))
-    return t("tomorrow at {time}", { time: clock(at) })
-  const day = DAYS.find((entry) => entry.value === at.getDay())?.label ?? ""
-  return t("{day} {date} at {time}", {
-    day: t(day),
-    date: `${two(at.getDate())}.${two(at.getMonth() + 1)}`,
-    time: clock(at),
-  })
+  const when = wall(at, zone)
+  const today = wall(now, zone)
+  const time = `${two(when.h)}:${two(when.mi)}`
+  const days = civilDays(when) - civilDays(today)
+  if (days === 0) return t("today at {time}", { time })
+  if (days === 1) return t("tomorrow at {time}", { time })
+  const day = DAYS.find((entry) => entry.value === weekDay(when))?.label ?? ""
+  return t("{day} {date} at {time}", { day: t(day), date: `${two(when.d)}.${two(when.m + 1)}`, time })
 }

@@ -46,7 +46,7 @@ describe("what an entry needs", () => {
 
   test("a model is written as provider/model", () => {
     expect(BuffCustom.problem(command, { id: "x", values: { model: "glm" }, body: "т" }, ru)).toBe(
-      "Модель записывается как провайдер/модель, например buff/buff. Пусто — модель сессии.",
+      "Модель записывается как провайдер/модель, например buff/buff. Пусто — модель чата.",
     )
     expect(BuffCustom.problem(command, { id: "x", values: { model: "buff/buff" }, body: "т" }, ru)).toBeUndefined()
   })

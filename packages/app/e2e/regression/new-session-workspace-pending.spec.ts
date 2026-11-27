@@ -319,7 +319,7 @@ test("retains the draft and reuses the created workspace after session creation 
   mock.worktree.resolve({ status: 200, json: { directory: workspace } })
 
   await expect(page).toHaveURL(draftPath)
-  await expect(page.getByText("Failed to create session", { exact: true })).toBeVisible()
+  await expect(page.getByText("Failed to create chat", { exact: true })).toBeVisible()
   await expect(page.locator('[data-component="composer-editor"]')).toHaveText(text)
   await expect(page.locator('[data-action="composer-submit"]')).toBeEnabled()
   await expect(page.getByRole("button", { name: "pending-workspace", exact: true })).toBeVisible()

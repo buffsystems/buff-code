@@ -10,6 +10,7 @@ import type {
   Namespace as ToolNamespace,
   Result,
 } from "@opencode/schema/tool"
+import { BuffSendFile } from "@opencode/schema/buff-send-file"
 import { Effect, Ref, Schema, Semaphore } from "effect"
 import { definition, normalizedName } from "../tool/runtime.js"
 import { CodeModeCatalog } from "./catalog.js"
@@ -21,11 +22,33 @@ const ExecuteFile = Schema.Struct({
   name: Schema.optionalKey(Schema.String),
 })
 
+// Buff (#969): файл, который вложенный вызов отдал человеку (рисование через MCP), — та же запись,
+// что у `send_file`; лента рисует по ней карточку.
+const ExecuteSent = Schema.Struct({
+  file: Schema.String,
+  name: Schema.String,
+  mime: Schema.String,
+  bytes: Schema.Number,
+  note: Schema.optionalKey(Schema.String),
+})
+
 const ExecuteCall = Schema.Struct({
   tool: Schema.String,
   status: Schema.Literals(["running", "completed", "error"]),
   input: Schema.optionalKey(Schema.Record(Schema.String, Schema.Json)),
+  sent: Schema.optionalKey(ExecuteSent),
 })
+
+// Запись о файле — из метаданных вызова или из его структурного ответа; неполная не передаётся.
+const sentOf = (executed: { readonly metadata?: unknown; readonly output?: unknown }): typeof ExecuteSent.Type | undefined => {
+  const sent = BuffSendFile.sentOf(executed.metadata) ?? BuffSendFile.sentOf(executed.output)
+  if (!sent) return undefined
+  const { note, ...rest } = sent
+  return note === undefined ? rest : { ...rest, note }
+}
+
+// Вызов узнаётся по входу: обработчик инструмента и запись о вызове видят один и тот же вход.
+const inputKey = (input: unknown) => JSON.stringify(input ?? null)
 
 type ExecuteCall = typeof ExecuteCall.Type
 
@@ -82,6 +105,7 @@ export const create = (
         const callIndex = yield* Ref.make(0)
         const files = yield* Ref.make<Array<CollectedFiles>>([])
         const calls = yield* Ref.make<Array<ExecuteCall>>([])
+        const handed = new Map<string, Array<typeof ExecuteSent.Type>>()
         const lock = Semaphore.makeUnsafe(1)
         const record = (update: (items: Array<ExecuteCall>) => Array<ExecuteCall>) =>
           lock.withPermit(
@@ -93,6 +117,8 @@ export const create = (
             Effect.gen(function* () {
               const index = yield* Ref.getAndUpdate(callIndex, (index) => index + 1)
               const executed = yield* executeTool(name, tool, input, context)
+              const sent = sentOf(executed)
+              if (sent) handed.set(inputKey(input), [...(handed.get(inputKey(input)) ?? []), sent])
               const content =
                 typeof executed.content === "string"
                   ? [{ type: "text" as const, text: executed.content }]
@@ -104,7 +130,7 @@ export const create = (
               const text = content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n")
               return text === "" ? null : text
             }),
-          progressHooks(record),
+          progressHooks(record, (input) => handed.get(inputKey(input))?.shift()),
         ).execute(code)
         const toolCalls = yield* Ref.get(calls)
         const collected = (yield* Ref.get(files))
@@ -140,19 +166,26 @@ export const create = (
 }
 
 // Rows appear in start order; the same call object arrives at both hooks, so a call finds its row again.
-function progressHooks(record: (update: (items: Array<ExecuteCall>) => Array<ExecuteCall>) => Effect.Effect<unknown>) {
+function progressHooks(
+  record: (update: (items: Array<ExecuteCall>) => Array<ExecuteCall>) => Effect.Effect<unknown>,
+  sentBy: (input: unknown) => typeof ExecuteSent.Type | undefined,
+) {
   const rows = new WeakMap<object, number>()
   const start = (call: object, entry: ExecuteCall) =>
     record((items) => {
       rows.set(call, items.length)
       return [...items, entry]
     })
-  const settle = (call: object, result: CodeMode.CallResult) => {
+  const settle = (call: object, result: CodeMode.CallResult, sent?: typeof ExecuteSent.Type) => {
     const index = rows.get(call)
     if (index === undefined) return Effect.void
     return record((items) => {
       const next = [...items]
-      next[index] = { ...items[index], status: result.status === "success" ? "completed" : "error" }
+      next[index] = {
+        ...items[index],
+        status: result.status === "success" ? "completed" : "error",
+        ...(sent && result.status === "success" ? { sent } : {}),
+      }
       return next
     })
   }
@@ -161,7 +194,7 @@ function progressHooks(record: (update: (items: Array<ExecuteCall>) => Array<Exe
       const shown = displayInput(call.input)
       return start(call, { tool: call.name, status: "running", ...(shown ? { input: shown } : {}) })
     },
-    "tool.after": settle,
+    "tool.after": (call, result) => settle(call, result, sentBy(call.input)),
     // Only listed extension functions get a row; anything else stays out of the TUI.
     "extension.before": (call) => {
       switch (call.name) {

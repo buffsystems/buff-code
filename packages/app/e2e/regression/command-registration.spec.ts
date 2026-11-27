@@ -53,7 +53,7 @@ test("navigation replaces commands without retaining disposed owners", async ({ 
   await page.locator("[data-titlebar-tab-link]").filter({ hasText: "Palette fixture session" }).click()
   await expect(page.getByRole("heading", { name: "Palette fixture session", exact: true })).toBeVisible()
   for (const count of [3, 4]) {
-    await page.getByRole("button", { name: "New session", exact: true }).click()
+    await page.getByRole("button", { name: "New chat", exact: true }).click()
     await expect(page.locator("[data-titlebar-tab-link]")).toHaveCount(count)
     await expect(page.locator('[data-component="composer-editor"]')).toBeEditable()
   }

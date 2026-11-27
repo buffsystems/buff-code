@@ -7,7 +7,7 @@ title: "Troubleshooting"
   the steps below, inspect its service and logs, and help identify the issue.
 </Callout>
 
-OpenCode uses a client-server architecture. A background server owns sessions, plugins, permissions, and other application
+OpenCode uses a client-server architecture. A background server owns chats, plugins, permissions, and other application
 state. Start by determining whether an issue is in a client, the shared server, or a specific project.
 
 ## Check the background service
@@ -103,7 +103,7 @@ Follow the log while reproducing the problem:
 tail -f ~/.local/share/opencode/log/opencode.log
 ```
 
-Each line includes a process `run` ID and a `role` field. Use `role=server` for session, provider, plugin, permission, and
+Each line includes a process `run` ID and a `role` field. Use `role=server` for chat, provider, plugin, permission, and
 tool activity.
 
 ```bash

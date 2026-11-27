@@ -262,3 +262,40 @@ test("other failures quote the provider short: the first line, without proxy wra
     "upstream timeout",
   )
 })
+
+// #966: подписка личного аккаунта Buff. Отказы сервер уже говорит словами для человека —
+// они показываются как есть, без «ответ 402:» и без совета «подключите провайдера».
+const account = (error: { type: string; message: string; status?: number }) => turnFailure(error, "buff-account", ru)
+
+test("the Buff account's refusals are shown in the server's own words", () => {
+  for (const [status, type, message] of [
+    [402, "provider.quota", "Нет действующей подписки — модели недоступны."],
+    [403, "provider.auth", "Доступ к чату остановлен. Напишите в поддержку."],
+    [422, "provider.invalid-request", "Лимит подписки исчерпан. Сколько использовано и когда лимит обновится — в разделе «Расход»."],
+    [429, "provider.rate-limit", "Превышен лимит запросов к модели по вашему тарифу. Повторите через 12 с."],
+    [413, "provider.invalid-request", "Запрос к модели слишком большой (максимум 1 МБ). Сократите контекст или уберите часть вложений."],
+    [200, "provider.unknown", "Модель не смогла ответить. Повторите запрос."],
+  ] as const)
+    expect(account({ type, message, status }).text).toBe(message)
+})
+
+test("a lost connection to the Buff account's site says what to check", () => {
+  expect(account({ type: "provider.transport", message: "ConnectionRefused: Unable to connect" }).text).toBe(
+    "Нет связи с Buff. Проверьте подключение к интернету и повторите.",
+  )
+})
+
+test("a Buff account failure without words still says something", () => {
+  expect(account({ type: "provider.unknown", message: "" }).text).toBe("Модель не ответила. Повторите запрос.")
+})
+
+test("a Buff account request too large with a picture says the size, not «the model may not read such files»", () => {
+  const message = "Запрос к модели слишком большой (максимум 1 МБ). Сократите контекст или уберите часть вложений."
+  const failure = turnFailure(
+    { type: "provider.invalid-request", message, status: 413, attachments: [{ mime: "image/png", name: "shot.png" }] },
+    "buff-account",
+    ru,
+  )
+  expect(failure.text).toBe(message)
+  expect(failure.files).toBeUndefined()
+})

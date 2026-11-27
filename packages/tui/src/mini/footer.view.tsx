@@ -601,7 +601,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       {
         id: "session.background",
         title: t("Background subagents"),
-        group: t("Session"),
+        group: t("Chat"),
         run: () => props.onBackground?.(),
       },
     ],
@@ -613,7 +613,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       {
         id: "session.child.first",
         title: t("View subagents"),
-        group: t("Session"),
+        group: t("Chat"),
         run: openSubagentMenu,
       },
     ],
@@ -642,7 +642,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       {
         id: "composer.subagent.interrupt",
         title: t("Interrupt subagent"),
-        group: t("Session"),
+        group: t("Chat"),
         run: () => {
           const current = selectedTab()
           if (current?.status !== "running") {

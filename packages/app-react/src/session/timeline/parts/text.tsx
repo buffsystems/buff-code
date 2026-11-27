@@ -1,3 +1,4 @@
+import { agentLabel } from "../../agent-label"
 import { IconButton, Tooltip } from "@buff/ui/react"
 import type {
   SessionMessageAssistant,
@@ -108,7 +109,7 @@ export function AssistantText(props: {
           : -1
   const agent = props.message.agent
   const meta = [
-    agent ? agent[0]?.toUpperCase() + agent.slice(1) : "",
+    agent ? agentLabel(agent, i18n.buff.t) : "",
     props.modelName,
     ms >= 0 ? duration(ms) : "",
     interrupted ? i18n.t("ui.message.interrupted") : "",

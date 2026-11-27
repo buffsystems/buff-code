@@ -79,7 +79,7 @@ test("finds and opens an exact session ID outside the recent list", async () => 
   })
 
   try {
-    await fixture.app.waitForFrame((frame) => frame.includes("Поиск сессий и проектов"))
+    await fixture.app.waitForFrame((frame) => frame.includes("Поиск чатов и проектов"))
     await fixture.app.mockInput.typeText(sessionID)
     await fixture.app.waitForFrame((frame) => frame.includes("TUI plugin slot API v2"))
 
@@ -291,7 +291,7 @@ test("loads Git worktrees only when drilling into a project or its associated di
     expect(worktrees.indexOf("current-branch")).toBeLessThan(worktrees.indexOf("other-branch"))
 
     fixture.app.mockInput.pressArrow("left")
-    await fixture.app.waitForFrame((frame) => frame.includes("Поиск сессий и проектов"))
+    await fixture.app.waitForFrame((frame) => frame.includes("Поиск чатов и проектов"))
     await fixture.app.mockInput.typeText("current-branch")
     await fixture.app.waitForFrame((frame) => frame.includes("current-branch") && !frame.includes("OpenCode"))
     fixture.app.mockInput.pressArrow("right")
@@ -355,7 +355,7 @@ test("does not show or trigger worktree navigation for non-Git and global direct
     fixture.app.mockInput.pressArrow("down")
     fixture.app.mockInput.pressArrow("right")
     await fixture.app.renderOnce()
-    expect(fixture.app.captureCharFrame()).toContain("Поиск сессий и проектов")
+    expect(fixture.app.captureCharFrame()).toContain("Поиск чатов и проектов")
     expect(requests).toBe(0)
   } finally {
     await fixture.dispose()
@@ -511,7 +511,7 @@ test("shows projects while sessions refresh and preserves the selected project",
 
   try {
     await fixture.app.waitForFrame((frame) => frame.includes("Second project") && frame.includes("Обновляю"))
-    expect(fixture.app.captureCharFrame()).toContain("Поиск сессий и проектов")
+    expect(fixture.app.captureCharFrame()).toContain("Поиск чатов и проектов")
     fixture.app.mockInput.pressArrow("down")
 
     resolveSessions(
@@ -721,7 +721,7 @@ test("keeps the previous recent list usable when reopening fails to refresh", as
     fixture.app.mockInput.pressEscape()
     await fixture.app.waitForFrame((frame) => !frame.includes("Recent session"))
     fixture.open()
-    await fixture.app.waitForFrame((frame) => frame.includes("Не удалось обновить сессии"))
+    await fixture.app.waitForFrame((frame) => frame.includes("Не удалось обновить чаты"))
     expect(fixture.app.captureCharFrame()).toContain("Recent session")
     fixture.app.mockInput.pressEnter()
     await fixture.app.waitFor(() => fixture.route.data.type === "session")
@@ -741,11 +741,11 @@ test("shows an initial loading shell instead of reporting an empty list", async 
   })
   try {
     await fixture.app.waitForFrame(
-      (frame) => frame.includes("Поиск сессий и проектов") && frame.includes("Обновляю"),
+      (frame) => frame.includes("Поиск чатов и проектов") && frame.includes("Обновляю"),
     )
     expect(fixture.app.captureCharFrame()).not.toContain("Здесь пока пусто")
     await fixture.app.mockInput.typeText("missing")
-    await fixture.app.waitForFrame((frame) => frame.includes("Ищу сессии и проекты"))
+    await fixture.app.waitForFrame((frame) => frame.includes("Ищу чаты и проекты"))
     expect(fixture.app.captureCharFrame()).not.toContain("Ничего не нашлось")
     sessions.resolve(json({ data: [], cursor: {} }))
     projects.resolve(json([]))
@@ -767,7 +767,7 @@ test("reports both refresh failures while keeping hydrated sessions usable", asy
     ({ data }) => data.session.remember(recentSession),
   )
   try {
-    await fixture.app.waitForFrame((frame) => frame.includes("Не удалось обновить сессии и проекты"))
+    await fixture.app.waitForFrame((frame) => frame.includes("Не удалось обновить чаты и проекты"))
     expect(fixture.app.captureCharFrame()).toContain("Recent session")
   } finally {
     await fixture.dispose()

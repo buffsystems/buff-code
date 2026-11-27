@@ -22,7 +22,7 @@
     min-height: 96px;
     width: 100%;
     overflow: clip;
-    border: 1px solid var(--border);
+    border: 1px solid var(--control-border); /* #972 (R1-28): a field edge a person can see (3:1). */
     border-radius: var(--radius-xl);
     background-color: var(--card);
     color: var(--card-foreground);

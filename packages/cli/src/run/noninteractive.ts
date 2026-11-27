@@ -84,6 +84,7 @@ export async function runNonInteractivePrompt(input: Input) {
   let submitted = false
   let promoted = false
   let emittedError = false
+  let heldFailure: { readonly time: number; readonly error: TurnError } | undefined
   // #562: чья это проблема — словами, как в окне и консоли; JSON для программ — как пришло.
   let provider: string | undefined
   const failureText = (error: TurnError) => turnFailure(error, provider ?? "", t).text
@@ -100,6 +101,16 @@ export async function runNonInteractivePrompt(input: Input) {
     if (input.format !== "json") return false
     process.stdout.write(JSON.stringify({ type, timestamp, sessionID: input.sessionID, ...data }) + EOL)
     return true
+  }
+
+  /** A held step failure that nothing recovered: told once, and the command fails. */
+  const tellHeldFailure = () => {
+    if (!heldFailure) return
+    const held = heldFailure
+    heldFailure = undefined
+    emittedError = true
+    process.exitCode = 1
+    if (!emit("error", held.time, { error: held.error })) UI.error(failureText(held.error))
   }
 
   const writeText = (part: { text: string; [key: string]: unknown }, timestamp: number) => {
@@ -170,6 +181,20 @@ export async function runNonInteractivePrompt(input: Input) {
     formCancelled = true
   }
 
+  // Buff (#966, #435): the header names the model as people know it — a subscription tier, a
+  // tariff — and falls back to its id. The names are read before the prompt goes out: the event
+  // loop must not wait in the middle of a turn, or the answer overtakes its own header.
+  let names = new Map<string, string>()
+  const loadModelNames = () =>
+    input.client.model
+      .list({ location: { directory: input.location.directory } })
+      .then((result) => {
+        names = new Map(result.data.map((item) => [`${item.providerID}/${item.id}`, item.name]))
+      })
+      .catch(() => undefined)
+  const modelName = (model: { providerID: string; id: string }) =>
+    names.get(`${model.providerID}/${model.id}`) || model.id
+
   const consume = async () => {
     while (!controller.signal.aborted) {
       const next = await stream.next().catch((error) => {
@@ -177,6 +202,7 @@ export async function runNonInteractivePrompt(input: Input) {
         return { done: true as const, value: undefined }
       })
       if (next.done) {
+        tellHeldFailure()
         if (emittedError) return
         throw new Error("Event stream disconnected during prompt execution")
       }
@@ -229,7 +255,10 @@ export async function runNonInteractivePrompt(input: Input) {
       if (finalizing && !event.type.startsWith("session.execution.")) continue
 
       if (event.type === "session.step.started") {
+        // A new step after a failed one is the session's own retry.
+        heldFailure = undefined
         provider = event.data.model.providerID
+        const label = `> ${event.data.agent} · ${modelName(event.data.model)}`
         const part = {
           id: partID(event.id),
           sessionID: input.sessionID,
@@ -241,13 +270,13 @@ export async function runNonInteractivePrompt(input: Input) {
           pendingStep = {
             timestamp: time,
             part,
-            label: `> ${event.data.agent} · ${event.data.model.id}`,
+            label,
           }
           continue
         }
         if (!emit("step_start", time, { part }) && input.format !== "json") {
           UI.empty()
-          UI.println(`> ${event.data.agent} · ${event.data.model.id}`)
+          UI.println(label)
           UI.empty()
         }
         continue
@@ -481,15 +510,16 @@ export async function runNonInteractivePrompt(input: Input) {
         }
         if (interrupted || permissionRejected || formCancelled) continue
         flushStep()
-        emittedError = true
-        process.exitCode = 1
-        if (!emit("error", time, { error: event.data.error })) UI.error(failureText(event.data.error))
+        // Buff (#966): the session may retry the step by itself and answer. The failure is held
+        // until the turn ends: told (and exit 1) only if nothing recovered it.
+        heldFailure = { time, error: event.data.error }
         continue
       }
       if (event.type === "session.execution.failed") {
         if (input.compatibility === "v1" && (v1InvalidOutput || permissionRejected || formCancelled)) return
         flushStep()
-        if (!emittedError && !formCancelled) {
+        if (heldFailure && !formCancelled) tellHeldFailure()
+        else if (!emittedError && !formCancelled) {
           emittedError = true
           process.exitCode = 1
           if (!emit("error", time, { error: event.data.error })) UI.error(failureText(event.data.error))
@@ -498,6 +528,7 @@ export async function runNonInteractivePrompt(input: Input) {
       }
       if (event.type === "session.execution.interrupted") {
         if (input.compatibility === "v1" && (permissionRejected || formCancelled)) return
+        tellHeldFailure()
         if (event.data.reason === "user" && interrupted) process.exitCode = 130
         if (event.data.reason !== "user" && !emittedError) {
           emittedError = true
@@ -507,7 +538,10 @@ export async function runNonInteractivePrompt(input: Input) {
         }
         return
       }
-      if (event.type === "session.execution.succeeded") return
+      if (event.type === "session.execution.succeeded") {
+        heldFailure = undefined
+        return
+      }
     }
   }
 
@@ -670,6 +704,21 @@ export async function runNonInteractivePrompt(input: Input) {
       await input.client.session.switchModel({ sessionID: input.sessionID, model: selected })
     }
 
+    // Buff (#966): a turn refused before its first step still knows whose model it is — the
+    // refusal is then read in that provider's words (a subscription's refusal is not «a rejected key»).
+    provider ??=
+      selected?.providerID ??
+      (await input.client.session
+        .get({ sessionID: input.sessionID })
+        .then((result) => result.model?.providerID)
+        .catch(() => undefined))
+    // A server that has just started may still be loading a signed-in provider's models: the
+    // chosen model's name is waited for briefly, so the header does not fall back to the id.
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await loadModelNames()
+      if (!selected || names.has(`${selected.providerID}/${selected.id}`)) break
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    }
     const prepared = await Promise.all(input.files.map(prepareFile))
     if (interrupted) return
     submitted = true
@@ -725,6 +774,7 @@ export async function runNonInteractivePrompt(input: Input) {
     const waiting = input.client.session.wait({ sessionID: input.sessionID })
     await Promise.race([waiting, completed.then(() => waiting)])
     finalizing = true
+    tellHeldFailure()
     const projected = await reconcile()
     if (
       !projected.responded &&

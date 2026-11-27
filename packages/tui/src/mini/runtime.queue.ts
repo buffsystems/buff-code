@@ -99,11 +99,11 @@ export async function runPromptQueue(input: QueueInput): Promise<void> {
                 {
                   type: "stream.patch",
                   patch: {
-                    status: t("new sessions unavailable"),
+                    status: t("new chats unavailable"),
                   },
                 },
                 {
-                  status: t("new sessions unavailable"),
+                  status: t("new chats unavailable"),
                 },
               )
               continue
@@ -114,12 +114,12 @@ export async function runPromptQueue(input: QueueInput): Promise<void> {
                 type: "stream.patch",
                 patch: {
                   phase: "running",
-                  status: t("starting new session"),
+                  status: t("starting new chat"),
                 },
               },
               {
                 phase: "running",
-                status: t("starting new session"),
+                status: t("starting new chat"),
               },
             )
             await input.onNewSession()
@@ -132,12 +132,12 @@ export async function runPromptQueue(input: QueueInput): Promise<void> {
                 type: "stream.patch",
                 patch: {
                   phase: "running",
-                  status: t("compacting session"),
+                  status: t("compacting chat"),
                 },
               },
               {
                 phase: "running",
-                status: t("compacting session"),
+                status: t("compacting chat"),
               },
             )
             await input.onCompact?.()

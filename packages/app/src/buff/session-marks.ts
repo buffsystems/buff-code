@@ -43,7 +43,7 @@ export function createSessionMarks(ctx: () => ServerCtx | undefined) {
         .then(mutate, (error: unknown) => {
           // Причину отказа ядро пишет английской строкой схемы — она переводится здесь (#472).
           showToast({
-            title: t("Sessions"),
+            title: t("Chats"),
             description: t(formatServerError(error, undefined, "Could not save.")),
           })
         }),

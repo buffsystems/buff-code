@@ -78,7 +78,7 @@ export function BuffAnswerQuote(props: { onSide?: (text: string) => void }) {
                     window.getSelection()?.removeAllRanges()
                   }}
                 >
-                  {t("To a side conversation")}
+                  {t("To a side chat")}
                 </Button>
               )}
             </Show>

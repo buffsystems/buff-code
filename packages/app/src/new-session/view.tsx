@@ -27,6 +27,7 @@ import { NewSessionWordmark } from "./wordmark"
 import { SummaryPopover } from "@/session/summary/popover"
 import type { DraftMcpControls } from "./mcp"
 import { BuffBalanceChip } from "@/buff/billing"
+import { BuffUsageChip } from "@/buff/subscription"
 import { BuffNoModelStrip } from "@/buff/no-model"
 import { BuffSnapshotGitStrip } from "@/buff/snapshot-git"
 import { BuffContextChip } from "@/buff/context-chip"
@@ -157,6 +158,7 @@ export function NewSessionView(props: {
                     />
                   </Show>
                   <BuffBalanceChip />
+                  <BuffUsageChip />
                 </div>
               </Show>
             </div>

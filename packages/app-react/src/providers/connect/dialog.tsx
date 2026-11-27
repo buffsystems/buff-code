@@ -6,7 +6,7 @@
 
 import "../providers.css"
 import { Badge, Button, CopyField, Dialog, DialogBody, Field, IconButton, Input, Spinner } from "@buff/ui/react"
-import { BUFF_PROVIDER } from "@opencode/app/react-reuse/buff-providers"
+import { BUFF_ACCOUNT, BUFF_PROVIDER } from "@opencode/app/react-reuse/buff-providers"
 import type { FormAnswer, FormStringField } from "@opencode/client/promise"
 import { ArrowLeft, Ban, Search } from "lucide-react"
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
@@ -75,6 +75,7 @@ export function DialogConnectProvider(props: {
               provider={selected}
               onClose={props.onClose}
               onOther={() => setSelected(undefined)}
+              onAccount={() => setSelected(BUFF_ACCOUNT)}
               setBack={(handler) => (back.current = handler ?? (() => setSelected(undefined)))}
             />
           ) : (
@@ -217,6 +218,8 @@ function Connection(props: {
   onClose: () => void
   /** To the list: Buff's sign-in offers one's own provider instead (#562). */
   onOther: () => void
+  /** To the personal Buff account's sign-in (#966): no company connector is needed for it. */
+  onAccount: () => void
   setBack: (handler: (() => void) | undefined) => void
 }) {
   const i18n = useI18n()
@@ -236,7 +239,8 @@ function Connection(props: {
         // #562: one's own provider is checked right away — the check, not a toast, says whether the
         // key works. Buff's sign-in closes as before. (This runs from the first render's closure:
         // the name comes from the connection's store, not the catalog read then.)
-        if (props.provider !== BUFF_PROVIDER) return setConnected(true)
+        // #966: the Buff account closes the same way — its tiers are there, nothing to check by a paid call.
+        if (props.provider !== BUFF_PROVIDER && props.provider !== BUFF_ACCOUNT) return setConnected(true)
         props.onClose()
         const provider = connection.store.get().integration?.name ?? props.provider
         showToast({
@@ -280,10 +284,21 @@ function Connection(props: {
       )
     if (state.loading || state.state === "pending") return <Pending />
     if (state.methodIndex === undefined) return <Methods connection={connection} name={name()} />
-    if (state.state === "form") return <AuthForm connection={connection} buff={buff} onLater={props.onClose} onOther={props.onOther} />
+    if (state.state === "form") return (
+        <AuthForm
+          connection={connection}
+          buff={buff}
+          onLater={props.onClose}
+          onOther={props.onOther}
+          onAccount={props.onAccount}
+        />
+      )
     if (state.state === "error") return <Failure connection={connection} buff={buff} name={name()} />
     if (method?.type === "key") return <ApiKey connection={connection} name={name()} provider={props.provider} />
     if (state.authorization?.mode === "code") return <OAuthCode connection={connection} name={name()} />
+    // #966: the Buff account's page returns by itself — there is no code to show or to enter.
+    if (state.authorization?.mode === "auto" && props.provider === BUFF_ACCOUNT)
+      return <AccountAuto connection={connection} onClose={props.onClose} />
     if (state.authorization?.mode === "auto")
       return <OAuthAuto connection={connection} name={name()} buff={buff} onClose={props.onClose} />
     return null
@@ -440,7 +455,13 @@ const matches = (field: FormStringField, value: Record<string, string>) =>
     return condition.op === "eq" ? actual === condition.value : actual !== condition.value
   })
 
-function AuthForm(props: { connection: ProviderConnection; buff: boolean; onLater: () => void; onOther: () => void }) {
+function AuthForm(props: {
+  connection: ProviderConnection
+  buff: boolean
+  onLater: () => void
+  onOther: () => void
+  onAccount: () => void
+}) {
   const i18n = useI18n()
   const state = useStore(props.connection.store, (value) => value)
   const fields = (props.connection.current()?.form ?? []).flatMap((field) => (field.type === "string" ? [field] : []))
@@ -504,6 +525,18 @@ function AuthForm(props: { connection: ProviderConnection; buff: boolean; onLate
               </>
             )}
           </div>
+          {props.buff && (
+            <div className="flex flex-col items-start gap-1.5" data-component="buff-sign-in-account">
+              <span className="ui-hint">
+                {i18n.buff.t(
+                  "No company connector? Sign in with your own Buff account: its subscription is shared with the site and the phone.",
+                )}
+              </span>
+              <Button type="button" data-action="buff-sign-in-account" onClick={props.onAccount}>
+                {i18n.buff.t("Sign in with a Buff account")}
+              </Button>
+            </div>
+          )}
         </>
       )}
       {field?.options && (
@@ -672,6 +705,51 @@ function OAuthCode(props: { connection: ProviderConnection; name: string }) {
           {i18n.t("common.continue")}
         </Button>
       </form>
+    </div>
+  )
+}
+
+/**
+ * The Buff account's browser sign-in (#966): the page opens by itself, the person signs in and
+ * presses «Allow» there, and the page hands the code back to Buff Code — nothing to copy.
+ */
+function AccountAuto(props: { connection: ProviderConnection; onClose: () => void }) {
+  const i18n = useI18n()
+  const platform = usePlatform()
+  const authorization = useStore(props.connection.store, (state) => state.authorization)
+  const url = authorization?.url
+  useEffect(() => {
+    if (url) platform.openExternal(url)
+  }, [url])
+  if (!authorization) return null
+  return (
+    <div className="flex flex-col gap-4" data-component="buff-account-auto">
+      <span className="text-sm">{authorization.instructions}</span>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="primary"
+          data-action="buff-account-open"
+          onClick={() => platform.openExternal(authorization.url)}
+        >
+          {i18n.buff.t("Open the sign-in page")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          data-action="buff-account-cancel"
+          onClick={() => {
+            props.connection.cancel()
+            props.onClose()
+          }}
+        >
+          {i18n.buff.t("Cancel")}
+        </Button>
+      </div>
+      <div className="flex items-center gap-4 text-sm">
+        <Spinner />
+        <span>{i18n.buff.t("Waiting for you to allow the sign-in on the page…")}</span>
+      </div>
     </div>
   )
 }

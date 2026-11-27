@@ -122,7 +122,7 @@ export class ShareLinks {
   async create(input: CreateInput): Promise<ShareView> {
     const title = (input.title ?? "").trim().slice(0, TITLE_MAX)
     if (!title) throw phoneRefusal("The title is required")
-    if (!(await this.p.session(input.session))) throw phoneRefusal("The session is not found")
+    if (!(await this.p.session(input.session))) throw phoneRefusal("The chat is not found")
     const messages = [...new Set((input.messages ?? []).filter((m) => typeof m === "string" && m))]
     const record: ShareRecord = {
       id: (this.p.newId ?? newShareId)(),

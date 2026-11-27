@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useI18n } from "../../../i18n/provider"
 import { previewImages, usePreviewImage, useReadImage } from "./image-preview"
+import { usePluginFrames } from "../../../buff/chat-plugins/timeline"
 import { createMarkdownView, type MarkdownInput } from "./markdown-view"
 
 /**
@@ -23,6 +24,10 @@ export function Markdown(props: MarkdownInput & { className?: string; onRendered
   const rendered = useRef(props.onRendered)
   rendered.current = props.onRendered
   const view = useRef<ReturnType<typeof createMarkdownView>>(undefined)
+  // Buff (#595): the blocks chat plugins draw get their frames after each paint.
+  const plugins = usePluginFrames(props.cacheKey)
+  const scanPlugins = useRef(plugins.scan)
+  scanPlugins.current = plugins.scan
 
   useLayoutEffect(() => {
     const element = root.current
@@ -31,7 +36,10 @@ export function Markdown(props: MarkdownInput & { className?: string; onRendered
       root: element,
       labels: () => labels.current,
       readImage,
-      onPainted: (root) => previewImages(root, (src, alt) => preview.current(src, alt), labels.current.image),
+      onPainted: (root) => {
+        previewImages(root, (src, alt) => preview.current(src, alt), labels.current.image)
+        scanPlugins.current(root)
+      },
       onRendered: () => rendered.current?.(),
     })
     view.current = created
@@ -54,7 +62,17 @@ export function Markdown(props: MarkdownInput & { className?: string; onRendered
     view.current?.relabel()
   }, [i18n])
 
-  return <div ref={root} data-component="markdown" dir="auto" className={`ui-prose ui-prose--chat ${props.className ?? ""}`} />
+  return (
+    <>
+      <div
+        ref={root}
+        data-component="markdown"
+        dir="auto"
+        className={`ui-prose ui-prose--chat ${props.className ?? ""}`}
+      />
+      {plugins.frames}
+    </>
+  )
 }
 
 const pace = 24

@@ -29,6 +29,7 @@ import { SessionQueuePanel } from "./queue-panel"
 import { resolveSessionComposerSelection } from "./selection"
 import { createSessionRequestModel } from "../requests/model"
 import { BuffBalanceChip, BuffFundsStrip } from "@/buff/billing"
+import { BuffUsageChip } from "@/buff/subscription"
 import { BuffNoModelStrip } from "@/buff/no-model"
 import { BuffSnapshotGitStrip } from "@/buff/snapshot-git"
 import { BackgroundWorkSummary, type BackgroundTask } from "@/session/summary/background"
@@ -318,6 +319,7 @@ export function ActiveSessionComposerRegion(props: {
               </span>
               <span class="ms-auto">
                 <BuffBalanceChip />
+                <BuffUsageChip />
               </span>
             </div>
           </div>

@@ -13,12 +13,12 @@ describe("SessionTitleFallback", () => {
   })
 
   test("supplies compact display labels", () => {
-    expect(SessionTitleFallback.displayLabel(root)).toBe("New session")
-    expect(SessionTitleFallback.displayLabel(child)).toBe("Child session")
-    expect(SessionTitleFallback.displayLabel({ title: "", parentID: "ses_parent" })).toBe("Child session")
-    expect(SessionTitleFallback.displayLabel({ title: "New session - 2026-07-30T18:45:03.662Z" })).toBe("New session")
+    expect(SessionTitleFallback.displayLabel(root)).toBe("New chat")
+    expect(SessionTitleFallback.displayLabel(child)).toBe("Child chat")
+    expect(SessionTitleFallback.displayLabel({ title: "", parentID: "ses_parent" })).toBe("Child chat")
+    expect(SessionTitleFallback.displayLabel({ title: "New session - 2026-07-30T18:45:03.662Z" })).toBe("New chat")
     expect(SessionTitleFallback.displayLabel({ title: "Child session - 2026-07-30T18:45:03.662Z" })).toBe(
-      "Child session",
+      "Child chat",
     )
     expect(SessionTitleFallback.displayLabel({ title: "Generated title" })).toBe("Generated title")
   })

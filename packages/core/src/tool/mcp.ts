@@ -16,6 +16,19 @@ import { Tool } from "../tool.js"
 export const namespace = (server: string) => server.replace(/[^a-zA-Z0-9_-]/g, "_")
 export const name = (server: string, tool: string) => `${namespace(server)}_${tool.replace(/[^a-zA-Z0-9_-]/g, "_")}`
 
+/** Which server registered a tool. A symbol, so only this registration sets it and a same-named tool never has it. */
+const SERVER = Symbol("buff.mcp-server")
+
+/** Registry options of an MCP server's tool, marked with its server. */
+export const options = (tool: Mcp.Tool): Tool.Options =>
+  Object.assign({ namespace: namespace(tool.server), codemode: tool.codemode !== false }, { [SERVER]: tool.server })
+
+/** The MCP server that registered this registry entry; undefined for every other tool, whatever its name. */
+export const server = (tool: { readonly options?: object | undefined }): string | undefined => {
+  const value = (tool.options as { readonly [SERVER]?: unknown } | undefined)?.[SERVER]
+  return typeof value === "string" ? value : undefined
+}
+
 export interface Interface {
   /** Wait for the initial MCP tool registration to settle. */
   readonly flush: Effect.Effect<void>
@@ -42,7 +55,7 @@ export const layer = Layer.effect(
             for (const tool of discovered) {
               editor.add({
                 name: tool.name,
-                options: { namespace: namespace(tool.server), codemode: tool.codemode !== false },
+                options: options(tool),
                 description: tool.description ?? "",
                 input: (tool.inputSchema ?? { type: "object", properties: {} }) as JsonSchema.JsonSchema,
                 output: (tool.outputSchema ?? {}) as JsonSchema.JsonSchema,

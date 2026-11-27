@@ -21,7 +21,7 @@ function Follow(props: { context: Context; sessionID: string }) {
       if (event.data.from !== props.sessionID) continue
       if (!context.ui.tabs.focus(event.data.session))
         context.ui.router.navigate({ type: "session", sessionID: event.data.session })
-      context.ui.toast.show({ message: t("Setup continues in a new session; this one is in the next tab."), variant: "info" })
+      context.ui.toast.show({ message: t("Self-setup continues in a new chat; this one is in the next tab."), variant: "info" })
     }
   })().catch(() => undefined)
   return null

@@ -110,7 +110,7 @@ function ModelField(props: { field: BuffCustom.Field; value: string; onChange: (
     const known = models.list().map((model) => ({ value: `${model.provider.id}/${model.id}`, label: model.name }))
     const missing = props.value && !known.some((option) => option.value === props.value)
     return [
-      { value: SESSION_MODEL, label: t("Session model") },
+      { value: SESSION_MODEL, label: t("Chat model") },
       ...(missing ? [{ value: props.value, label: props.value }] : []),
       ...known.toSorted((a, b) => a.label.localeCompare(b.label)),
     ]

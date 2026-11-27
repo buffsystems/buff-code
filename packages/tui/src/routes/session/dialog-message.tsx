@@ -29,7 +29,7 @@ export function DialogMessage(props: {
         {
           title: t("Jump to"),
           value: "message.jump",
-          description: t("view message in session"),
+          description: t("view message in chat"),
           onSelect: (dialog) => dialog.clear(),
         },
         {
@@ -92,7 +92,7 @@ export function DialogMessage(props: {
         {
           title: t("Fork"),
           value: "session.fork",
-          description: t("create a new session"),
+          description: t("create a new chat"),
           onSelect: (dialog) => {
             const value = message()
             if (!value || value.type !== "user") return

@@ -94,7 +94,7 @@ export function StartDialog(props: {
           <Field
             label={t("Project")}
             group
-            hint={t("The run goes into a new session of this project; subagents work in it with the usual tools.")}
+            hint={t("The run goes into a new chat of this project; subagents work in it with the usual tools.")}
           >
             <SelectMenu
               aria-label={t("Project")}

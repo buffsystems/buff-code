@@ -146,7 +146,7 @@ export function permissionPresentation(
     return {
       icon: "⟳",
       title: t("Continue after repeated failures"),
-      lines: [t("This keeps the session running despite repeated failures.")],
+      lines: [t("This keeps the chat running despite repeated failures.")],
     }
   }
 

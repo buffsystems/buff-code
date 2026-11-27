@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { BuffMobile } from "../src/buff-mobile.js"
 
-describe("сессия с телефона", () => {
+describe("чат с телефона", () => {
   test("пометка в метаданных — имя телефона; чужие и пустые метаданные — не с телефона", () => {
     expect(BuffMobile.phoneOrigin({ origin: "phone", device: "Pixel" })).toEqual({ device: "Pixel" })
     expect(BuffMobile.phoneOrigin({ origin: "phone" })).toEqual({})

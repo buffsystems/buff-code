@@ -9,6 +9,8 @@ export * as BuffEnv from "./buff-env.js"
 
 /** Переменные самого Buff Code — у апстрима двойников нет, переносить их некуда. */
 const OWN = new Set([
+  "BUFF_ACCOUNT_HOST",
+  "BUFF_ACCOUNT_WEB",
   "BUFF_APP_DIR",
   "BUFF_BINARY",
   "BUFF_CARDS",
@@ -17,6 +19,7 @@ const OWN = new Set([
   "BUFF_HOOK_EVENT",
   "BUFF_HOOK_ID",
   "BUFF_INSTALL_SCRIPT",
+  "BUFF_MANAGED_PERMISSIONS",
   "BUFF_PRODUCT",
   "BUFF_PROVIDER",
   "BUFF_RUNNER",

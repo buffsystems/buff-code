@@ -7,7 +7,10 @@
 import "../../providers/providers.css"
 import { Badge, Button, Dialog, DialogBody } from "@buff/ui/react"
 import {
+  accountSignInOffered,
+  BUFF_ACCOUNT,
   BUFF_PROVIDER,
+  pendingNote,
   connectedRows,
   providerTag,
   signInOffered,
@@ -25,6 +28,7 @@ import { useDialog } from "../../dialog/dialogs"
 import { useI18n } from "../../i18n/provider"
 import { showToast } from "../../shell/notifications/toast"
 import { BuffBillingSection } from "../../buff/billing/billing"
+import { BuffSubscriptionSection } from "../../buff/subscription/subscription"
 import { useBuffContextChoice } from "../../buff/context/choice"
 import { popularProviders, useProviderCatalog } from "../../providers/catalog/use-catalog"
 import { openConnectProvider } from "../../providers/connect/open"
@@ -181,7 +185,7 @@ export function SettingsProviders() {
                       {row.account && <span className="settings-entity-description">{row.account}</span>}
                       {row.pending && (
                         <span className="settings-entity-description">
-                          {t("Models will appear after you choose an organization and project")}
+                          {t(pendingNote(row.id))}
                         </span>
                       )}
                     </div>
@@ -189,7 +193,7 @@ export function SettingsProviders() {
                   {row.pending && row.id === BUFF_PROVIDER && directory && (
                     <ChooseContext server={scope.server} directory={directory} />
                   )}
-                  {row.id !== BUFF_PROVIDER && !row.pending && (
+                  {row.id !== BUFF_PROVIDER && row.id !== BUFF_ACCOUNT && !row.pending && (
                     <Button variant="ghost" data-action="provider-check" onClick={() => check(row.id, row.name)}>
                       {t("Check")}
                     </Button>
@@ -252,12 +256,20 @@ export function SettingsProviders() {
         </div>
 
         <BuffBillingSection server={scope.server} directory={directory} />
+        <BuffSubscriptionSection server={scope.server} directory={directory} />
 
-        {signInOffered(catalog.integrations) && (
-          <div data-component="buff-sign-in-section">
-            <Button leadingIcon={Plus} onClick={() => connect(BUFF_PROVIDER)}>
-              {t("Sign in to Buff")}
-            </Button>
+        {(signInOffered(catalog.integrations) || accountSignInOffered(catalog.integrations)) && (
+          <div className="flex flex-wrap gap-2" data-component="buff-sign-in-section">
+            {signInOffered(catalog.integrations) && (
+              <Button leadingIcon={Plus} onClick={() => connect(BUFF_PROVIDER)}>
+                {t("Sign in to Buff")}
+              </Button>
+            )}
+            {accountSignInOffered(catalog.integrations) && (
+              <Button leadingIcon={Plus} data-action="buff-account-sign-in" onClick={() => connect(BUFF_ACCOUNT)}>
+                {t("Sign in with a Buff account")}
+              </Button>
+            )}
           </div>
         )}
 

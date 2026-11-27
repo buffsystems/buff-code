@@ -100,7 +100,7 @@ function MemoryDialog(props: { controller: Controller; file: BuffMemory.File; te
               setProblem(undefined)
             }}
           />
-          <Hint>{t("Plain text in Markdown. The model gets it at the start of the next session.")}</Hint>
+          <Hint>{t("Plain text in Markdown. The model gets it at the start of the next chat.")}</Hint>
           <Problem text={problem()} />
         </FormBody>
       </DialogBody>

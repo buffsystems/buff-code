@@ -121,7 +121,7 @@ function Commands(props: { context: Context }) {
       )
     if (!started.run) return say(t(started.problem ?? "The workflow did not start."), "error")
     say(
-      t("Workflow «{name}» started: the result will arrive in its session.", {
+      t("Workflow «{name}» started: the result will arrive in its chat.", {
         name: BuffWorkflowFile.displayName(saved.meta),
       }),
       "success",
@@ -179,7 +179,7 @@ function Commands(props: { context: Context }) {
     if (action === "remove") {
       const yes = await context.ui.dialog.confirm({
         title: t("Delete workflow «{name}»?", { name: BuffWorkflowFile.displayName(saved.meta) }),
-        message: t("The workflow file will be deleted. Past runs and their sessions stay."),
+        message: t("The workflow file will be deleted. Past runs and their chats stay."),
       })
       context.ui.dialog.clear()
       if (yes)

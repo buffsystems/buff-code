@@ -61,7 +61,7 @@ export const Plugin = define<KV.Service | Session.Service | Scope.Scope>({
       .transform((editor) =>
         editor.add({
           name: "side",
-          description: BuffLocale.t("Side conversation: a branch of this session in a tab nearby — the main one does not change"),
+          description: BuffLocale.t("Side chat: a branch of this chat in a tab nearby — the main one does not change"),
           execute: (input) =>
             Effect.promise(() => runner.open(input.sessionID, BuffSide.parse(input.prompt.text).text)).pipe(
               Effect.flatMap((side) => opened(input.sessionID, side)),

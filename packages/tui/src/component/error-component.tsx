@@ -122,7 +122,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
             {t("Buff Code crashed")}
           </text>
           <Show when={showSubtext()}>
-            <text fg={colors.muted}>{t("An unexpected error stopped the session.")}</text>
+            <text fg={colors.muted}>{t("An unexpected error stopped the chat.")}</text>
           </Show>
         </box>
 

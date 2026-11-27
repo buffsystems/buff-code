@@ -23,10 +23,10 @@ test("starts in the stored language and persists a switch where the Solid window
       <Probe />
     </I18nProvider>,
   )
-  expect(view.element.textContent).toBe("Изменения сессии")
+  expect(view.element.textContent).toBe("Изменения чата")
   act(() => seen.switch?.())
   await settle()
-  expect(view.element.textContent).toBe("Session changes")
+  expect(view.element.textContent).toBe("Chat changes")
   expect(items.get("language")).toBe(JSON.stringify({ locale: "en" }))
   view.unmount()
 })

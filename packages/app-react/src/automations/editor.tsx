@@ -194,7 +194,7 @@ export function AutomationEditor(props: {
           </Field>
           <Field
             label={t("What the agent should do")}
-            hint={t("Each run is a new session: the agent does not see past conversations, write the whole task.")}
+            hint={t("Each run is a new chat: the agent does not see past conversations, write the whole task.")}
           >
             <Textarea
               rows={4}
@@ -214,7 +214,7 @@ export function AutomationEditor(props: {
           <Field
             label={t("Permissions in a run")}
             group
-            hint={`${t(mode?.hint ?? "")} ${t("If a run asks anyway, it will wait for your answer in the session.")}`}
+            hint={`${t(mode?.hint ?? "")} ${t("If a run asks anyway, it will wait for your answer in the chat.")}`}
           >
             <Segmented
               size="sm"

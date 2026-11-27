@@ -128,3 +128,53 @@ describe("when the next run is, said short", () => {
     expect(BuffSchedule.nextLabel(at("2026-10-12T09:00:00"), now, ru)).toBe("пн 12.10 в 09:00")
   })
 })
+
+// Живая проверка #969: «17:10», набранное в браузере по Берлину, облачная машина (UTC) считала по
+// своим часам. Расписание с поясом считается по поясу человека — и через переход на летнее и
+// зимнее время.
+describe("a schedule in the person's time zone", () => {
+  const berlin = "Europe/Berlin"
+  const utc = (text: string) => new Date(text)
+
+  test("a daily time is the person's wall clock, whatever the machine's", () => {
+    const next = BuffSchedule.next({ kind: "daily", at: "17:10", zone: berlin }, utc("2026-11-01T00:00:00Z"), utc("2026-11-25T12:00:00Z"))
+    expect(next.toISOString()).toBe("2026-11-25T16:10:00.000Z")
+  })
+
+  test("across the spring and autumn clock changes the wall time stays", () => {
+    const daily = { kind: "daily", at: "09:00", zone: berlin } as const
+    const anchor = utc("2026-01-01T00:00:00Z")
+    expect(BuffSchedule.next(daily, anchor, utc("2026-03-28T09:00:00Z")).toISOString()).toBe("2026-03-29T07:00:00.000Z")
+    expect(BuffSchedule.next(daily, anchor, utc("2026-03-27T09:00:00Z")).toISOString()).toBe("2026-03-28T08:00:00.000Z")
+    expect(BuffSchedule.next(daily, anchor, utc("2026-10-24T09:00:00Z")).toISOString()).toBe("2026-10-25T08:00:00.000Z")
+  })
+
+  test("a time the spring change skips runs once, an hour later; the autumn's repeated hour runs once", () => {
+    const gap = { kind: "daily", at: "02:30", zone: berlin } as const
+    const anchor = utc("2026-01-01T00:00:00Z")
+    const spring = BuffSchedule.next(gap, anchor, utc("2026-03-28T12:00:00Z"))
+    expect(spring.toISOString()).toBe("2026-03-29T01:30:00.000Z")
+    const autumn = BuffSchedule.next(gap, anchor, utc("2026-10-24T12:00:00Z"))
+    expect(BuffSchedule.next(gap, anchor, autumn).getTime() - autumn.getTime()).toBeGreaterThan(23 * 3600_000)
+  })
+
+  test("days of the week and of the month are the person's", () => {
+    // 23:30 UTC on Sunday is already Monday in Berlin.
+    const monday = { kind: "weekly", days: [1], at: "00:15", zone: berlin } as const
+    expect(BuffSchedule.next(monday, utc("2026-01-01T00:00:00Z"), utc("2026-11-22T22:00:00Z")).toISOString()).toBe(
+      "2026-11-22T23:15:00.000Z",
+    )
+    const last = { kind: "monthly", day: 31, at: "00:30", zone: "Asia/Tokyo" } as const
+    expect(BuffSchedule.next(last, utc("2026-01-01T00:00:00Z"), utc("2026-11-01T00:00:00Z")).toISOString()).toBe(
+      "2026-11-29T15:30:00.000Z",
+    )
+  })
+
+  test("an unknown zone is a problem; the next run reads in the zone", () => {
+    expect(BuffSchedule.problem({ kind: "daily", at: "09:00", zone: "Mars/Olympus" })).toBeDefined()
+    expect(BuffSchedule.problem({ kind: "daily", at: "09:00", zone: berlin })).toBeUndefined()
+    expect(BuffSchedule.nextLabel(utc("2026-11-25T16:10:00Z"), utc("2026-11-25T12:00:00Z"), undefined, berlin)).toBe(
+      "today at 17:10",
+    )
+  })
+})

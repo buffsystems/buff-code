@@ -68,7 +68,7 @@ test("/balance lists the balance, the tariff, this session, my spend by day and 
     ["Хватит при текущем расходе", "≈ 12 дн."],
     ["Тариф", "Команда"],
     ["Цена за 1 млн токенов", "вход 90 ₽ · выход 180 ₽"],
-    ["Эта сессия (оценка)", "≈ 171 ₽"],
+    ["Этот чат (оценка)", "≈ 171 ₽"],
     ["Мой расход за 3 дня", "150 ₽"],
     ["  03.10", "50 ₽"],
     ["  02.10", "0 ₽"],
@@ -80,7 +80,7 @@ test("/balance lists the balance, the tariff, this session, my spend by day and 
 
 test("without a session, a tariff or prices those rows say so; funds gone — the balance says it", () => {
   const rows = balanceRows(info({ tariff: null, price_input_rub_per_m: null }), "2026-10-03", undefined)
-  expect(rows.map((row) => row.title)).not.toContain("Эта сессия (оценка)")
+  expect(rows.map((row) => row.title)).not.toContain("Этот чат (оценка)")
   expect(rows.find((row) => row.title === "Тариф")!.description).toBe("не назначен")
   expect(rows.find((row) => row.title === "Цена за 1 млн токенов")!.description).toBe("не задана")
   const gone = balanceRows(info({ balance_rub: -14.82, exhausted: true, days_left: 0 }), "2026-10-03", undefined)

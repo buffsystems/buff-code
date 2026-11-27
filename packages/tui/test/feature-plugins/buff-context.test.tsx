@@ -11,8 +11,8 @@ const context = {
   theme: { text: { base: color, muted: color, feedback: { warning: { base: color } } } },
 } as unknown as Context
 
-async function frame(choice: Parameters<typeof ContextLabel>[0]["choice"], signedOut = false, own = false) {
-  const app = await testRender(() => <ContextLabel context={context} choice={choice} signedOut={signedOut} own={own} />, {
+async function frame(choice: Parameters<typeof ContextLabel>[0]["choice"], signedOut = false, own = false, account?: string) {
+  const app = await testRender(() => <ContextLabel context={context} choice={choice} signedOut={signedOut} own={own} account={account} />, {
     width: 80,
     height: 1,
   })
@@ -41,4 +41,15 @@ test("without a sign-in the label says there is no model and how to sign in", as
 // #562: со своим провайдером модель есть — строка только напоминает о входе в Buff.
 test("signed out with an own provider the label is no warning", async () => {
   expect(await frame(null, true, true)).toContain("Buff: вход не выполнен · /connect")
+})
+
+// #966: вошли личным аккаунтом Buff — строка называет его, а не говорит «вход не выполнен».
+test("signed in with a Buff account the label names the account", async () => {
+  const label = await frame(null, true, true, "ivan")
+  expect(label).toContain("Аккаунт Buff · ivan")
+  expect(label).not.toContain("вход не выполнен")
+  // Аккаунт без действующей подписки: моделей нет, но вход выполнен — об этом и сказано.
+  expect(await frame(null, true, false, "ivan")).toContain("Аккаунт Buff · ivan")
+  // Вошли и в компанию — виден её контекст.
+  expect(await frame({ org: "acme", project: null, spaces: [] }, false, true, "ivan")).toContain("acme › без проекта")
 })

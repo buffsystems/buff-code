@@ -31,7 +31,7 @@ test("searches settings globally and opens the matching setting", async () => {
       commands: [
         {
           id: "session.new",
-          title: "New session",
+          title: "New chat",
           group: "Session",
           palette: true,
           run() {},
@@ -70,7 +70,7 @@ test("searches settings globally and opens the matching setting", async () => {
   app.renderer.start()
 
   try {
-    await app.waitForFrame((frame) => frame.includes("New session"))
+    await app.waitForFrame((frame) => frame.includes("New chat"))
     expect(app.captureCharFrame()).not.toContain("Animations")
     await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
 

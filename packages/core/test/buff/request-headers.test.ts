@@ -14,7 +14,7 @@ const upstream = {
 // #510: запрос к модели называет сессию нашими заголовками — по ним шлюз к моделям (#501)
 // привязывает расход к сессии; апстримных x-opencode-* наружу больше не уходит.
 describe("заголовки запроса к модели", () => {
-  test("сессия, родительская сессия и клиент — под именами x-buff-*", () => {
+  test("чат, родительский чат и клиент — под именами x-buff-*", () => {
     const out = BuffRequestHeaders.rebrand(upstream, null, true)
     expect(out["X-Buff-Session"]).toBe("ses_1")
     expect(out["X-Buff-Parent-Session"]).toBe("ses_0")
@@ -34,7 +34,7 @@ describe("заголовки запроса к модели", () => {
     expect(out["User-Agent"]).toBe("buff/latest/2.0.11-buff.19/cli")
   })
 
-  test("у корневой сессии родителя нет — заголовка тоже", () => {
+  test("у корневого чата родителя нет — заголовка тоже", () => {
     const { ["x-parent-session-id"]: _, ...root } = upstream
     expect(BuffRequestHeaders.rebrand(root, null, true)["X-Buff-Parent-Session"]).toBeUndefined()
   })

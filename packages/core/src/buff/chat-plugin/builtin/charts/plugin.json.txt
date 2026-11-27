@@ -1,0 +1,10 @@
+{
+  "name": "Charts",
+  "description": "Interactive charts of numbers given in the conversation: change over time, comparison of categories, shares of a whole, distribution, correlation, KPI against a goal, funnels, flows between things, hierarchies, financial candles. Use when the user asks to chart, plot, visualise, compare or show a trend, a share, a ranking or a breakdown — or when three or more numbers read better as a picture than as text.",
+  "labels": {
+    "ru": { "name": "Графики", "summary": "Интерактивные графики по числам из разговора: динамика, сравнение, доли, распределения, воронки, потоки, иерархии." },
+    "en": { "name": "Charts", "summary": "Interactive charts of the numbers in a conversation: trends, comparisons, shares, distributions, funnels, flows, hierarchies." }
+  },
+  "blocks": ["chart"],
+  "height": 352
+}

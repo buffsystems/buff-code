@@ -1,4 +1,4 @@
-// Getting to know Buff Code (#457), ported from the Solid window's buff/onboarding.tsx: three
+// Getting to know Buff Code (#457), ported from the Solid window's buff/onboarding.tsx: its
 // steps, and every choice changes something — what the person does sets the permissions mode and
 // «Plan» of new sessions, the theme (light, dark or as the system) and the text size the window's
 // look, the last step project memory and the hooks check. «Skip» on any step; the steps and words
@@ -9,6 +9,7 @@ import { Button, Dialog, DialogBody, DialogFooter, RadioGroup, RadioItem, useThe
 import { BuffFirstRun } from "@opencode/schema/buff-first-run"
 import { BuffMemory } from "@opencode/schema/buff-memory"
 import { BuffTrust } from "@opencode/schema/buff-trust"
+import { ChartColumn, Plug, Sparkles } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { Server } from "../../core/servers"
 import { useDialog } from "../../dialog/dialogs"
@@ -22,7 +23,25 @@ import { markOnboardingDone } from "./state"
 
 type Role = BuffFirstRun.Role["value"]
 
-export function OnboardingDialog(props: { server: Server; onClose: () => void }) {
+// The window's steps (#972): what the person does, how a chat is shown, how the window looks,
+// what to turn on. The second is the window's own — the console's introduction has none.
+// The last (#595) picks nothing: it says that Buff Code extends itself and where to ask for it.
+const STEPS = [
+  BuffFirstRun.STEPS[0],
+  BuffFirstRun.LAYOUT_STEP,
+  BuffFirstRun.STEPS[1],
+  BuffFirstRun.STEPS[2],
+  BuffFirstRun.SETUP_STEP,
+] as const
+
+export function OnboardingDialog(props: {
+  server: Server
+  /** The chat layout picked (#972). A dialog is drawn outside the settings' provider: its host sets it. */
+  onLayout: (layout: BuffFirstRun.Layout["value"]) => void
+  /** What the step starts on: «simple» at a first launch, the person's own choice when shown again. */
+  layout: BuffFirstRun.Layout["value"]
+  onClose: () => void
+}) {
   const i18n = useI18n()
   const t = i18n.buff.t
   const dialog = useDialog()
@@ -30,6 +49,9 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
   const size = useStore(textSize, (value) => value.ui)
   const [step, setStep] = useState(0)
   const [role, setRole] = useState<Role>("develop")
+  // #972: a new install picks how a chat is shown; «simple» is the start for someone who came
+  // to talk to the agent. An install that never saw this step keeps the developer layout.
+  const [layout, setLayout] = useState<BuffFirstRun.Layout["value"]>(props.layout)
   const [memory, setMemory] = useState(true)
   const [askFirst, setAskFirst] = useState(true)
   const signedIn = useBuffSignedIn(props.server)
@@ -55,6 +77,7 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
   const finish = async () => {
     const chosen = BuffFirstRun.ROLES.find((item) => item.value === role)
     if (chosen) preferForNewSessions(chosen.mode, chosen.plan)
+    props.onLayout(layout)
     const api = props.server.api()
     await Promise.all([
       api
@@ -76,12 +99,14 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
       )
   }
   const skip = () => {
+    // #972: a layout the person saw and went on from is their choice, even if the rest is skipped.
+    if (step > STEPS.indexOf(BuffFirstRun.LAYOUT_STEP)) props.onLayout(layout)
     markOnboardingDone()
     props.onClose()
   }
-  const last = step === BuffFirstRun.STEPS.length - 1
-  const current = BuffFirstRun.STEPS[step]
-  const counter = t("Step {n} of {total}", { n: step + 1, total: BuffFirstRun.STEPS.length })
+  const last = step === STEPS.length - 1
+  const current = STEPS[step]
+  const counter = t("Step {n} of {total}", { n: step + 1, total: STEPS.length })
 
   return (
     <Dialog
@@ -94,7 +119,7 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
       <DialogBody>
         <div className="flex flex-col gap-4" data-component="buff-onboarding" data-step={step + 1}>
           <div className="buff-onboarding-progress" aria-label={counter}>
-            {BuffFirstRun.STEPS.map((item, index) => (
+            {STEPS.map((item, index) => (
               <span key={item.title} className="buff-onboarding-dot" data-active={index <= step} />
             ))}
             <span className="ui-hint ms-1.5">{counter}</span>
@@ -114,7 +139,18 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
               ))}
             </RadioGroup>
           )}
-          {step === 1 && (
+          {current === BuffFirstRun.LAYOUT_STEP && (
+            <RadioGroup
+              aria-label={t(current.title)}
+              value={layout}
+              onValueChange={(value) => setLayout(value === "developer" ? "developer" : "simple")}
+            >
+              {BuffFirstRun.LAYOUTS.map((item) => (
+                <RadioItem key={item.value} value={item.value} label={t(item.title)} hint={t(item.note)} />
+              ))}
+            </RadioGroup>
+          )}
+          {current === BuffFirstRun.STEPS[1] && (
             <>
               <RadioGroup
                 aria-label={t(current?.title ?? "")}
@@ -143,7 +179,7 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
               </label>
             </>
           )}
-          {step === 2 && (
+          {current === BuffFirstRun.STEPS[2] && (
             <SettingsList>
               <SwitchRow
                 action="buff-onboarding-memory"
@@ -160,6 +196,22 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
                 onChange={setAskFirst}
               />
             </SettingsList>
+          )}
+          {current === BuffFirstRun.SETUP_STEP && (
+            <ul className="flex flex-col gap-3" data-component="buff-onboarding-setup">
+              {BuffFirstRun.SETUP_POINTS.map((point, index) => {
+                const Icon = SETUP_ICONS[index] ?? Sparkles
+                return (
+                  <li key={point.title} className="flex items-start gap-3">
+                    <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <div>
+                      <div className="text-sm font-medium">{t(point.title)}</div>
+                      <div className="ui-hint">{t(point.note)}</div>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </div>
       </DialogBody>
@@ -187,6 +239,8 @@ export function OnboardingDialog(props: { server: Server; onClose: () => void })
   )
 }
 
+const SETUP_ICONS = [Plug, ChartColumn, Sparkles] as const
+
 const pickRole = (value: string): Role => BuffFirstRun.ROLES.find((item) => item.value === value)?.value ?? "develop"
 const pickTheme = (value: string): Theme => BuffFirstRun.THEMES.find((item) => item.value === value)?.value ?? "system"
 
@@ -196,8 +250,10 @@ function useBuffSignedIn(server: Server) {
   useEffect(() => {
     void server.data.location.integration.sync().catch(() => undefined)
   }, [server])
+  // #966: a personal Buff account is a sign-in as well as the company's.
   return !!integrations?.some(
     (integration) =>
-      integration.id === "buff" && integration.connections.some((connection) => connection.type === "credential"),
+      (integration.id === "buff" || integration.id === "buff-account") &&
+      integration.connections.some((connection) => connection.type === "credential"),
   )
 }

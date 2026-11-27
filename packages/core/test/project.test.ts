@@ -10,6 +10,8 @@ import { Database } from "@opencode/core/database/database"
 import { Project } from "@opencode/core/project"
 import { ProjectSchema } from "@opencode/core/project/schema"
 import { ProjectTable } from "@opencode/core/project/sql"
+import { SessionSchema } from "@opencode/core/session/schema"
+import { SessionTable } from "@opencode/core/session/sql"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Hash } from "@opencode/util/hash"
 import { tmpdir } from "./fixture/tmpdir"
@@ -553,6 +555,50 @@ describe("Project.resolve", () => {
         sandboxes: [abs("/preserved-sandbox")],
         time: { created: 1 },
       })
+    }),
+  )
+})
+
+// #969: проект убирают из списка, когда его папку удаляет веб-клиент; чаты к этому времени
+// перенесены или удалены — строка проекта с чатами не удаляется, иначе чаты ушли бы вместе с ней.
+describe("Project.remove", () => {
+  it.effect("removes a project without sessions; an unknown one is not found", () =>
+    Effect.gen(function* () {
+      const db = (yield* Database.Service).db
+      const project = yield* Project.Service
+      const id = Project.ID.make("gone")
+      yield* db
+        .insert(ProjectTable)
+        .values({ id, worktree: abs("/gone"), sandboxes: [], time_created: 1, time_updated: 1 })
+        .run()
+      yield* project.remove(id)
+      expect(yield* project.list()).toEqual([])
+      expect((yield* Effect.flip(project.remove(id)))._tag).toBe("Project.NotFoundError")
+    }),
+  )
+
+  it.effect("refuses while sessions still belong to the project", () =>
+    Effect.gen(function* () {
+      const db = (yield* Database.Service).db
+      const project = yield* Project.Service
+      const id = Project.ID.make("busy")
+      yield* db
+        .insert(ProjectTable)
+        .values({ id, worktree: abs("/busy"), sandboxes: [], time_created: 1, time_updated: 1 })
+        .run()
+      yield* db
+        .insert(SessionTable)
+        .values({
+          id: SessionSchema.ID.create(),
+          project_id: id,
+          slug: "s",
+          directory: abs("/busy"),
+          title: "kept",
+          version: "test",
+        })
+        .run()
+      expect((yield* Effect.flip(project.remove(id)))._tag).toBe("Project.InUseError")
+      expect((yield* project.list()).map((item) => item.id)).toEqual([id])
     }),
   )
 })

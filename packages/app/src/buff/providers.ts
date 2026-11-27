@@ -47,7 +47,31 @@ export function signInOffered(integrations: readonly Integration[]): boolean {
   return integrations.some((integration) => integration.id === BUFF_PROVIDER && !signedIn(integration))
 }
 
+/** Личный аккаунт Buff (#966): вход своим аккаунтом buff.systems, модели — уровни подписки. */
+export const BUFF_ACCOUNT = "buff-account"
+
+/** Чей вход личным аккаунтом Buff выполнен; входа нет — ничего. Без подписи — пустая строка. */
+export function accountSignedIn(integrations: readonly Integration[]): string | undefined {
+  const connection = integrations
+    .find((integration) => integration.id === BUFF_ACCOUNT)
+    ?.connections.find((item) => item.type === "credential")
+  return connection ? (connection.label ?? "") : undefined
+}
+
+/** Вход в аккаунт Buff предлагается, пока его нет. */
+export function accountSignInOffered(integrations: readonly Integration[]): boolean {
+  return integrations.some((integration) => integration.id === BUFF_ACCOUNT && !signedIn(integration))
+}
+
 /** Подпись способа подключения: вход в Buff — не ключ API; английская строка, переводит экран (#472). */
 export function providerTag(id: string): string | undefined {
+  if (id === BUFF_ACCOUNT) return "Sign-in with a Buff account"
   return id === BUFF_PROVIDER ? "Sign-in through the connector" : undefined
+}
+
+/** Почему у выполненного входа ещё нет моделей — словами для этого входа; английская строка. */
+export function pendingNote(id: string): string {
+  return id === BUFF_ACCOUNT
+    ? "Models will appear when the account has an active subscription"
+    : "Models will appear after you choose an organization and project"
 }

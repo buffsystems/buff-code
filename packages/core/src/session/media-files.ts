@@ -31,10 +31,11 @@ export const mediaKey = (data: string | Uint8Array): string =>
 /** Форматы, которые человек исключил, и как (`BuffAttachment.omittedMedia`). */
 export type Omitted = ReadonlyMap<string, BuffAttachment.OmitMode>
 
-/** Модель не получит этот файл содержимым: не читает формат или человек его исключил. */
+/** Модель не получит этот файл содержимым: не читает формат, человек его исключил или формат не для моделей. */
 export const isReplaced = (mime: string, capabilities: Model.Capabilities, omitted: Omitted): boolean => {
   const modality = BuffAttachment.modalityOf(mime)
-  if (!modality) return false
+  // A format no model reads as content (#971): it always reaches the model as a saved file.
+  if (!modality) return true
   return omitted.has(modality) || !capabilities.input.some((item) => item.startsWith(modality))
 }
 
@@ -64,11 +65,34 @@ const EXTENSIONS: Record<string, string> = {
   "application/pdf": "pdf",
 }
 
+/** Сколько байт имени файла остаётся после приставки по содержимому: с ней — далеко до 255 (NAME_MAX). */
+const NAME_BYTES = 120
+
+/** Имя не длиннее `max` байт; расширение (до 16 знаков) остаётся, укорачивается основа. */
+const capBytes = (name: string, max: number) => {
+  if (Buffer.byteLength(name) <= max) return name
+  const dot = name.lastIndexOf(".")
+  const ext = dot > 0 && name.length - dot <= 16 ? name.slice(dot) : ""
+  const stem = Array.from(name.slice(0, name.length - ext.length))
+  while (stem.length > 0 && Buffer.byteLength(stem.join("") + ext) > max) stem.pop()
+  return stem.join("") + ext
+}
+
 const fileName = (media: Media, hash: string) => {
   const ext = EXTENSIONS[media.mime.toLowerCase()] ?? media.mime.split("/")[1]?.replace(/[^\w]+/g, "") ?? "bin"
-  const base = path.basename(media.name ?? "").replace(/[^\w.\-]+/g, "_").replace(/^\.+/, "")
-  return `${hash.slice(0, 12)}-${base || `file.${ext}`}`
+  // Буквы любого языка остаются (#971): «Подготовка к встрече.pptx» не становится «_.pptx»; имя из
+  // macOS (NFD) сначала собирается (R14-06), иначе «й» распадалось бы на «и_».
+  const base = path
+    .basename(media.name ?? "")
+    .normalize("NFC")
+    .replace(/[^\p{L}\p{M}\p{N}_.\-]+/gu, "_")
+    .replace(/^\.+/, "")
+  return `${hash.slice(0, 12)}-${capBytes(base || `file.${ext}`, NAME_BYTES)}`
 }
+
+/** Имя файла в тексте для модели (R14-06): собранное (NFC), в кавычках, с экранированными кавычками и
+ *  переводами строк — имя, данное человеком, модель читает как имя, а не как указания. */
+export const quotedName = (name: string): string => JSON.stringify(name.normalize("NFC"))
 
 const bytes = (data: string | Uint8Array): Uint8Array =>
   typeof data !== "string"

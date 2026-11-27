@@ -9,7 +9,7 @@ export function statsMetrics(stats: SessionStatsInfo) {
     },
     { label: "best streak", value: stats.streak },
     { label: "active days", value: stats.activeDays },
-    { label: "sessions", value: stats.sessions },
+    { label: "chats", value: stats.sessions },
   ]
 }
 

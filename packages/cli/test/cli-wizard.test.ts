@@ -67,7 +67,7 @@ describe("мастер команды", () => {
     ])
       expect(run.output).toContain(text)
     expect(run.output).toContain("$ opencode session delete ses_1")
-    for (const text of ["Задать", "ID сессии, которую удалить", "Запустить эту команду?", "да", "нет"])
+    for (const text of ["Задать", "ID чата, который удалить", "Запустить эту команду?", "да", "нет"])
       expect(run.screen).toContain(text)
     expect(run.output + run.screen).not.toMatch(/\b(Set|Command|Current|Run this|yes|no)\b/)
   })

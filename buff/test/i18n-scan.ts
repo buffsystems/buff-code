@@ -20,6 +20,21 @@ const INTENDED: { path: string; line: RegExp; reason: string }[] = [
     reason: "так отвечает шлюз разработчика — по этому ответу узнаётся ошибка в адресе",
   },
   {
+    path: "packages/core/src/buff/account.ts",
+    line: /const REVOKED = new Set\(\["Устройство отозвано/,
+    reason: "так сайт аккаунта отвечает об отозванном устройстве — по ответу узнаётся, что вход надо повторить",
+  },
+  {
+    path: "packages/core/src/buff/account/upload.ts",
+    line: /const BUSY = new Set\(\["модели сейчас недоступны"/,
+    reason: "так шлюз отвечает о недоступных моделях — по ответу узнаётся временный отказ",
+  },
+  {
+    path: "packages/schema/src/buff-project-slug.ts",
+    line: /^\s*[а-яё]: "[a-z]*",/,
+    reason: "таблица транслитерации имени проекта в имя папки — данные, а не текст интерфейса",
+  },
+  {
     path: "packages/core/src/buff/workflow-tools.ts",
     line: /\(сценарий \/ workflow\)/,
     reason: "описание для модели: русское слово, по которому человек просит сценарий",

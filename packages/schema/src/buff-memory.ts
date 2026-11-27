@@ -23,8 +23,12 @@ export const File = Schema.Struct({
   modified: Schema.optional(Schema.Number),
   /** Выключенный файл остаётся на диске, но модель его не получает. */
   enabled: Schema.Boolean,
+  /** Файл заметок (MEMORY.md, #969): их сохраняет агент, человек видит списком. */
+  notes: Schema.optional(Schema.Boolean),
 })
 export type File = typeof File.Type
+
+const NotesFile = Schema.Struct({ path: Schema.String, enabled: Schema.Boolean })
 
 const portable = Schema.toStandardSchemaV1
 const Nothing = portable(Schema.Undefined)
@@ -36,7 +40,17 @@ export const Rpc = define({
   id: "buff.memory",
   methods: {
     /** `enabled` — общий выключатель: без него модель не получает ни одного файла памяти. */
-    list: { input: Nothing, output: portable(Schema.Struct({ enabled: Schema.Boolean, files: Schema.Array(File) })) },
+    list: {
+      input: Nothing,
+      output: portable(
+        Schema.Struct({
+          enabled: Schema.Boolean,
+          files: Schema.Array(File),
+          /** Файлы заметок (#969) — и те, которых ещё нет: аккаунта и, в проекте, проекта. */
+          notes: Schema.optional(Schema.Struct({ account: NotesFile, project: Schema.optional(NotesFile) })),
+        }),
+      ),
+    },
     read: { input: portable(Target), output: portable(Schema.Struct({ text: Schema.String })), errors: Failures },
     write: {
       input: portable(Schema.Struct({ ...Target.fields, text: Schema.String })),
@@ -48,6 +62,14 @@ export const Rpc = define({
       input: portable(Schema.Struct({ path: Schema.optional(Schema.String), enabled: Schema.Boolean })),
       output: Nothing,
       errors: Failures,
+    },
+    /**
+     * Память аккаунта в этом проекте (#969): `on` — включить или выключить заметки аккаунта для
+     * чатов проекта; без `on` — только узнать. Инструкции аккаунта действуют всегда.
+     */
+    useAccount: {
+      input: portable(Schema.Struct({ on: Schema.optional(Schema.Boolean) })),
+      output: portable(Schema.Struct({ on: Schema.Boolean })),
     },
   },
   events: { changed: { schema: portable(Schema.Struct({})) } },
@@ -91,4 +113,4 @@ export function scopeTitle(scope: Scope, t: BuffI18n.T = BuffI18n.english): stri
 
 /** Что такое память — одной фразой над списком. */
 export const ABOUT =
-  "Memory is notes in AGENTS.md files: project rules, agreements, frequent commands. The model gets them at the start of every session. AGENTS.md files in nested directories are picked up by themselves when the agent reads files from there."
+  "Memory is notes in AGENTS.md files: project rules, agreements, frequent commands. The model gets them at the start of every chat. AGENTS.md files in nested directories are picked up by themselves when the agent reads files from there."

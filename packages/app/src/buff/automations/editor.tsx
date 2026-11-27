@@ -183,7 +183,7 @@ export function AutomationEditor(props: {
             onChange={(value) => setForm("prompt", value)}
           />
           <Hint>
-            {t("Each run is a new session: the agent does not see past conversations, write the whole task.")}
+            {t("Each run is a new chat: the agent does not see past conversations, write the whole task.")}
           </Hint>
           <div class="buff-auto-field">
             <span class="buff-auto-label">{t("Project")}</span>
@@ -201,7 +201,7 @@ export function AutomationEditor(props: {
             <Choice value={form.mode} options={modes()} onPick={(mode) => setForm("mode", mode)} />
             <Hint>
               {t(BuffPermissionMode.MODES.find((mode) => mode.value === form.mode)?.hint ?? "")}{" "}
-              {t("If a run asks anyway, it will wait for your answer in the session.")}
+              {t("If a run asks anyway, it will wait for your answer in the chat.")}
             </Hint>
           </div>
           <div class="buff-auto-field">

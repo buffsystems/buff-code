@@ -528,12 +528,12 @@ export function createPromptState(input: PromptInput): PromptState {
         display: "/settings",
         description: t("configure Mini transcript output"),
       } satisfies SlashOption,
-      { kind: "slash", name: "new", display: "/new", description: t("start a new session") } satisfies SlashOption,
+      { kind: "slash", name: "new", display: "/new", description: t("start a new chat") } satisfies SlashOption,
       {
         kind: "slash",
         name: "compact",
         display: "/compact",
-        description: t("compact older session context to free space"),
+        description: t("compact older chat context to free space"),
       } satisfies SlashOption,
       { kind: "slash", name: "exit", display: "/exit", description: t("close Buff Code") } satisfies SlashOption,
     ]
@@ -1195,8 +1195,8 @@ export function createPromptState(input: PromptInput): PromptState {
       },
       {
         id: "session.interrupt",
-        title: t("Interrupt session"),
-        group: t("Session"),
+        title: t("Interrupt the agent"),
+        group: t("Chat"),
         run() {
           if (input.onInterrupt()) return
           return false

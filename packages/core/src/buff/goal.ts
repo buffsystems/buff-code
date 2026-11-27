@@ -37,7 +37,7 @@ export const Plugin = define<BuffGoalService.Service | Scope.Scope>({
       .transform((editor) =>
         editor.add({
           name: "goal",
-          description: BuffLocale.t("Session goal: the agent works in iterations until the check accepts the goal"),
+          description: BuffLocale.t("Chat goal: the agent works in iterations until the check accepts the goal"),
           execute: (input) =>
             Effect.promise(async () => {
               await goals.remember(input.sessionID)

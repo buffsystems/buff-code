@@ -2,7 +2,7 @@
 // slots, the project and workspace pickers under it, and «Session details» at the top end. A port
 // of the Solid NewSessionView; the composer and the extensions come from other features.
 
-import { IconButton, Panel, Popover, PopoverContent, PopoverTrigger } from "@buff/ui/react"
+import { IconButton, Panel, Popover, PopoverContent, PopoverTrigger, Tooltip } from "@buff/ui/react"
 import { PanelRight } from "lucide-react"
 import { Component, Suspense, useState, type ReactNode } from "react"
 import { useCommandRegistration } from "../commands/provider"
@@ -187,15 +187,16 @@ function SummaryPopover(props: { open: boolean; onOpenChange: (open: boolean) =>
   ])
   return (
     <Popover open={props.open} onOpenChange={props.onOpenChange}>
-      <PopoverTrigger asChild>
-        <IconButton
-          icon={PanelRight}
-          size="sm"
-          aria-label={i18n.t("session.summary.title")}
-          aria-expanded={props.open}
-          title={i18n.t("session.summary.tooltip")}
-        />
-      </PopoverTrigger>
+      <Tooltip content={i18n.t("session.summary.tooltip")}>
+        <PopoverTrigger asChild>
+          <IconButton
+            icon={PanelRight}
+            size="sm"
+            aria-label={i18n.t("session.summary.title")}
+            aria-expanded={props.open}
+          />
+        </PopoverTrigger>
+      </Tooltip>
       <PopoverContent
         side="bottom"
         align="end"

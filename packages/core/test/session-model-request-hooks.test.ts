@@ -6,6 +6,7 @@ import { Session } from "@opencode/schema/session"
 import type { SessionRequestKind } from "@opencode/plugin/effect/session"
 import { Location } from "@opencode/core/location"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
+import { BuffProviderFetch } from "@opencode/core/buff/provider-fetch"
 import { Project } from "@opencode/core/project"
 import { AbsolutePath } from "@opencode/core/schema"
 import { SessionModelRequest } from "@opencode/core/session/model-request"
@@ -78,6 +79,41 @@ describe("SessionModelRequest HTTP hooks", () => {
           { hook: "response", kind, agent: Agent.ID.make("build") },
         ]),
       )
+    }).pipe(Effect.provideService(SessionModelTransport.Service, transport)),
+  )
+
+  // Buff (#966): a provider reached over another transport answers its requests itself.
+  it.effect("a provider that answers its own requests is not reached over the network; hooks still see both ends", () =>
+    Effect.gen(function* () {
+      const hooks = yield* PluginHooks.Service
+      const seen: string[] = []
+      const requests = yield* SessionModelRequest.Service.pipe(Effect.provide(SessionModelRequest.layer.pipe(Layer.provide(tempGlobalLayer))))
+      const send = Effect.fnUntraced(function* () {
+        const prepared = yield* requests.primary({ session, agent: Agent.ID.make("build"), model, system: [], messages: [] })
+        const http = prepared.options.http
+        if (!http) throw new Error("Expected HTTP middleware")
+        const response = yield* http(
+          HttpClientRequest.post("https://example.test/v1/chat/completions").pipe(HttpClientRequest.bodyText('{"model":"fast"}')),
+          () => Effect.die("the network must not be reached"),
+        )
+        return { status: response.status, text: yield* response.text }
+      })
+      const remove = BuffProviderFetch.register(model.ref.providerID, async (request) => new Response(`answered: ${await request.text()}`, { status: 202 }))
+      try {
+        // Without hooks the middleware exists for the answering provider alone.
+        expect(yield* send()).toEqual({ status: 202, text: 'answered: {"model":"fast"}' })
+        yield* hooks.register("session", "http.request", (event) =>
+          Effect.sync(() => {
+            seen.push("request")
+            event.request.headers.set("x-tag", "1")
+          }),
+        )
+        yield* hooks.register("session", "http.response", (event) => Effect.sync(() => void seen.push(`response ${event.response.status}`)))
+        expect(yield* send()).toEqual({ status: 202, text: 'answered: {"model":"fast"}' })
+        expect(seen).toEqual(["request", "response 202"])
+      } finally {
+        remove()
+      }
     }).pipe(Effect.provideService(SessionModelTransport.Service, transport)),
   )
 

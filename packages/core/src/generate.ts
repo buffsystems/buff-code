@@ -6,6 +6,7 @@ import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { llmClient } from "./effect/app-node-platform.js"
 import { ModelResolver } from "./model-resolver.js"
 import { Model } from "./model.js"
+import { BuffProviderFetch } from "./buff/provider-fetch.js"
 
 export interface TextInput {
   readonly prompt: string
@@ -60,7 +61,14 @@ export const layer = Layer.effect(
             ? `Model unavailable: ${input.model.providerID}/${input.model.id}`
             : "No model specified and no supported model is available",
         })
-      const response = yield* llm.generate(LLM.request({ model: resolved.model, prompt: input.prompt })).pipe(
+      // Buff (#966): a provider that answers its own requests is not reached over the network.
+      const answering = BuffProviderFetch.get(resolved.ref.providerID)
+      const response = yield* llm
+        .generate(
+          LLM.request({ model: resolved.model, prompt: input.prompt }),
+          answering ? { http: (request) => BuffProviderFetch.answer(answering, request) } : undefined,
+        )
+        .pipe(
         Effect.mapError(
           (error: AIError) =>
             new UnavailableError({

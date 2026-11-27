@@ -19,6 +19,7 @@ import {
 } from "@buff/ui/react"
 import { BuffMobile } from "@opencode/schema/buff-mobile"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { confirm } from "../../dialog/confirm"
 import { useDialog } from "../../dialog/dialogs"
 import { useI18n } from "../../i18n/provider"
 import { usePlatform } from "../../platform/context"
@@ -149,6 +150,23 @@ export function SettingsPhone() {
       (done) => done && showToast({ title: t("Phone"), description: t("The phone is disconnected.") }),
     )
 
+  // #972 (L-03): every phone off this computer in one press — a lost phone is not looked for in a list.
+  const disconnectAll = async () => {
+    const sure = await confirm(dialog, {
+      title: t("Disconnect all phones?"),
+      text: t("Each phone will have to be paired with this computer again."),
+      action: t("Disconnect all"),
+      cancel: t("Cancel"),
+      danger: true,
+    })
+    if (!sure) return
+    const done = await act(
+      Promise.all(phones.map((phone) => rpc.revoke({ device: phone.device }))),
+      "Not every phone was disconnected.",
+    )
+    if (done) showToast({ title: t("Phone"), description: t("All phones are disconnected.") })
+  }
+
   const rename = (device: string) => {
     const phone = phones.find((item) => item.device === device)
     if (!phone) return
@@ -231,6 +249,13 @@ export function SettingsPhone() {
               onRename={rename}
               onDisconnect={disconnect}
             />
+            {phones.length > 1 && (
+              <div className="mt-3">
+                <Button variant="outline" size="sm" data-action="buff-phones-disconnect-all" onClick={() => void disconnectAll()}>
+                  {t("Disconnect all phones")}
+                </Button>
+              </div>
+            )}
           </SettingsSection>
         )}
       </SettingsBody>

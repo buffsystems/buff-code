@@ -56,6 +56,14 @@ test("macOS-пакет подписан ad-hoc без hardened runtime — ин�
   expect(config).not.toContain('"--code-signature-flags", "runtime"')
 })
 
+// #764: с ключами Developer ID — подпись с hardened runtime и нотаризация; ключи идут в контейнер по имени.
+test("macOS-пакет с ключами BUFF_MAC_* подписан Developer ID и нотаризован; значения ключей не в команде (#764)", () => {
+  expect(read("packages/desktop/electron-builder.config.ts")).toContain("signAndNotarize(bundle, signing, plists)")
+  const make = read("buff/Makefile")
+  expect(make).toContain("MAC_SIGN_ENV := -e BUFF_MAC_SIGN_P12 -e BUFF_MAC_SIGN_PASSWORD -e BUFF_MAC_NOTARY_ISSUER -e BUFF_MAC_NOTARY_KEY_ID -e BUFF_MAC_NOTARY_KEY")
+  expect(make).not.toMatch(/-e BUFF_MAC_[A-Z_]+=/)
+})
+
 test("десктоп собирается под нашим именем", () => {
   const config = read("packages/desktop/electron-builder.config.ts")
   expect(config).toContain("systems.buff.code")
@@ -138,7 +146,10 @@ test("настройка при запуске, без отдельных ком
   expect(commands).toContain('"log in to a provider"')
   expect(read("packages/cli/src/commands/handlers/run.ts")).toContain("setupBuff")
   expect(read("packages/cli/src/acp/service.ts")).toContain('args: ["auth", "login"]')
-  expect(read("packages/tui/src/feature-plugins/buff/context.tsx")).toContain('integrationID="buff"')
+  // Вход прямо здесь (#401); с #966 — выбранным способом: вход через компанию — интеграция buff.
+  expect(read("packages/tui/src/feature-plugins/buff/context.tsx")).toContain("integrationID={picked.integration}")
+  expect(read("packages/schema/src/buff-first-run.ts")).toMatch(/value: "company", integration: COMPANY/)
+  expect(read("packages/schema/src/buff-first-run.ts")).toMatch(/const COMPANY = "buff"/)
   expect(read("packages/app/src/buff/sign-in.tsx")).toContain('controller.select("buff")')
   expect(read("packages/app/src/buff/context-chip.tsx")).toContain("openBuffSignIn")
 })

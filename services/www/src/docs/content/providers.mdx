@@ -548,9 +548,9 @@ V2 rejects the retired provider IDs with a direct replacement. Use `azure/<model
 
 ## WebSockets
 
-OpenAI, xAI, and supported Azure Responses models can keep one WebSocket connection open per session. Consecutive steps
+OpenAI, xAI, and supported Azure Responses models can keep one WebSocket connection open per chat. Consecutive steps
 reuse the unchanged request prefix and only send content added since the previous response, reducing uploads in long
-sessions.
+chats.
 
 ```jsonc title="opencode.jsonc"
 {
@@ -571,5 +571,5 @@ WebSocket behavior follows these rules:
 - OpenAI provider compaction uses the same connection.
 - xAI continues from stored responses only. With its default `store: false`, each step is sent in full over the reused
   connection.
-- A closed socket reconnects on the next step. If the connection cannot open, the session continues over HTTP.
+- A closed socket reconnects on the next step. If the connection cannot open, the chat continues over HTTP.
 - Provider plugins with `http.request` or `http.response` hooks stay on HTTP so each request remains observable.

@@ -7,7 +7,7 @@ type Shown = Parameters<Host["toast"]["show"]>[0]
 
 const sessions: Record<string, { id: string; title?: string; parentID?: string }> = {
   parent: { id: "parent", title: "Parent session" },
-  child: { id: "child", title: "Child session", parentID: "parent" },
+  child: { id: "child", title: "Child chat", parentID: "parent" },
   other: { id: "other", title: "Other session" },
 }
 

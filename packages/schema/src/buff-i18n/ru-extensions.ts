@@ -133,9 +133,9 @@ export const extensions = {
   "The entry will be removed from {file}.": "Запись будет убрана из файла {file}.",
   "The entry will be removed from the configuration.": "Запись будет убрана из файла конфигурации.",
   Model: "Модель",
-  "Empty — the session's model.": "Пусто — модель сессии.",
-  "The model is written as provider/model, for example buff/buff. Empty — the session's model.":
-    "Модель записывается как провайдер/модель, например buff/buff. Пусто — модель сессии.",
+  "Empty — the chat's model.": "Пусто — модель чата.",
+  "The model is written as provider/model, for example buff/buff. Empty — the chat's model.":
+    "Модель записывается как провайдер/модель, например buff/buff. Пусто — модель чата.",
   "The name is lowercase Latin letters, digits and hyphen, for example deploy; a folder goes with a slash: git/sync.":
     "Имя — строчные латинские буквы, цифры и дефис, например deploy; папка — через косую черту: git/sync.",
   "The command is called by name in the input field: /deploy.": "По имени команду вызывают в поле ввода: /deploy.",
@@ -143,9 +143,9 @@ export const extensions = {
   "Shown in the command list under «/».": "Видно в списке команд по «/».",
   "Deploy to the stand": "Выложить на стенд",
   Agent: "Агент",
-  "Who runs the command. Empty — the session's current agent.": "Кто выполняет команду. Пусто — текущий агент сессии.",
+  "Who runs the command. Empty — the chat's current agent.": "Кто выполняет команду. Пусто — текущий агент чата.",
   "Where to run": "Где выполнять",
-  "In the current session": "В текущей сессии",
+  "In the current chat": "В текущем чате",
   "As a separate subagent": "Отдельным субагентом",
   "Command text": "Текст команды",
   "Goes to the model when the command is called. $ARGUMENTS — everything written after the name; $1, $2 — word by word.":
@@ -302,8 +302,8 @@ export const extensions = {
   "changed {when}": "изменён {when}",
   "Your memory — in all projects": "Ваша память — во всех проектах",
   "Project memory": "Память проекта",
-  "Memory is notes in AGENTS.md files: project rules, agreements, frequent commands. The model gets them at the start of every session. AGENTS.md files in nested directories are picked up by themselves when the agent reads files from there.":
-    "Память — это заметки в файлах AGENTS.md: правила проекта, договорённости, частые команды. Модель получает их в начале каждой сессии. Файлы AGENTS.md во вложенных каталогах подключаются сами, когда агент читает файлы оттуда.",
+  "Memory is notes in AGENTS.md files: project rules, agreements, frequent commands. The model gets them at the start of every chat. AGENTS.md files in nested directories are picked up by themselves when the agent reads files from there.":
+    "Память — это заметки в файлах AGENTS.md: правила проекта, договорённости, частые команды. Модель получает их в начале каждого чата. Файлы AGENTS.md во вложенных каталогах подключаются сами, когда агент читает файлы оттуда.",
   "my memory": "моя",
   "All memory: turn off": "Вся память: выключить",
   "All memory: turn on": "Вся память: включить",
@@ -345,8 +345,8 @@ export const extensions = {
   "The hook changed while you were looking at it. Check it again.":
     "Хук изменился, пока вы его смотрели. Проверьте его ещё раз.",
   "Could not write {file}: {cause}": "Не удалось записать {file}: {cause}",
-  "This is the last primary agent — without it nobody can run the session.":
-    "Это последний основной агент — без него некому вести сессию.",
+  "This is the last primary agent — without it there is no agent to answer in the chat.":
+    "Это последний основной агент — без него некому вести чат.",
   "«{id}» is not from the project: there is nothing to confirm.": "«{id}» не из проекта: подтверждать нечего.",
   "Could not delete {file}: {cause}": "Не удалось удалить {file}: {cause}",
   "«{id}» is not among yours: only your own entries can be edited.":
@@ -424,8 +424,8 @@ export const extensions = {
   Cancel: "Отмена",
   Trust: "Доверять",
   "Could not get the list.": "Не удалось получить список.",
-  "Plain text in Markdown. The model gets it at the start of the next session.":
-    "Обычный текст в разметке Markdown. Модель получит его в начале следующей сессии.",
+  "Plain text in Markdown. The model gets it at the start of the next chat.":
+    "Обычный текст в разметке Markdown. Модель получит его в начале следующего чата.",
   "Could not open the file.": "Не удалось открыть файл.",
   Edit: "Изменить",
   Create: "Создать",
@@ -459,7 +459,7 @@ export const extensions = {
     "Логин и пароль — в отдельных полях, не в адресе.",
   Certificate: "Сертификат",
   "In the project": "В проекте",
-  "Session model": "Модель сессии",
+  "Chat model": "Модель чата",
   "Trust {name}?": "Доверять {name}?",
   "This entry came from the project. Check its text: inserts like !`command` run on your machine. If the text changes, you will be asked to confirm again.":
     "Эта запись пришла из проекта. Проверьте её текст: вставки вида !`команда` выполняются на вашей машине. Если текст изменится, подтверждение спросим заново.",
@@ -613,4 +613,54 @@ export const extensions = {
   "Open the page again": "Открыть страницу ещё раз",
   "Open the page first.": "Сначала откройте страницу.",
   "Fill in «{field}».": "Заполните «{field}».",
+  // Плагины чатов (#595).
+  "The ID is lowercase Latin letters, digits and hyphen, for example sales-map.":
+    "Идентификатор — строчные латинские буквы, цифры и дефис, например sales-map.",
+  "A block name is one lowercase word of Latin letters, digits, hyphen or underscore, for example sales-map.":
+    "Имя блока — одно слово из строчных латинских букв, цифр, дефиса или подчёркивания, например sales-map.",
+  "The plugin description is not a JSON object.": "Описание плагина — не объект JSON.",
+  "The plugin has no name.": "У плагина нет имени.",
+  "Describe when the plugin is needed: the model decides by the description.":
+    "Опишите, когда плагин нужен: модель решает по описанию.",
+  "The description is always in the model's prompt: keep it within {size} characters.":
+    "Описание всегда в промпте модели: уложите его в {size} знаков.",
+  "The plugin names no block to draw.": "Плагин не называет ни одного блока, который рисует.",
+  "The plugin has no view: the file {file} is missing or empty.":
+    "У плагина нет отрисовщика: файла {file} нет или он пуст.",
+  "The view is too large: {file} must fit into {size} MB.":
+    "Отрисовщик слишком большой: {file} должен уместиться в {size} МБ.",
+  "The plugin has no guide for the model: the file {file} is missing or empty.":
+    "У плагина нет инструкции для модели: файла {file} нет или он пуст.",
+  "The guide is too long: {file} must fit into {size} characters.":
+    "Инструкция слишком длинная: {file} должен уместиться в {size} знаков.",
+  "There is no chat plugin «{id}».": "Плагина чатов «{id}» нет.",
+  "The plugin «{id}» has no text form for the console.": "У плагина «{id}» нет текстового вида для консоли.",
+  "The plugin «{id}» has no example «{name}».": "У плагина «{id}» нет примера «{name}».",
+  "A visual may tell the model at most {size} characters.":
+    "Визуализация может сообщить модели не больше {size} знаков.",
+  "Save the chat plugin «{name}» for: {where}": "Сохранить плагин чатов «{name}» для: {where}",
+  "Draws blocks: {blocks}": "Рисует блоки: {blocks}",
+  "When it is needed: {description}": "Когда нужен: {description}",
+  "Remove the chat plugin «{name}»": "Удалить плагин чатов «{name}»",
+  "The visual «{name}» is drawn in the window, on the web and on the phone.":
+    "Визуализация «{name}» рисуется в окне, в вебе и на телефоне.",
+  "Chat plugins": "Плагины чатов",
+  "Your chat plugins — in this project only": "Ваши плагины чатов — только в этом проекте",
+  "Your chat plugins — in all projects": "Ваши плагины чатов — во всех проектах",
+  "Built-in chat plugins": "Встроенные плагины чатов",
+  "Could not read the chat plugins.": "Не удалось прочитать плагины чатов.",
+  "Could not open the example.": "Не удалось открыть пример.",
+  "This is an example: it sends nothing.": "Это пример: он ничего не отправляет.",
+  "«{name}»: an example": "«{name}»: пример",
+  "Delete the chat plugin «{name}»?": "Удалить плагин чатов «{name}»?",
+  "Its folder is deleted; blocks it drew become plain code again.":
+    "Его папка удаляется; блоки, которые он рисовал, снова станут обычным кодом.",
+  "Turned off: its blocks are shown as code, and the model does not know of it.":
+    "Выключен: его блоки показываются кодом, и модель о нём не знает.",
+  Example: "Пример",
+  "A chat plugin draws a block of an answer as a visual — a chart, a diagram, a board. To get a new one, open Self-setup and say what you want to see: the agent makes the plugin, tests it and shows you.":
+    "Плагин чатов рисует блок ответа как визуализацию — график, схему, доску. Чтобы появился новый, откройте самонастройку и скажите, что хотите видеть: агент сделает плагин, проверит его и покажет.",
+  "This chat is only read.": "Этот чат только для чтения.",
+  "Open the address?": "Открыть адрес?",
+  "«{id}» is built in: it can be switched off, not removed.": "«{id}» встроен: его можно выключить, но не удалить.",
 } as const

@@ -56,7 +56,8 @@ const allTargets: {
 
 const targets =
   requestedTarget !== undefined
-    ? allTargets.filter((item) => targetName(item) === requestedTarget)
+    ? // Buff (#764): several targets in one run, comma-separated — the run clears outdir first.
+      allTargets.filter((item) => requestedTarget.split(",").includes(targetName(item)))
     : singleFlag
       ? allTargets.filter((item) => {
           if (item.os !== process.platform || item.arch !== process.arch) return false

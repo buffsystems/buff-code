@@ -1,0 +1,16 @@
+/* Chat plugins in the developer timeline (#595, #981): a plugin's frame stands in its code
+   block's place; the code comes back if the plugin fails. */
+[data-component="markdown-code"][data-plugin="true"] > pre,
+[data-component="markdown-code"][data-plugin="true"] > [data-slot="markdown-copy-button"] {
+  display: none;
+}
+[data-component="markdown-code"][data-plugin="true"] {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+[data-component="markdown-plugin"] .ui-plugin__frame {
+  display: block;
+  width: 100%;
+  border: 0;
+}

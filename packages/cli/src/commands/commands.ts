@@ -46,12 +46,12 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
     ),
     continue: Flag.boolean("continue").pipe(
       Flag.withAlias("c"),
-      Flag.withDescription("Continue the last session"),
+      Flag.withDescription("Continue the last chat"),
       Flag.withDefault(false),
     ),
     session: Flag.string("session").pipe(
       Flag.withAlias("s"),
-      Flag.withDescription("Session ID to continue"),
+      Flag.withDescription("Chat ID to continue"),
       Flag.optional,
     ),
     prompt: Flag.string("prompt").pipe(Flag.withDescription("Prompt to use"), Flag.optional),
@@ -82,7 +82,7 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
         ),
         keepData: Flag.boolean("keep-data").pipe(
           Flag.withAlias("d"),
-          Flag.withDescription("Keep session data and snapshots"),
+          Flag.withDescription("Keep chat data and snapshots"),
           Flag.withDefault(false),
         ),
         dryRun: Flag.boolean("dry-run").pipe(
@@ -323,20 +323,20 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
         ...ServerParams,
         continue: Flag.boolean("continue").pipe(
           Flag.withAlias("c"),
-          Flag.withDescription("Continue the last session"),
+          Flag.withDescription("Continue the last chat"),
           Flag.withDefault(false),
         ),
         session: Flag.string("session").pipe(
           Flag.withAlias("s"),
-          Flag.withDescription("Session ID to continue"),
+          Flag.withDescription("Chat ID to continue"),
           Flag.optional,
         ),
         fork: Flag.boolean("fork").pipe(
-          Flag.withDescription("Fork the session when continuing"),
+          Flag.withDescription("Fork the chat when continuing"),
           Flag.withDefault(false),
         ),
         replay: Flag.boolean("replay").pipe(
-          Flag.withDescription("Restore session history on resume and resize (disable with --no-replay)"),
+          Flag.withDescription("Restore chat history on resume and resize (disable with --no-replay)"),
           Flag.optional,
         ),
         replayLimit: Flag.integer("replay-limit").pipe(
@@ -363,16 +363,16 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
         ),
         continue: Flag.boolean("continue").pipe(
           Flag.withAlias("c"),
-          Flag.withDescription("Continue the last session"),
+          Flag.withDescription("Continue the last chat"),
           Flag.withDefault(false),
         ),
         session: Flag.string("session").pipe(
           Flag.withAlias("s"),
-          Flag.withDescription("Session ID to continue"),
+          Flag.withDescription("Chat ID to continue"),
           Flag.optional,
         ),
         fork: Flag.boolean("fork").pipe(
-          Flag.withDescription("Fork the session before continuing"),
+          Flag.withDescription("Fork the chat before continuing"),
           Flag.withDefault(false),
         ),
         model: Flag.string("model").pipe(
@@ -390,22 +390,22 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
           Flag.withDescription("File to attach to the message"),
           Flag.atMost(100),
         ),
-        title: Flag.string("title").pipe(Flag.withDescription("Session title"), Flag.optional),
+        title: Flag.string("title").pipe(Flag.withDescription("Chat title"), Flag.optional),
         thinking: Flag.boolean("thinking").pipe(Flag.withDescription("Show thinking blocks"), Flag.withDefault(false)),
         ...PermissionParams,
       },
     }),
     Spec.make("session", {
-      description: "Manage sessions",
+      description: "Manage chats",
       commands: [
         Spec.make("list", {
-          description: "List top-level sessions in the current project, newest first",
+          description: "List top-level chats in the current project, newest first",
           params: {
             ...ServerParams,
             maxCount: Flag.integer("max-count").pipe(
               Flag.withAlias("n"),
               Flag.withSchema(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
-              Flag.withDescription("Limit to N most recent sessions (default: 100)"),
+              Flag.withDescription("Limit to N most recent chats (default: 100)"),
               Flag.optional,
             ),
             format: Flag.choice("format", ["table", "json"]).pipe(
@@ -415,10 +415,10 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
           },
         }),
         Spec.make("delete", {
-          description: "Delete a session and its child sessions",
+          description: "Delete a chat and its child chats",
           params: {
             ...ServerParams,
-            sessionID: Argument.string("sessionID").pipe(Argument.withDescription("Session ID to delete")),
+            sessionID: Argument.string("sessionID").pipe(Argument.withDescription("Chat ID to delete")),
           },
         }),
       ],

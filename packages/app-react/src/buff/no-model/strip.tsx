@@ -5,7 +5,7 @@
 // the draft mount it with their server and directory.
 
 import { Button } from "@buff/ui/react"
-import { BUFF_PROVIDER, buffSignedIn } from "@opencode/app/react-reuse/buff-providers"
+import { accountSignedIn, BUFF_PROVIDER, buffSignedIn } from "@opencode/app/react-reuse/buff-providers"
 import { BuffFirstRun } from "@opencode/schema/buff-first-run"
 import { TriangleAlert } from "lucide-react"
 import type { Server } from "../../core/servers"
@@ -32,6 +32,8 @@ export function BuffNoModelStrip(props: { server: Server; directory: string }) {
           context: !!choice,
           models: catalog.paid.some((provider) => provider.id === BUFF_PROVIDER),
           own: catalog.paid.some((provider) => provider.id !== BUFF_PROVIDER),
+          // #966: signed in with a Buff account whose subscription is not active — say that.
+          account: accountSignedIn(catalog.integrations) !== undefined,
         })
   if (!state) return null
   const fix = async () => {
@@ -43,10 +45,12 @@ export function BuffNoModelStrip(props: { server: Server; directory: string }) {
     <div className="buff-bar" data-component="buff-no-model" data-action-kind={state.action} data-tone="warning">
       <TriangleAlert aria-hidden className="buff-bar__icon" />
       <span className="buff-bar__text">{t(state.text)}</span>
-      <Button size="sm" variant="primary" data-action="buff-no-model-fix" onClick={() => void fix()}>
-        {state.action === "sign-in" ? t("Sign in to Buff") : t("Choose context")}
-      </Button>
-      {state.action === "sign-in" && (
+      {state.action !== "connect" && (
+        <Button size="sm" variant="primary" data-action="buff-no-model-fix" onClick={() => void fix()}>
+          {state.action === "sign-in" ? t("Sign in to Buff") : t("Choose context")}
+        </Button>
+      )}
+      {state.action !== "choose-context" && (
         <Button
           size="sm"
           variant="ghost"

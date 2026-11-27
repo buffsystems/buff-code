@@ -51,7 +51,7 @@ describe("промпт Buff Code не называет opencode (#623)", () => {
       })
   })
 
-  it.effect("каталог Code Mode и подсказка про перенос сессии", () =>
+  it.effect("каталог Code Mode и подсказка про перенос чата", () =>
     Effect.gen(function* () {
       const hooks = yield* PluginHooks.Service
       const pluginHost = yield* PluginHost.make(yield* Plugin.Service)

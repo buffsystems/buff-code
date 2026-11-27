@@ -1,4 +1,4 @@
-Save a connection (an MCP server) and start it: Buff Code writes it to the user's configuration, connects, and tells you the status. The user confirms before anything is written or run. Setup mode only.
+Save a connection (an MCP server) and start it: Buff Code writes it to the user's configuration, connects, and tells you the status. The user confirms before anything is written or run. Self-setup mode only.
 
 Call it once you know how the service is reached and have collected what it needs with `setup_form`. Saving an existing name replaces that connection where it already lives (it is not moved) — use that to fix settings after a failed test.
 

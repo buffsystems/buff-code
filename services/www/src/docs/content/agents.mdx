@@ -81,7 +81,7 @@ Define agents under `agents` in any [OpenCode configuration file](/config):
 
 ## Selection
 
-Set the primary agent used when a session has not selected one:
+Set the primary agent used when a chat has not selected one:
 
 ```jsonc title="opencode.jsonc"
 {
@@ -93,7 +93,7 @@ Set the primary agent used when a session has not selected one:
 }
 ```
 
-The selected default must exist, be visible, and support primary use. Otherwise OpenCode uses `build`, then the first visible primary-capable agent. Changing this setting does not replace the agent stored on an existing session.
+The selected default must exist, be visible, and support primary use. Otherwise OpenCode uses `build`, then the first visible primary-capable agent. Changing this setting does not replace the agent stored on an existing chat.
 
 ## Modes
 
@@ -109,11 +109,11 @@ Set `mode` according to where the agent should run:
 
 | Mode | Behavior |
 | --- | --- |
-| `primary` | Runs as the main agent for a session. This is the default for a new custom agent. |
-| `subagent` | Runs only in a child session through the `subagent` tool. |
+| `primary` | Runs as the main agent for a chat. This is the default for a new custom agent. |
+| `subagent` | Runs only in a child chat through the `subagent` tool. |
 | `all` | Runs either as a primary agent or a subagent. |
 
-Subagents run with fresh context in foreground or background child sessions. The parent agent's `subagent` permissions control which agents it may launch; the child uses its own configured permissions.
+Subagents run with fresh context in foreground or background child chats. The parent agent's `subagent` permissions control which agents it may launch; the child uses its own configured permissions.
 
 ```jsonc
 {
@@ -218,8 +218,8 @@ JSON configuration also accepts the expanded form:
 }
 ```
 
-- A subagent uses its configured model, or inherits the parent session's model when none is configured.
-- A session stores its selected model separately. Selecting a primary agent by ID does not change that model.
+- A subagent uses its configured model, or inherits the parent chat's model when none is configured.
+- A chat stores its selected model separately. Selecting a primary agent by ID does not change that model.
 
 ### System
 

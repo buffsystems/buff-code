@@ -49,7 +49,7 @@ changes available to restore.
 
 ## Scope
 
-Snapshots cover the session's active directory inside a Git worktree. For example, a session opened in `packages/app`
+Snapshots cover the chat's active directory inside a Git worktree. For example, a chat opened in `packages/app`
 captures eligible files below `packages/app`, not changes elsewhere in the repository.
 
 | Content | Captured | Example |
@@ -119,9 +119,9 @@ Snapshots are a convenience, not a transaction or backup:
   the active directory. Restoring a snapshot does not reverse those effects.
 - Interrupted or failed work can leave changes when capture fails or no usable snapshot pair exists.
 - Restoring affected paths overwrites their current contents. Cancelling a staged rollback can also overwrite later edits.
-- OpenCode rejects rollback operations while the session is running, but external editors and commands can still change
+- OpenCode rejects rollback operations while the chat is running, but external editors and commands can still change
   the worktree between capture and restoration.
-- Committing a rollback removes messages from the active conversation view, not from durable session history or existing
+- Committing a rollback removes messages from the active conversation view, not from durable chat history or existing
   snapshot storage. It is not secure erasure.
 
 Commit or back up important work before using `/undo` on a dirty worktree.

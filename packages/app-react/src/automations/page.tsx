@@ -116,7 +116,7 @@ function AutomationsPage(props: { server: Server }) {
           <h1 className="ui-title ui-title--lg">{t("Automations")}</h1>
           <p className="buff-auto-intro ui-note">
             {t(
-              "Tasks for the agent on a schedule. The Buff Code service on this machine runs them — even with the window closed; each run is a new session in the project.",
+              "Tasks for the agent on a schedule. The Buff Code service on this machine runs them — even with the window closed.",
             )}
           </p>
         </div>
@@ -219,7 +219,7 @@ function AutomationCard(props: {
             data-action="buff-auto-open"
             onClick={() => last.session && props.onOpenSession(last.session)}
           >
-            {state === "waiting" ? t("Answer in the session") : t("Open session")}
+            {state === "waiting" ? t("Answer in the chat") : t("Open chat")}
           </Button>
         )}
         <Button

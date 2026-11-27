@@ -44,7 +44,7 @@ function Commands(props: { context: Context }) {
           const session = current()
           const items = session ? latest(context, session) : undefined
           if (!items?.length)
-            return context.ui.toast.show({ message: t("This session has no to-do list yet."), variant: "info" })
+            return context.ui.toast.show({ message: t("This chat has no to-do list yet."), variant: "info" })
           void context.ui.dialog.alert({ title: BuffTodo.line(items, t), message: todoLines(items).join("\n") })
         },
       },

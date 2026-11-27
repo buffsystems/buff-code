@@ -89,7 +89,7 @@ function TranscriptSearchDialog(props: {
   const search = useTranscriptSearch(props.server, query)
   const note = (() => {
     if (search.problem) return search.problem
-    if (!query.trim()) return t("Searches the message text in all sessions.")
+    if (!query.trim()) return t("Searches the message text in all chats.")
     if (BuffSearch.problem(query)) return t(BuffSearch.problem(query) ?? "")
     if (search.loading || search.query !== query.trim()) return t("Searching…")
     return t("Nothing found.")

@@ -2,6 +2,7 @@
 // open tabs under them, then every session of the server with its state; the phone and the
 // settings beside the pages at the top (#704, #709).
 
+import { useSettings } from "./settings-context"
 import { ResizeHandle } from "@buff/ui/react"
 import { House, Settings, Smartphone, SquarePen, type LucideIcon } from "lucide-react"
 import { useState, type ReactNode } from "react"
@@ -26,6 +27,41 @@ export function VerticalSidebar(props: { sessions?: ReactNode }) {
   const update = updateNotice(useUpdaterState()).visible
   const [width, setWidth] = useState(260)
   const clearance = macClearance(useDesktopChrome())
+  const simple = useSettings((settings) => settings.appearance.layout) === "simple"
+  const home = (
+    <SidebarAction
+      action="vertical-tabs-home"
+      icon={House}
+      label={i18n.t("home.title")}
+      pressed={actions.home}
+      keybind="home.toggle"
+      onClick={actions.toggleHome}
+    />
+  )
+  const pages = (
+    <>
+      {PAGE_ENTRIES.map((page) => (
+        <SidebarAction
+          key={page.action}
+          action={`${page.action}-open`}
+          icon={page.icon}
+          label={i18n.buff.t(page.title)}
+          pressed={route.name === page.route}
+          onClick={() => navigate(page.path)}
+        />
+      ))}
+      <SidebarReach />
+    </>
+  )
+  const fresh = (
+    <SidebarAction
+      action="vertical-tabs-new-session"
+      icon={SquarePen}
+      label={i18n.t("command.session.new")}
+      keybind="tab.new"
+      onClick={actions.openNewTab}
+    />
+  )
   return (
     <aside
       data-slot="vertical-tabs-sidebar"
@@ -47,37 +83,30 @@ export function VerticalSidebar(props: { sessions?: ReactNode }) {
         {clearance !== undefined && (
           <div className="mb-4 min-h-7 w-full shrink-0" style={{ height: clearance }} data-drag-region="" />
         )}
-        <SidebarAction
-          action="vertical-tabs-home"
-          icon={House}
-          label={i18n.t("home.title")}
-          pressed={actions.home}
-          keybind="home.toggle"
-          onClick={actions.toggleHome}
-        />
-        {PAGE_ENTRIES.map((page) => (
-          <SidebarAction
-            key={page.action}
-            action={`${page.action}-open`}
-            icon={page.icon}
-            label={i18n.buff.t(page.title)}
-            pressed={route.name === page.route}
-            onClick={() => navigate(page.path)}
-          />
-        ))}
-        <SidebarReach />
-        <SidebarAction
-          action="vertical-tabs-new-session"
-          icon={SquarePen}
-          label={i18n.t("command.session.new")}
-          keybind="tab.new"
-          onClick={actions.openNewTab}
-        />
+        {/* #972: in the simple layout the chats come first — a new one, the open ones, the list —
+            and Buff's pages with the settings keep to the foot, always in sight (the list scrolls). */}
+        {simple ? (
+          <>
+            {fresh}
+            {home}
+          </>
+        ) : (
+          <>
+            {home}
+            {pages}
+            {fresh}
+          </>
+        )}
         <div className="h-4 w-full shrink-0" aria-hidden="true" />
         <div className="flex max-h-[40%] min-h-0 shrink-0 flex-col gap-1 overflow-y-auto">
           <WindowTabs orientation="vertical" />
         </div>
         {props.sessions}
+        {simple && (
+          <div data-slot="vertical-tabs-pages" className="mt-auto flex w-full shrink-0 flex-col pt-2">
+            {pages}
+          </div>
+        )}
         {update && (
           <div data-slot="vertical-tabs-footer" className="mt-2 flex w-full shrink-0 flex-col">
             <UpdateButton vertical />

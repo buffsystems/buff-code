@@ -1,6 +1,6 @@
 ---
 title: "TUI"
-description: "Start a session and use the everyday workflows in the terminal interface."
+description: "Start a chat and use the everyday workflows in the terminal interface."
 ---
 
 Run OpenCode from your project, type a request, and press **Enter**.
@@ -14,7 +14,7 @@ opencode
 Explain how authentication works in this project
 ```
 
-Press **Shift+Enter**, **Ctrl+Enter**, or **Ctrl+J** for a new line. While OpenCode is working, **Enter** steers the active session and **Alt+Enter** queues the prompt for later.
+Press **Shift+Enter**, **Ctrl+Enter**, or **Ctrl+J** for a new line. While OpenCode is working, **Enter** steers the active chat and **Alt+Enter** queues the prompt for later.
 
 ## Context
 
@@ -38,7 +38,7 @@ Type `!` at the start of an empty prompt to enter shell mode. Enter a command an
 !git status
 ```
 
-Shell commands run in the session's working directory and their output stays in the session.
+Shell commands run in the chat's working directory and their output stays in the chat.
 
 ## Commands
 
@@ -52,7 +52,7 @@ Common commands include `/new`, `/sessions`, `/models`, `/agents`, `/undo`, `/re
 
 ## Side questions
 
-Run `/btw <question>` to ask a quick question about the conversation so far. The answer uses the session's context and current model but is not added to the conversation, so it does not affect later prompts. A `/btw` indicator shows in the prompt footer while it runs, and the answer opens in a dialog; press **C** to copy it.
+Run `/btw <question>` to ask a quick question about the conversation so far. The answer uses the chat's context and current model but is not added to the conversation, so it does not affect later prompts. A `/btw` indicator shows in the prompt footer while it runs, and the answer opens in a dialog; press **C** to copy it.
 
 ```text
 /btw why did the test in step 2 fail?
@@ -64,9 +64,9 @@ Press **Ctrl+X**, then **M** to choose a model, or run `/models`. Press **F2** t
 
 Press **Ctrl+X**, then **A** to choose an agent, or run `/agents`. Press **Shift+Tab** to cycle agents.
 
-## Sessions
+## Chats
 
-Press **Ctrl+X**, then **N** to start a new session. Press **Ctrl+X**, then **L** or run `/sessions` to return to an existing session; **Ctrl+O** opens recent sessions and projects together.
+Press **Ctrl+X**, then **N** to start a new chat. Press **Ctrl+X**, then **L** or run `/sessions` to return to an existing chat; **Ctrl+O** opens recent chats and projects together.
 
 Tabs are enabled by default. Use **Ctrl+Tab** and **Ctrl+Shift+Tab** to move between them, **Ctrl+X** then **W** to close one, and **Ctrl+Shift+T** to reopen the last closed tab.
 

@@ -1,4 +1,4 @@
-// Побочный диалог (#464): ответвление, название по номеру, список у основной, первый вопрос.
+// Побочный чат (#464): ответвление, название по номеру, список у основной, первый вопрос.
 import { expect, test } from "bun:test"
 import type { BuffSide } from "@opencode/schema/buff-side"
 import { SideRunner } from "../../src/buff/side/runner"
@@ -29,10 +29,10 @@ test("open: a fork of the session, titled by its number, remembered, asked the f
   expect(await w.runner.open("main")).toEqual({ id: "side_2", n: 2, at: 7 })
   expect(w.calls).toEqual([
     "fork main",
-    "rename side_1 Побочный диалог 1",
+    "rename side_1 Побочный чат 1",
     "prompt side_1 что значит X?",
     "fork main",
-    "rename side_2 Побочный диалог 2",
+    "rename side_2 Побочный чат 2",
   ])
   expect(await w.runner.list("main")).toEqual([
     { id: "side_1", n: 1, at: 7 },

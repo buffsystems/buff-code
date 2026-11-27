@@ -11,6 +11,7 @@ import Storybook from "../feature-plugins/system/storybook"
 import Stats from "../feature-plugins/system/stats"
 import Latex from "@opencode/latex/plugin"
 import Merman from "@opencode/merman/plugin"
+import BuffChatPlugin from "../feature-plugins/buff/chat-plugin"
 import BuffContext from "../feature-plugins/buff/context"
 import BuffLocale from "../feature-plugins/buff/locale"
 import BuffMcp from "../feature-plugins/buff/mcp"
@@ -21,6 +22,7 @@ import BuffHook from "../feature-plugins/buff/hook"
 import BuffPermissionMode from "../feature-plugins/buff/permission-mode"
 import BuffGit from "../feature-plugins/buff/git"
 import BuffBilling from "../feature-plugins/buff/billing"
+import BuffSubscription from "../feature-plugins/buff/subscription"
 import BuffFiles from "../feature-plugins/buff/files"
 import BuffAutomation from "../feature-plugins/buff/automation"
 import BuffPhone from "../feature-plugins/buff/phone"
@@ -37,6 +39,8 @@ export const builtins = [
   // Buff: язык — общий с окном (#472).
   BuffLocale,
   // Buff: рабочий контекст — организация, проект, пространства (#391).
+  // Buff (#595): блок плагина чатов в консоли — текстом.
+  BuffChatPlugin,
   BuffContext,
   // Buff: MCP-серверы — добавить, изменить, удалить (#444).
   BuffMcp,
@@ -48,6 +52,8 @@ export const builtins = [
   BuffGit,
   // Buff: остаток организации и свой расход (#455).
   BuffBilling,
+  // Buff: расход подписки личного аккаунта (#966).
+  BuffSubscription,
   BuffFiles,
   // Buff: задачи агенту по расписанию (#447).
   BuffAutomation,

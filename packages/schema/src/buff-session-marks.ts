@@ -174,8 +174,8 @@ export function sections<Item extends Listed>(
   })
   const rest = newestFirst(listed.filter((item) => !taken.has(item.id)))
   const head = [
-    ...(live.length ? [{ key: "active", title: "Active sessions", kind: "active" as const, items: live }] : []),
-    ...(!needle || setup.length ? [{ key: "setup", title: "Setup", kind: "setup" as const, items: setup }] : []),
+    ...(live.length ? [{ key: "active", title: "Active chats", kind: "active" as const, items: live }] : []),
+    ...(!needle || setup.length ? [{ key: "setup", title: "Self-setup", kind: "setup" as const, items: setup }] : []),
     ...(pinned.length ? [{ key: "pinned", title: "Pinned", kind: "pinned" as const, items: pinned }] : []),
     ...groups.filter((section) => !needle || section.items.length),
   ]

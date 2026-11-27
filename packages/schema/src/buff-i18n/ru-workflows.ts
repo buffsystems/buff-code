@@ -116,8 +116,8 @@ export const workflows = {
   "The workflow could not be read.": "Сценарий не прочитался.",
   "The description was not saved.": "Описание не сохранилось.",
   "Delete workflow «{name}»?": "Удалить сценарий «{name}»?",
-  "The workflow file will be deleted. Past runs and their sessions stay.":
-    "Файл сценария удалится. Прошедшие прогоны и их сессии останутся.",
+  "The workflow file will be deleted. Past runs and their chats stay.":
+    "Файл сценария удалится. Прошедшие прогоны и их чаты останутся.",
   "The workflow was not deleted.": "Сценарий не удалился.",
   "The workflow did not start.": "Сценарий не запустился.",
   "The run did not stop.": "Прогон не остановился.",
@@ -141,16 +141,16 @@ export const workflows = {
   "No points yet.": "Точек пока нет.",
   "Workflow run": "Прогон сценария",
   "Loading the run…": "Загружаем прогон…",
-  "Open session": "Открыть сессию",
+  "Open chat": "Открыть чат",
   "Time: {elapsed}": "Время: {elapsed}",
   "Tokens: {total} (input {input}, output {output}, cache {cache})":
     "Токены: {total} (вход {input}, выход {output}, кэш {cache})",
   "Files: +{added} ~{modified} −{deleted} · lines +{linesAdded} −{linesDeleted}":
     "Файлы: +{added} ~{modified} −{deleted} · строки +{linesAdded} −{linesDeleted}",
   "Steps waiting for permission": "Ждут разрешения",
-  "{actor} is waiting for your permission — answer in the workflow session.":
-    "{actor} ждёт вашего разрешения — ответьте в сессии сценария.",
-  "Answer in the session": "Ответить в сессии",
+  "{actor} is waiting for your permission — answer in the workflow chat.":
+    "{actor} ждёт вашего разрешения — ответьте в чате сценария.",
+  "Answer in the chat": "Ответить в чате",
   "Subagent questions": "Вопросы субагентов",
   Phases: "Фазы",
   "No steps yet.": "Шагов пока не было.",
@@ -172,8 +172,8 @@ export const workflows = {
   "The workflow has no arguments.": "У сценария нет аргументов.",
   '{"key": "value"}': '{"ключ": "значение"}',
   Project: "Проект",
-  "The run goes into a new session of this project; subagents work in it with the usual tools.":
-    "Прогон пойдёт в новой сессии этого проекта; субагенты работают в нём с обычными инструментами.",
+  "The run goes into a new chat of this project; subagents work in it with the usual tools.":
+    "Прогон пойдёт в новом чате этого проекта; субагенты работают в нём с обычными инструментами.",
   Cancel: "Отмена",
   "last: {status}": "последний: {status}",
   "No workflows yet": "Сценариев пока нет",
@@ -186,7 +186,7 @@ export const workflows = {
   "write what to change — the agent will amend the run": "напишите, что поменять, — агент исправит прогон",
   "Enter — answer": "Enter — ответить",
   "{actor} is waiting for your permission": "{actor} ждёт вашего разрешения",
-  "Enter — open the workflow session and answer": "Enter — открыть сессию сценария и ответить",
+  "Enter — open the workflow chat and answer": "Enter — открыть чат сценария и ответить",
   "main result · {kind}": "главный итог · {kind}",
   "Run result": "Итог прогона",
   "Enter — show": "Enter — показать",
@@ -197,8 +197,8 @@ export const workflows = {
   "Step result:": "Итог шага:",
   "What to fix?": "Что исправить?",
   Subagent: "Субагент",
-  "Workflow «{name}» started: the result will arrive in its session.":
-    "Сценарий «{name}» запущен: итог придёт в его сессию.",
+  "Workflow «{name}» started: the result will arrive in its chat.":
+    "Сценарий «{name}» запущен: итог придёт в его чат.",
   "description, arguments and script": "описание, аргументы и скрипт",
   "write what to change — the agent will fix and save it": "напишите, что поменять, — агент исправит и сохранит",
   "Script (read-only — the agent edits it):": "Скрипт (только чтение — правит агент):",
@@ -208,7 +208,9 @@ export const workflows = {
   "There is no workflow «{name}».": "Сценария «{name}» нет.",
   "Trial snippet": "Пробный кусочек",
   "The run no longer exists.": "Прогона больше нет.",
-  "The actor session was interrupted.": "Сессию актёра прервали.",
+  "The actor was interrupted.": "Актёра прервали.",
+  // What run rows written before «session» became «chat» carry (#972).
+  "The actor session was interrupted.": "Актёра прервали.",
   "The actor did not submit a result matching the schema.": "Актёр не сдал результат по схеме.",
   "The run script was not saved — fix it through the chat.": "Скрипт прогона не сохранился — исправьте его через чат.",
   "This question is already closed.": "Этот вопрос уже закрыт.",

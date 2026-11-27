@@ -137,7 +137,7 @@ function SearchDialog(props: { server: ServerConnection.Key | undefined }) {
                 {t(
                   search.problem() ??
                     (!query().trim()
-                      ? "Searches the message text in all sessions."
+                      ? "Searches the message text in all chats."
                       : !search.active()
                         ? (BuffSearch.problem(query()) ?? "")
                         : search.loading() || search.query() !== query().trim()

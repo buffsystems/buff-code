@@ -6,7 +6,15 @@
 import { extractPromptComments, extractPromptFromMessage } from "@opencode/app/react-reuse/composer-prompt"
 import type { SessionMessageUser } from "@opencode/client/promise"
 import type { Server } from "../../core/servers"
-import type { ComposerDraft } from "./draft/draft"
+import { promptText, type ComposerDraft } from "./draft/draft"
+import { hasUnsent, joined } from "./unsent"
+
+const marks = new WeakMap<object, { text?: string }>()
+function placedIn(draft: object) {
+  const held = marks.get(draft) ?? {}
+  marks.set(draft, held)
+  return held
+}
 
 export type RevertInput = {
   server: Server
@@ -17,6 +25,8 @@ export type RevertInput = {
   /** Buff (#449): ask before rewinding — what comes back and whether files are restored; undefined cancels. */
   confirm?(message: SessionMessageUser): Promise<{ files: boolean } | undefined>
   setActiveMessage?(message: SessionMessageUser | undefined): void
+  /** Buff (#972): the box held unsent text when a request was put into it — offer that text back. */
+  setAside?(bringBack: () => void): void
 }
 
 export function createSessionRevert(input: RevertInput) {
@@ -36,7 +46,14 @@ export function createSessionRevert(input: RevertInput) {
       },
     )
 
+  // Kept with the draft, not here: the transcript and the box each have a rewind over one draft.
+  const placed = placedIn(input.draft)
   const restore = (message: SessionMessageUser) => {
+    const unsent = input.draft.current()
+    const notes = input.draft.contextItems().filter((item) => item.type === "file" && !!item.comment?.trim())
+    // What an earlier rewind put into the box is a request of the chat, not unsent work.
+    const own = placed.text === undefined || promptText(unsent) !== placed.text
+    const kept = own && (hasUnsent(unsent) || notes.length > 0) ? unsent : undefined
     input.draft.set(extractPromptFromMessage(message, { directory: input.directory }))
     input.draft.context.replaceComments(
       extractPromptComments(message).map((comment) => ({
@@ -48,6 +65,23 @@ export function createSessionRevert(input: RevertInput) {
         commentOrigin: comment.origin,
       })),
     )
+    const request = promptText(input.draft.current())
+    placed.text = request
+    if (kept)
+      input.setAside?.(() => {
+        // Typed since over the request: the text set aside joins it, nothing typed is lost.
+        const now = input.draft.current()
+        const typed = promptText(now) !== request && hasUnsent(now)
+        if (typed) {
+          input.draft.set(joined(now, kept))
+          const here = input.draft.contextItems().filter((item) => item.type === "file" && !!item.comment?.trim())
+          input.draft.context.replaceComments([...here, ...notes])
+        } else {
+          input.draft.set(kept)
+          input.draft.context.replaceComments(notes)
+        }
+        placed.text = undefined
+      })
   }
 
   const stage = async (message: SessionMessageUser, previous: SessionMessageUser | undefined, ask = false) => {

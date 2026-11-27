@@ -248,7 +248,7 @@ export function Session(props: {
   Keymap.createLayer(() => ({
     priority: 10,
     enabled: () => props.sidebarVisible && dimensions().width - props.verticalTabsWidth <= 120 && !disabled(),
-    commands: [{ bind: "escape,ctrl+c", title: t("Close sidebar"), group: t("Session"), run: props.onToggleSidebar }],
+    commands: [{ bind: "escape,ctrl+c", title: t("Close sidebar"), group: t("Chat"), run: props.onToggleSidebar }],
   }))
   const contentWidth = createMemo(() => (props.width ?? dimensions().width - props.verticalTabsWidth) - 4)
   const models = createMemo(() => data.location.model.list(location()) ?? [])
@@ -338,7 +338,7 @@ export function Session(props: {
       const info = data.session.get(sessionID)
       if (!info) {
         toast.show({
-          message: t("Session not found: {id}", { id: sessionID }),
+          message: t("Chat not found: {id}", { id: sessionID }),
           variant: "error",
           duration: 5000,
         })
@@ -617,7 +617,7 @@ export function Session(props: {
     ))
   const unavailable = (feature: string) => {
     toast.show({
-      message: t("{feature} is not implemented for V2 sessions yet", { feature }),
+      message: t("{feature} is not implemented for V2 chats yet", { feature }),
       variant: "error",
       duration: 5000,
     })
@@ -710,42 +710,42 @@ export function Session(props: {
     {
       id: "session.page.up",
       title: t("Page up"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => moveTranscript(-scroll.height / 2),
     },
     {
       id: "session.page.down",
       title: t("Page down"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => moveTranscript(scroll.height / 2),
     },
     {
       id: "session.line.up",
       title: t("Line up"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => moveTranscript(-1),
     },
     {
       id: "session.line.down",
       title: t("Line down"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => moveTranscript(1),
     },
     {
       id: "session.half.page.up",
       title: t("Half page up"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => moveTranscript(-scroll.height / 4),
     },
     {
       id: "session.half.page.down",
       title: t("Half page down"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => moveTranscript(scroll.height / 4),
     },
@@ -755,7 +755,7 @@ export function Session(props: {
     {
       id: "session.first",
       title: t("First message"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => {
         if (firstJump()) return
@@ -823,7 +823,7 @@ export function Session(props: {
     {
       id: "session.last",
       title: t("Last message"),
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => {
         toBottom()
@@ -835,9 +835,9 @@ export function Session(props: {
   // Buff (#818): /share and /unshare are the share plugin's (feature-plugins/buff/share.tsx).
   const baseCommands = createMemo(() => [
     {
-      title: t("Rename session"),
+      title: t("Rename chat"),
       id: "session.rename",
-      group: t("Session"),
+      group: t("Chat"),
       slash: { name: "rename", arguments: true as const },
       run: (input?: string) => {
         if (input === undefined) return DialogSessionRename.show(dialog, route.sessionID, session()?.title)
@@ -852,7 +852,7 @@ export function Session(props: {
     {
       title: t("Jump to message"),
       id: "session.timeline",
-      group: t("Session"),
+      group: t("Chat"),
       slash: { name: "timeline" },
       run: () => {
         dialog.replace(() => (
@@ -865,9 +865,9 @@ export function Session(props: {
       },
     },
     {
-      title: t("Fork session"),
+      title: t("Fork chat"),
       id: "session.fork",
-      group: t("Session"),
+      group: t("Chat"),
       slash: { name: "fork" },
       run: () => {
         dialog.replace(() => (
@@ -882,9 +882,9 @@ export function Session(props: {
       },
     },
     {
-      title: t("Compact session"),
+      title: t("Compact chat"),
       id: "session.compact",
-      group: t("Session"),
+      group: t("Chat"),
       slash: {
         name: "compact",
       },
@@ -908,7 +908,7 @@ export function Session(props: {
     {
       title: t("Undo previous message"),
       id: "session.undo",
-      group: t("Session"),
+      group: t("Chat"),
       slash: { name: "undo" },
       run: () => {
         const message = messagesBeforeRevert().findLast(
@@ -949,7 +949,7 @@ export function Session(props: {
     {
       title: t("Redo"),
       id: "session.redo",
-      group: t("Session"),
+      group: t("Chat"),
       enabled: !!session()?.revert?.messageID,
       slash: { name: "redo" },
       run: () => {
@@ -970,7 +970,7 @@ export function Session(props: {
         return t("Expand thinking")
       })(),
       id: "session.toggle.thinking",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => {
         void configState
@@ -982,9 +982,9 @@ export function Session(props: {
       },
     },
     {
-      title: t("Toggle session scrollbar"),
+      title: t("Toggle chat scrollbar"),
       id: "session.toggle.scrollbar",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => {
         void configState
@@ -998,7 +998,7 @@ export function Session(props: {
     {
       title: groupExploration() ? t("Show tool calls individually") : t("Group related tool calls"),
       id: "session.toggle.exploration_grouping",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => {
         void configState
@@ -1012,7 +1012,7 @@ export function Session(props: {
     {
       title: t("Jump to last user message"),
       id: "session.messages_last_user",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => {
         const messages = data.session.message.list(route.sessionID)
@@ -1032,35 +1032,35 @@ export function Session(props: {
     {
       title: t("Next message"),
       id: "session.message.next",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => scrollToMessage("next", dialog),
     },
     {
       title: t("Previous message"),
       id: "session.message.previous",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => scrollToMessage("prev", dialog),
     },
     {
       title: t("Next user message"),
       id: "session.message.user.next",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => scrollToMessage("next", dialog, true),
     },
     {
       title: t("Previous user message"),
       id: "session.message.user.previous",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => scrollToMessage("prev", dialog, true),
     },
     {
       title: t("Copy last assistant message"),
       id: "messages.copy",
-      group: t("Session"),
+      group: t("Chat"),
       run: () => {
         const lastAssistantMessage = messagesBeforeRevert().findLast(
           (msg): msg is SessionMessageAssistant => msg.type === "assistant",
@@ -1099,21 +1099,21 @@ export function Session(props: {
       },
     },
     {
-      title: t("Copy session ID"),
+      title: t("Copy chat ID"),
       id: "session.copy.id",
-      group: t("Session"),
+      group: t("Chat"),
       run: () => {
         clipboard
           .write(route.sessionID)
-          .then(() => toast.show({ message: t("Session ID copied to clipboard!"), variant: "success" }))
-          .catch(() => toast.show({ message: t("Failed to copy session ID"), variant: "error" }))
+          .then(() => toast.show({ message: t("Chat ID copied to clipboard!"), variant: "success" }))
+          .catch(() => toast.show({ message: t("Failed to copy chat ID"), variant: "error" }))
         dialog.clear()
       },
     },
     {
-      title: t("Copy session transcript"),
+      title: t("Copy chat transcript"),
       id: "session.copy",
-      group: t("Session"),
+      group: t("Chat"),
       slash: {
         name: "copy",
       },
@@ -1123,18 +1123,18 @@ export function Session(props: {
           if (!sessionData) return
           const transcript = formatSessionTranscript(sessionData, messages(), true)
           await clipboard.write(transcript)
-          toast.show({ message: t("Session transcript copied to clipboard!"), variant: "success" })
+          toast.show({ message: t("Chat transcript copied to clipboard!"), variant: "success" })
         } catch {
-          toast.show({ message: t("Failed to copy session transcript"), variant: "error" })
+          toast.show({ message: t("Failed to copy chat transcript"), variant: "error" })
         }
         dialog.clear()
       },
     },
     {
-      title: t("Export session transcript"),
+      title: t("Export chat transcript"),
       id: "session.export",
       enabled: BuffFeatures.sessionTransfer,
-      group: t("Session"),
+      group: t("Chat"),
       slash: {
         name: "export",
       },
@@ -1170,7 +1170,7 @@ export function Session(props: {
           await writeExport(filepath, content)
           await DialogExportResult.show(dialog, filepath)
         } catch {
-          toast.show({ message: t("Failed to export session"), variant: "error" })
+          toast.show({ message: t("Failed to export chat"), variant: "error" })
         }
         dialog.clear()
       },
@@ -1178,7 +1178,7 @@ export function Session(props: {
     {
       title: t("Background blocking tools"),
       id: "session.background",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       run: () => {
         void client.api.session.background({ sessionID: route.sessionID })
@@ -1188,7 +1188,7 @@ export function Session(props: {
     {
       title: t("Toggle subagent picker"),
       id: "session.child.first",
-      group: t("Session"),
+      group: t("Chat"),
       run: () => {
         if (composer.open || session()?.parentID) setComposer("open", false)
         else setComposer({ open: true, tab: "subagents" })
@@ -1203,9 +1203,9 @@ export function Session(props: {
       run: openQueuedPrompts,
     },
     {
-      title: t("Go to parent session"),
+      title: t("Go to parent chat"),
       id: "session.parent",
-      group: t("Session"),
+      group: t("Chat"),
       palette: undefined,
       enabled: !!session()?.parentID,
       run: () => {
@@ -1350,7 +1350,7 @@ export function Session(props: {
             </box>
             <box height={1} flexShrink={0} flexDirection="row" justifyContent="flex-end">
               <Show when={firstJump()}>
-                <text fg={theme.text.feedback.info.base}>{t("Loading session history…")}</text>
+                <text fg={theme.text.feedback.info.base}>{t("Loading chat history…")}</text>
               </Show>
               <Show when={!firstJump() && awayFromBottom()}>
                 <box
@@ -3800,7 +3800,7 @@ function formatSessionTranscript(session: SessionInfo, messages: SessionMessageI
     if (content.length === 0) return []
     return [`## Assistant\n\n${content.join("\n\n")}`]
   })
-  return `# ${withTimestampedFallback(session)}\n\n**Session ID:** ${session.id}\n**Created:** ${new Date(session.time.created).toLocaleString()}\n**Updated:** ${new Date(session.time.updated).toLocaleString()}\n\n---\n\n${body.join("\n\n---\n\n")}\n`
+  return `# ${withTimestampedFallback(session)}\n\n**Chat ID:** ${session.id}\n**Created:** ${new Date(session.time.created).toLocaleString()}\n**Updated:** ${new Date(session.time.updated).toLocaleString()}\n\n---\n\n${body.join("\n\n---\n\n")}\n`
 }
 
 export function parseApplyPatchFiles(value: unknown) {

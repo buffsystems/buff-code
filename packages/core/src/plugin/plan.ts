@@ -8,22 +8,15 @@ import type { SessionEvent } from "@opencode/schema/session-event"
 import { Global } from "@opencode/util/global"
 import { Effect, Stream } from "effect"
 import path from "path"
+import enterText from "./plan-prompts/enter.md" with { type: "text" }
+import leaveText from "./plan-prompts/leave.md" with { type: "text" }
 import { Permission } from "../permission.js"
 
 const plan = Agent.ID.make("plan")
 
-const enter = (directory: string) => `<system-reminder>
-You are in Plan mode. Discuss the plan with the user directly in the conversation. Do not create or update plan files unless the user explicitly asks you to; when they do, write them only in:
-${directory}
-
-Do not modify any other files or ask a subagent to do so.
-
-You remain in Plan mode until the user switches agents or approves your plan. If the user asks you to implement changes, do not do so yourself: when the plan is ready, present it with plan_exit — the user's approval switches you to implementation.
-</system-reminder>`
-
-const leave = `<system-reminder>
-You are NO LONGER in Plan mode. The previous Plan restrictions no longer apply. Any Plan mode instructions from earlier in this conversation are no longer active.
-</system-reminder>`
+// The texts live in template files (#969, rule Ю6); the code only fills in the directory.
+const enter = (directory: string) => enterText.trim().replace("{{directory}}", directory)
+const leave = leaveText.trim()
 
 export const Plugin = define({
   id: "opencode.plan",

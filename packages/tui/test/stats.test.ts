@@ -26,7 +26,7 @@ describe("stats poster", () => {
       { label: "tokens", value: 15 },
       { label: "best streak", value: 2 },
       { label: "active days", value: 2 },
-      { label: "sessions", value: 12 },
+      { label: "chats", value: 12 },
     ])
     expect([0, 685, 5284, 9_200_000_000].map(statsNumber)).toEqual(["0", "685", "5.3K", "9.2B"])
   })

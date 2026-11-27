@@ -32,6 +32,31 @@ export const REMOVE_ACTION = "buff_connection_remove"
  */
 export const APP_LINK = "buff://oauth"
 
+/** Страница веб-клиента, куда сервис возвращает вход из веб-чата (#969). */
+export const WEB_RETURN_PATH = "/oauth"
+
+/**
+ * Куда сервис вернёт вход (#969, R13-02): чат с телефона — в приложение, чат из веб-клиента — на
+ * его страницу `/oauth` (адрес веб-клиента знает машина, не клиент). Прочие — на loopback машины.
+ */
+export function returnTo(origin: unknown, webOrigin: string): string | undefined {
+  if (origin === "phone") return APP_LINK
+  if (origin === "web") return new URL(WEB_RETURN_PATH, webOrigin).href
+  return undefined
+}
+
+/**
+ * Кто входит сейчас (#969, R14-01): клиент последнего запроса человека, а не место рождения чата —
+ * один чат ведут и с телефона, и из веба. Веб-клиент метит запрос `client: "web"`, приложение —
+ * `source: "phone"` (выпущенные приложения ничего нового не шлют); запрос из окна или терминала
+ * не метит никак. Запроса ещё нет — остаётся метка рождения чата.
+ */
+export function signingClient(latest: Record<string, unknown> | undefined, origin: unknown): unknown {
+  if (!latest) return origin
+  if (latest["client"] === "web") return "web"
+  return latest["source"] === "phone" ? "phone" : undefined
+}
+
 /** Состояние попытки входа из адреса авторизации: по нему приложение узнаёт форму, которой принесло код. */
 export function oauthState(url: string): string | undefined {
   return URL.parse(url)?.searchParams.get("state") ?? undefined

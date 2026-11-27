@@ -119,7 +119,7 @@ Run bun test from packages/core with a five-minute timeout.
 ```
 
 Set `background` to true for a dev server or another long-running process.
-Background calls return immediately and notify the session when they finish;
+Background calls return immediately and notify the chat when they finish;
 they have no timeout unless one is supplied. Large output is shortened and the
 complete output is retained in a managed file.
 
@@ -188,7 +188,7 @@ creation, discovery, and loading rules.
 
 ### Subagent
 
-`subagent` starts a child session with a configured subagent. Supply the agent
+`subagent` starts a child chat with a configured subagent. Supply the agent
 ID, a short `description`, and a complete `prompt`.
 
 ```text
@@ -217,13 +217,13 @@ only call tools in its catalog. Permission `execute` with resource `*` controls
 whether Code Mode is available. Every nested tool still enforces its own
 permission.
 
-### Sessions
+### Chats
 
-The `opencode` Code Mode namespace contains session utilities:
+The `opencode` Code Mode namespace contains chat utilities:
 
-- `session_rename` changes the title of the current session, or another session
+- `session_rename` changes the title of the current chat, or another chat
   selected by `sessionID`.
-- `session_move` moves the current session, or another selected session, to a
+- `session_move` moves the current chat, or another selected chat, to a
   relative or absolute `directory`. The move takes effect at a safe boundary,
   so destination-dependent work belongs in a later call.
 

@@ -17,8 +17,10 @@ export function withTimestampedFallback(info: Info) {
 
 /** Supplies a compact human label and collapses historical timestamped fallbacks. */
 export function displayLabel(info: Pick<Info, "title" | "parentID">) {
-  if (!info.title) return info.parentID ? "Child session" : "New session"
-  return info.title.match(pattern)?.[1] ?? info.title
+  if (!info.title) return info.parentID ? "Child chat" : "New chat"
+  // The stored fallback keeps its old words (it is data); a person is shown today's.
+  const stored = info.title.match(pattern)?.[1]
+  return stored ? (stored === "Child session" ? "Child chat" : "New chat") : info.title
 }
 
 /** Recognizes missing and historical root or child fallback titles. */

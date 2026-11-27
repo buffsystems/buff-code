@@ -95,7 +95,7 @@ function createController(server: () => ServerConnection.Key | undefined) {
       ?.sdk.api.session.get({ sessionID })
       .then(open)
       .catch((error: unknown) =>
-        showToast({ title: t("Setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
+        showToast({ title: t("Self-setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
       )
   // Сессия настройки открыта моделью из этой переписки (#765) — показать её; список обновить в любом случае.
   onMount(() => {
@@ -145,7 +145,7 @@ function createController(server: () => ServerConnection.Key | undefined) {
         .open({})
         .then((result) => openByID(result.session))
         .catch((error: unknown) =>
-          showToast({ title: t("Setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
+          showToast({ title: t("Self-setup"), description: formatServerError(error, undefined, t("Could not open.")) }),
         ),
     rename: (session: SessionInfo, title: string) =>
       ctx()
@@ -154,7 +154,7 @@ function createController(server: () => ServerConnection.Key | undefined) {
           () => ctx()?.data.session.remember({ ...session, title }),
           (error: unknown) =>
             showToast({
-              title: t("Sessions"),
+              title: t("Chats"),
               description: formatServerError(error, undefined, t("Could not rename.")),
             }),
         ),
@@ -285,7 +285,7 @@ function Row(props: { session: SessionInfo; controller: Controller; current: boo
               onSelect={() =>
                 void dialog.show(() => (
                   <NameDialog
-                    title={t("Rename session")}
+                    title={t("Rename chat")}
                     label={t("Name")}
                     name={sessionLabel(props.session, t)}
                     onSave={(name) => void props.controller.rename(props.session, name)}
@@ -340,8 +340,8 @@ function GroupTitle(props: { section: Marks.Section<unknown>; controller: Contro
           type="button"
           class="buff-sessions-add"
           data-action="buff-setup-new"
-          title={t("New setup")}
-          aria-label={t("New setup")}
+          title={t("New self-setup")}
+          aria-label={t("New self-setup")}
           onClick={() => void props.controller.setup()}
         >
           +
@@ -376,7 +376,7 @@ function GroupTitle(props: { section: Marks.Section<unknown>; controller: Contro
                 {t("Edit group")}
               </Menu.Item>
               <Menu.Item onSelect={() => void props.controller.change({ type: "group.remove", groupID: group().id })}>
-                {t("Delete group — sessions stay")}
+                {t("Delete group — chats stay")}
               </Menu.Item>
             </Menu.Context.Content>
           </Menu.Context.Portal>
@@ -399,7 +399,7 @@ export function BuffSessionSidebar(props: { server: ServerConnection.Key | undef
   return (
     <div class="buff-sessions" data-component="buff-sessions">
       <div class="buff-sessions-top">
-        <span class="buff-sessions-heading">{t("All sessions")}</span>
+        <span class="buff-sessions-heading">{t("All chats")}</span>
         <input
           class="buff-sessions-search"
           placeholder={t("Search by title")}
@@ -419,7 +419,7 @@ export function BuffSessionSidebar(props: { server: ServerConnection.Key | undef
                   <span class="buff-sessions-empty">
                     {section.kind === "setup"
                       ? t("Nothing connected yet — press + and ask to connect something.")
-                      : t("Empty — add a session from its menu.")}
+                      : t("Empty — add a chat from its menu.")}
                   </span>
                 }
               >
@@ -433,7 +433,7 @@ export function BuffSessionSidebar(props: { server: ServerConnection.Key | undef
           )}
         </For>
         <Show when={!sections().length}>
-          <span class="buff-sessions-empty">{query() ? t("Nothing found by title.") : t("No sessions yet.")}</span>
+          <span class="buff-sessions-empty">{query() ? t("Nothing found by title.") : t("No chats yet.")}</span>
         </Show>
         <Show when={search.results().length}>
           <div class="buff-sessions-section" data-section="content">

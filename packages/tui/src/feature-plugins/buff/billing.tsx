@@ -70,7 +70,7 @@ export function balanceRows(info: BuffBilling.Info, today: string, sessionCost: 
     ...(info.exhausted ? [] : [row(t("Will last at the current spending"), BuffBilling.runwayShort(info, t))]),
     row(t("Tariff"), info.tariff ?? t("not assigned")),
     row(t("Price per 1M tokens"), prices),
-    ...(sessionCost ? [row(t("This session (estimate)"), sessionCost)] : []),
+    ...(sessionCost ? [row(t("This chat (estimate)"), sessionCost)] : []),
     row(
       t("My spending over {window}", { window: n(info.mine.windowDays, "{n} day|{n} days") }),
       BuffBilling.rub(info.mine.totalRub),

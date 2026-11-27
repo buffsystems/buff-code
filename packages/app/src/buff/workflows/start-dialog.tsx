@@ -103,7 +103,7 @@ export function StartDialog(props: {
               onSelect={(item) => item && setDirectory(item)}
             />
             <Hint>
-              {t("The run goes into a new session of this project; subagents work in it with the usual tools.")}
+              {t("The run goes into a new chat of this project; subagents work in it with the usual tools.")}
             </Hint>
           </div>
           <Problem text={problem()} />

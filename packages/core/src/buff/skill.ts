@@ -5,6 +5,7 @@ import { BuffProjectDir } from "./project-dir.js"
 import { Duration, Effect } from "effect"
 import type { Scope } from "effect"
 import { define, type Context } from "@opencode/plugin/effect/plugin"
+import { BuffChatPlugin } from "@opencode/schema/buff-chat-plugin"
 import { BuffSkill } from "@opencode/schema/buff-skill"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
@@ -134,7 +135,8 @@ export const register = Effect.fn("BuffSkill.register")(function* (ctx: Context,
     }
     for (const skill of [...(yield* skills.list()), ...hidden]) {
       const id = String(skill.id)
-      if (entries.has(id)) continue
+      // Плагины чатов (#595) — тоже навыки для модели, но у человека для них свой экран.
+      if (entries.has(id) || BuffChatPlugin.isPluginSkill(id)) continue
       const scope = originOf(String(skill.path))
       entries.set(id, {
         id,

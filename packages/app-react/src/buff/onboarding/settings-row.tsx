@@ -15,7 +15,9 @@ export function BuffOnboardingSettingsRow() {
   return (
     <SettingsRow
       title={t("Getting to know Buff Code")}
-      description={t("Three short steps: what you do, the theme, memory and the hooks check. Shortcut — Ctrl+Shift+H.")}
+      description={t(
+        "Five short steps: what you do, how a chat and the window look, memory and the hooks check, self-setup. Shortcut — Ctrl+Shift+H.",
+      )}
     >
       <Button data-action="buff-onboarding-again" onClick={() => commands.trigger(ONBOARDING_COMMAND)}>
         {t("Go through again")}

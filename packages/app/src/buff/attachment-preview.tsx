@@ -1,3 +1,4 @@
+import { showToast } from "@/shell/notifications/toast"
 import { onCleanup, Show, type JSX } from "solid-js"
 import { BuffComposerParts } from "@opencode/schema/buff-composer-parts"
 import { Button } from "@opencode/ui/button"
@@ -31,7 +32,10 @@ function PathPreview(props: { part: PathAttachmentPart; local: boolean }) {
   const src = file ? URL.createObjectURL(file) : undefined
   onCleanup(() => src && URL.revokeObjectURL(src))
   const kind = mediaKind(props.part.mime)
-  const openInApp = () => void platform.openPath?.(props.part.path)
+  const openInApp = () =>
+    void platform.openPath?.(props.part.path).catch((error: unknown) =>
+      showToast({ title: t("The file did not open"), description: error instanceof Error ? error.message : String(error) }),
+    )
   const fallback = () => (
     <div class="buff-attach-none">
       <span>{file ? t("This file type is not shown here.") : t("The preview is available until the window restarts.")}</span>

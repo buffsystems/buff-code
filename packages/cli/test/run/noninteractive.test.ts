@@ -220,8 +220,12 @@ async function run(input: {
   messages?: (inboxID: string) => SessionMessageInfo[]
   wait?: () => Promise<void>
   terminalDelay?: number
+  models?: Array<{ providerID: string; id: string; name: string }>
+  sessionModel?: { providerID: string; id: string }
 }) {
   const sdk = OpenCode.make({ baseUrl: "https://opencode.test" })
+  spyOn(sdk.session, "get").mockImplementation(() => ok({ id: "ses_1", model: input.sessionModel }) as never)
+  spyOn(sdk.model, "list").mockImplementation(() => ok({ data: input.models ?? [] }) as never)
   const values: V2Event[] = [{ id: "evt_connected", type: "server.connected", data: {} }]
   let wake: (() => void) | undefined
   const wait = Promise.withResolvers<void>()
@@ -494,6 +498,50 @@ describe("runNonInteractivePrompt", () => {
     expect(output.stderr).toContain("> build · test-model")
     expect(output.stderr).toContain(said)
     expect(output.stderr.indexOf("> build · test-model")).toBeLessThan(output.stderr.indexOf(said))
+  })
+
+  // #966: сбой шага, после которого сессия сама повторила запрос и ответила, — не ошибка команды.
+  test("a step that failed and was retried to an answer ends with exit 0 and no error shown", async () => {
+    const output = await capture({
+      turn: (messageID) => [prompted(messageID), stepStarted(), stepFailed("upstream hiccup"), stepStarted(), settled()],
+    })
+    expect(output.exitCode).toBe(0)
+    expect(output.stderr).not.toContain("upstream hiccup")
+    expect(output.stderr).not.toContain("Error")
+  })
+
+  test("a step failure that nothing recovered is told once and ends with exit 1", async () => {
+    const output = await capture({
+      turn: (messageID) => [prompted(messageID), stepStarted(), stepFailed("Provider request failed"), executionFailed("Provider request failed")],
+    })
+    const said = turnFailure({ type: "provider.transport", message: "Provider request failed" }, "test", t).text
+    expect(output.exitCode).toBe(1)
+    expect(output.stderr.split(said).length - 1).toBe(1)
+  })
+
+  // #966: отказ до первого шага (подписка остановлена) читается словами своего провайдера.
+  test("a turn refused before any step is read as its provider's refusal, not as a rejected key", async () => {
+    const refused = (event: V2Event): V2Event =>
+      event.type === "session.execution.failed"
+        ? { ...event, data: { ...event.data, error: { type: "provider.auth", message: "Доступ к чату остановлен. Напишите в поддержку.", status: 403 } } }
+        : event
+    const output = await capture({
+      sessionModel: { providerID: "buff-account", id: "fast" },
+      turn: (messageID) => [prompted(messageID), executionFailed("x")].map(refused),
+    })
+    expect(output.stderr).toContain("Доступ к чату остановлен. Напишите в поддержку.")
+    expect(output.stderr).not.toContain("ключ")
+    expect(output.exitCode).toBe(1)
+  })
+
+  // #966: человек видит имя модели — у подписки Buff это уровень («Быстрая»), а не идентификатор.
+  test("the step header names the model as people know it; an unlisted model keeps its id", async () => {
+    const turn = (messageID: string) => [prompted(messageID), stepStarted(), executionFailed("Execution failed")]
+    const named = await capture({ turn, models: [{ providerID: "test", id: "test-model", name: "Быстрая" }] })
+    expect(named.stderr).toContain("> build · Быстрая")
+    expect(named.stderr).not.toContain("test-model")
+    const foreign = await capture({ turn, models: [{ providerID: "other", id: "test-model", name: "Чужая" }] })
+    expect(foreign.stderr).toContain("> build · test-model")
   })
 
   // #562: отказ своего провайдера — словами, чья это проблема; JSON для программ остаётся как пришёл.

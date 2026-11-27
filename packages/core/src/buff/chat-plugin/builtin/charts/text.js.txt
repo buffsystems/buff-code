@@ -1,0 +1,52 @@
+// The console's form of a `chart` block: its title and the numbers as a table.
+function text(data, options) {
+  var option
+  try { option = JSON.parse(data) } catch (error) { return data }
+  var width = (options && options.width) || 80
+  var list = function (value) { return value === undefined || value === null ? [] : Array.isArray(value) ? value : [value] }
+  var plain = function (value) { return value !== null && typeof value === 'object' && !Array.isArray(value) }
+  var cell = function (point) {
+    if (plain(point)) point = point.value
+    if (Array.isArray(point)) return point.join(' · ')
+    return point === undefined || point === null ? '' : String(point)
+  }
+  var head = [], body = []
+  var dataset = list(option.dataset)[0]
+  var series = list(option.series).filter(function (item) { return item && Array.isArray(item.data) })
+  var axis = list(option.xAxis).concat(list(option.yAxis)).filter(function (item) { return item && Array.isArray(item.data) })[0]
+  var form = plain(option.buff) ? option.buff.form : ''
+  if (form === 'gantt') {
+    body = list(option.tasks).filter(plain).map(function (task) { return [cell(task.name), cell(task.start), task.end === undefined ? '◆' : cell(task.end), typeof task.done === 'number' ? task.done + '%' : '', cell(task.group)] })
+  } else if (form === 'venn') {
+    list(option.sets).filter(plain).forEach(function (set) { body.push([cell(set.name), cell(set.value)]) })
+    list(option.overlaps).filter(plain).forEach(function (overlap) { body.push([list(overlap.sets).join(' ∩ '), cell(overlap.value)]) })
+  } else if (form === 'wordcloud') {
+    body = list(option.words).filter(plain).sort(function (a, b) { return b.value - a.value }).map(function (word) { return [cell(word.name), cell(word.value)] })
+  } else if (dataset && Array.isArray(dataset.source) && dataset.source.length) {
+    if (Array.isArray(dataset.source[0])) { head = dataset.source[0].map(String); body = dataset.source.slice(1).map(function (row) { return row.map(cell) }) }
+    else { head = Object.keys(dataset.source[0]); body = dataset.source.map(function (row) { return head.map(function (key) { return cell(row[key]) }) }) }
+  } else if (axis) {
+    head = [''].concat(series.map(function (item, index) { return item.name || String(index + 1) }))
+    body = axis.data.map(function (category, index) { return [cell(category)].concat(series.map(function (item) { return cell(item.data[index]) })) })
+  } else {
+    series.forEach(function (item) {
+      item.data.forEach(function (point) { body.push([plain(point) && point.name !== undefined ? String(point.name) : item.name || '', cell(point)]) })
+      list(item.links).forEach(function (link) { body.push([link.source + ' → ' + link.target, cell(link.value)]) })
+    })
+  }
+  var title = list(option.title)[0]
+  var lines = title && title.text ? [String(title.text), ''] : []
+  if (!body.length) return lines.concat(['(' + list(option.series).map(function (item) { return item && item.type }).join(', ') + ')']).join('\n')
+  var rows = (head.length ? [head] : []).concat(body.slice(0, 40))
+  var widths = []
+  rows.forEach(function (row) { row.forEach(function (value, index) { widths[index] = Math.max(widths[index] || 0, String(value).length) }) })
+  var budget = Math.max(8, Math.floor((width - 3 * (widths.length - 1)) / widths.length))
+  widths = widths.map(function (size) { return Math.min(size, budget) })
+  var line = function (row) { return row.map(function (value, index) { var s = String(value); return (s.length > widths[index] ? s.slice(0, widths[index] - 1) + '…' : s).padEnd(widths[index]) }).join(' │ ').trimEnd() }
+  rows.forEach(function (row, index) {
+    lines.push(line(row))
+    if (index === 0 && head.length) lines.push(widths.map(function (size) { return '─'.repeat(size) }).join('─┼─'))
+  })
+  if (body.length > 40) lines.push('… +' + (body.length - 40))
+  return lines.join('\n')
+}
