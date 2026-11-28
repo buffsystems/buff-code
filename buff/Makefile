@@ -79,8 +79,8 @@ desktop-mac-x64: desktop-bundle ## десктоп под macOS на Intel (zip)
 
 desktop: desktop-linux desktop-win desktop-mac ## десктоп под все три системы
 
-test:                       ## сторожа: бренд (наши адреса, каталоги, срезанное чужое), переводы (#472) и язык установщика (#713)
-	docker run --rm -v $(ROOT):/src -w /src/buff -e HOME=/tmp $(IMAGE) bun test test/brand.test.ts test/i18n.test.ts test/install.test.ts
+test:                       ## сторожа: бренд (наши адреса, каталоги, срезанное чужое), переводы (#472) , язык установщика (#713) и заливка выпуска (#764)
+	docker run --rm -v $(ROOT):/src -w /src/buff -e HOME=/tmp $(IMAGE) bun test test/brand.test.ts test/i18n.test.ts test/install.test.ts test/publish.test.ts
 
 unit:                       ## тесты пакетов в окружении CI: make unit [PKG="core tui"] (без PKG — все)
 	IMAGE=$(IMAGE) bash $(ROOT)/buff/unit.sh $(PKG)
