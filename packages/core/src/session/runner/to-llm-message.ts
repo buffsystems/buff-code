@@ -37,7 +37,11 @@ const attachmentLocation = (file: FileAttachment) => {
 const textAttachment = (file: FileAttachment): ContentPart => ({
   type: "text",
   text: `\n\n${[
-    `Attached file: ${file.name ?? (file.source.type === "uri" ? file.source.uri : "inline attachment")}`,
+    // An inline attachment (from the web or the phone) has no copy on disk: the model is told so, or it
+    // goes reading the name as a path and shows a failed step (#764, v0.28.0 prod check).
+    `Attached file: ${file.name ?? (file.source.type === "uri" ? file.source.uri : "inline attachment")}${
+      file.source.type === "inline" ? " (its whole content is below; there is no copy of it on disk)" : ""
+    }`,
     file.description === undefined ? undefined : `Description: ${file.description}`,
     "",
     Buffer.from(file.data, "base64").toString("utf8"),

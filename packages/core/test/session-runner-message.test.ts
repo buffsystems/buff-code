@@ -364,7 +364,8 @@ Recent work
       { type: "text", text: "Review this file" },
       {
         type: "text",
-        text: "\n\nAttached file: inline.txt\n\ninline content",
+        // #764: an inline attachment has no copy on disk — the model is told so and does not go looking for it.
+        text: "\n\nAttached file: inline.txt (its whole content is below; there is no copy of it on disk)\n\ninline content",
       },
     ])
   })

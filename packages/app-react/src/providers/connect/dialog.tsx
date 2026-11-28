@@ -688,7 +688,9 @@ function OAuthCode(props: { connection: ProviderConnection; name: string }) {
       <form className="flex flex-col items-start gap-5 self-stretch" onSubmit={(event) => void submit(event)}>
         <Field
           className="w-full"
-          label={i18n.t("provider.connect.oauth.code.label", { method: props.connection.current()?.label ?? "" })}
+          // The field's name alone: the method's own label («По ссылке и коду — по SSH или без браузера»)
+          // glued to «код авторизации» read as one broken phrase (#764, v0.28.0 prod check).
+          label={i18n.t("provider.connect.oauth.code.placeholder")}
           error={error}
         >
           <Input
